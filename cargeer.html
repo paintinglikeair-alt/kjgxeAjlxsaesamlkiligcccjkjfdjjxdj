@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدرسة القيادة الذكية - محاكي تعليم القيادة</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Arabic Font: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        /* Canvas Road Container */
+        #simCanvas {
+            background-color: #334155;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+        }
+
+        /* Interactive Steering Wheel */
+        .steering-wheel {
+            /* Smooth return to center transition */
+            transition: transform 0.1s ease-out;
+        }
+        .steering-wheel.dragging {
+            transition: none; /* No delay while user is dragging */
+        }
+
+        /* Pedals Active Animation */
+        .pedal-active {
+            transform: scale(0.95);
+            filter: brightness(1.2);
+        }
+
+        /* Dashboard Glow */
+        .dashboard-panel {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            border: 1px solid #334155;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-4">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 border-b border-slate-800 p-3 rounded-2xl shadow-xl flex justify-between items-center mb-3">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 text-white p-2.5 rounded-2xl text-lg font-black flex items-center gap-2 shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-car-side"></i>
+                <span>مدرسة القيادة الذكية</span>
+            </div>
+            <span class="hidden sm:inline bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded-full border border-slate-700 font-semibold">
+                محاكي قواعد السواقة والسيارات 🚗
+            </span>
+        </div>
+
+        <!-- Instructor Evaluation Stats -->
+        <div class="flex items-center gap-3 text-xs md:text-sm">
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved text-emerald-400"></i>
+                <span class="text-slate-400">النقاط:</span>
+                <span id="scoreText" class="font-extrabold text-emerald-400 text-base">100</span>
+            </div>
+
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
+                <span class="text-slate-400">الأخطاء:</span>
+                <span id="violationsText" class="font-extrabold text-rose-400 text-base">0</span>
+            </div>
+
+            <div class="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-graduation-cap text-amber-400"></i>
+                <span id="lessonTitleDisplay" class="font-extrabold text-amber-300 text-xs">الدرس 1: تشغيل السيارة</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Simulator Grid -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-grow">
+
+        <!-- LEFT/CENTER: ROAD VIEW CANVAS & CONTROLS (Cols 8) -->
+        <section class="lg:col-span-8 flex flex-col gap-3">
+
+            <!-- Simulation Viewport -->
+            <div class="relative w-full bg-slate-950 rounded-2xl border-2 border-slate-800 p-2 overflow-hidden shadow-2xl flex flex-col items-center">
+                
+                <!-- Instructor Live Feedback Banner -->
+                <div id="instructorBanner" class="absolute top-4 left-4 right-4 z-20 bg-slate-900/90 border-2 border-blue-500/50 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 shadow-xl transition-all duration-300">
+                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
+                        <i class="fa-solid fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-black text-xs text-blue-300">المدرب كابتن سامي:</h4>
+                        <p id="instructorText" class="text-xs text-slate-100 font-semibold mt-0.5">مرحباً بك! قبل التحرك، قم بربط حزام الأمان، تعديل المرايا، ثم انقل القير إلى وضع القيادة D.</p>
+                    </div>
+                </div>
+
+                <!-- Canvas Field -->
+                <canvas id="simCanvas" width="700" height="380" class="w-full max-w-full h-auto"></canvas>
+
+                <!-- On-Screen Indicators Overlay -->
+                <div class="absolute bottom-4 left-4 z-20 flex gap-2">
+                    <div id="indicatorLeft" class="w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </div>
+                    <div id="indicatorRight" class="w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-4 right-4 z-20 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-gauge-high text-cyan-400 text-xs"></i>
+                    <span id="speedometerText" class="font-black text-cyan-300 text-sm">0 كم/س</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Cockpit Controls -->
+            <div class="dashboard-panel rounded-2xl p-3 grid grid-cols-12 gap-2 items-center shadow-xl">
+                
+                <!-- Pre-Driving Checklist Buttons (Cols 4) -->
+                <div class="col-span-12 sm:col-span-4 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 space-y-2">
+                    <div class="text-[11px] font-bold text-slate-400 mb-1 flex items-center justify-between">
+                        <span>قائمة الأمان المسبقة:</span>
+                        <i class="fa-solid fa-list-check text-blue-400"></i>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button id="btnSeatbelt" onclick="toggleSeatbelt()" class="bg-rose-950/60 border border-rose-700/50 text-rose-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-user-shield"></i> حزام الأمان
+                        </button>
+                        <button id="btnMirrors" onclick="adjustMirrors()" class="bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-clone"></i> المرايا
+                        </button>
+                        <button id="btnHandbrake" onclick="toggleHandbrake()" class="bg-rose-950/60 border border-rose-700/50 text-rose-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-hand"></i> جلنط (اليد)
+                        </button>
+                        <button id="btnEngine" onclick="toggleEngine()" class="bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-power-off"></i> التشغيل
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW: Interactive Steering Wheel & Indicators (Cols 4) -->
+                <div class="col-span-6 sm:col-span-4 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex flex-col items-center justify-center gap-2">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleIndicator('left')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 p-2 rounded-xl text-xs font-bold transition shadow">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        
+                        <!-- Interactive Steering Wheel SVG -->
+                        <div id="steeringWheel" class="steering-wheel w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] cursor-pointer touch-none relative border-[5px] border-slate-700 z-10">
+                            <svg viewBox="0 0 100 100" fill="none" stroke="#94a3b8" stroke-width="8" class="w-full h-full pointer-events-none drop-shadow-md">
+                                <path d="M15,50 Q50,60 85,50" />
+                                <path d="M50,55 L50,95" />
+                                <circle cx="50" cy="53" r="14" fill="#334155" stroke="none" />
+                            </svg>
+                        </div>
+
+                        <button onclick="toggleIndicator('right')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-400 p-2 rounded-xl text-xs font-bold transition shadow">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <span class="text-[9px] text-slate-400">حرك الدركسيون بإصبعك/الماوس 👆</span>
+                </div>
+
+                <!-- Pedals & Gear Selector (Cols 4) -->
+                <div class="col-span-6 sm:col-span-4 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex justify-between items-center gap-2">
+                    <!-- Gear Selector -->
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="text-[10px] text-slate-400 font-bold">الغير (Gear):</span>
+                        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-extrabold gap-1">
+                            <button onclick="setGear('P')" id="gearP" class="px-2 py-0.5 rounded-lg text-slate-500">P</button>
+                            <button onclick="setGear('R')" id="gearR" class="px-2 py-0.5 rounded-lg text-slate-500">R</button>
+                            <button onclick="setGear('N')" id="gearN" class="px-2 py-0.5 rounded-lg text-slate-500">N</button>
+                            <button onclick="setGear('D')" id="gearD" class="px-2 py-0.5 rounded-lg bg-blue-600 text-white shadow">D</button>
+                        </div>
+                    </div>
+
+                    <!-- Touch Pedals -->
+                    <div class="flex items-center gap-2">
+                        <button id="pedalBrake" onmousedown="pressBrake(true)" onmouseup="pressBrake(false)" ontouchstart="pressBrake(true)" ontouchend="pressBrake(false)" class="bg-rose-900/80 hover:bg-rose-800 border-2 border-rose-600 text-white px-2.5 py-4 rounded-xl text-[10px] font-black shadow-lg transition flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-shoe-prints text-sm"></i>
+                            <span>فرامل (S)</span>
+                        </button>
+                        <button id="pedalGas" onmousedown="pressGas(true)" onmouseup="pressGas(false)" ontouchstart="pressGas(true)" ontouchend="pressGas(false)" class="bg-emerald-700/80 hover:bg-emerald-600 border-2 border-emerald-500 text-white px-2.5 py-4 rounded-xl text-[10px] font-black shadow-lg transition flex flex-col items-center gap-1">
+                            <i class="fa-solid fa-bolt text-sm"></i>
+                            <span>بنزين (W)</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- RIGHT: LESSONS CURRICULUM & DRIVING RULES (Cols 4) -->
+        <section class="lg:col-span-4 flex flex-col gap-3">
+
+            <!-- Driving Lessons Curriculum Selector -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <h3 class="font-extrabold text-sm text-amber-300 mb-3 flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <i class="fa-solid fa-book-bookmark"></i> منهج الدروس والاختبارات
+                </h3>
+
+                <div class="space-y-2">
+                    <!-- Lesson 1 -->
+                    <button onclick="loadLesson(1)" id="lessonBtn1" class="w-full text-right bg-blue-900/40 border-2 border-blue-500 p-3 rounded-xl transition flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-extrabold text-blue-300 block">الدرس 1: خطوات البدء والتشغيل</span>
+                            <span class="text-[10px] text-slate-400">الحزام، المرايا، حبل اليد والقير D</span>
+                        </div>
+                        <i class="fa-solid fa-circle-play text-blue-400 text-base"></i>
+                    </button>
+
+                    <!-- Lesson 2 -->
+                    <button onclick="loadLesson(2)" id="lessonBtn2" class="w-full text-right bg-slate-800/80 border border-slate-700 hover:border-blue-500 p-3 rounded-xl transition flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-200 block">الدرس 2: التوقف التام عند إشارة Stop</span>
+                            <span class="text-[10px] text-slate-400">الوقوف قبل الخط للتأكد من خلو الطريق</span>
+                        </div>
+                        <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
+                    </button>
+
+                    <!-- Lesson 3 -->
+                    <button onclick="loadLesson(3)" id="lessonBtn3" class="w-full text-right bg-slate-800/80 border border-slate-700 hover:border-blue-500 p-3 rounded-xl transition flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-200 block">الدرس 3: الانعطاف واستخدام الغمازات</span>
+                            <span class="text-[10px] text-slate-400">استخدام إشارة اليمين/اليسار قبل الانعطاف</span>
+                        </div>
+                        <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
+                    </button>
+
+                    <!-- Lesson 4 -->
+                    <button onclick="loadLesson(4)" id="lessonBtn4" class="w-full text-right bg-slate-800/80 border border-slate-700 hover:border-blue-500 p-3 rounded-xl transition flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-extrabold text-slate-200 block">الدرس 4: اصطفاف السيارة (الركن التوازي)</span>
+                            <span class="text-[10px] text-slate-400">تفادى المخروطات واركن بالخلف بأمان</span>
+                        </div>
+                        <i class="fa-solid fa-lock text-slate-500 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Key Driving Rules & Tips -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex-grow flex flex-col justify-between shadow-xl">
+                <div>
+                    <h3 class="font-extrabold text-sm text-emerald-400 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb"></i> القواعد الذهبية للقيادة الآمنة
+                    </h3>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-emerald-400 mt-0.5"></i>
+                            <span><b>الرجوع للخلف:</b> اختر (R) واضغط <b>دواسة البنزين</b> للحركة، الفرامل للوقوف فقط.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-emerald-400 mt-0.5"></i>
+                            <span>قف وقوفاً تاماً عند لوحة STOP لمدة 3 ثوانٍ وتأكد من خلو الطريق.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa-solid fa-check text-emerald-400 mt-0.5"></i>
+                            <span>شغّل الغماز (الإشارة) قبل الانعطاف بـ 30 متراً على الأقل.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Reset / Restart Test Button -->
+                <button onclick="resetCurrentLesson()" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> إعادة تجربة الدرس الحالي
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- LESSON SUCCESS EVALUATION MODAL -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 max-w-md w-full shadow-2xl text-center animate-fade-in">
+            <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 border-2 border-emerald-400 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                <i class="fa-solid fa-trophy animate-bounce"></i>
+            </div>
+            <h3 class="font-black text-xl text-slate-100 mb-2">ممتاز! أكملت الدرس بنجاح 🎉</h3>
+            <p id="modalLessonSummary" class="text-xs text-slate-300 leading-relaxed mb-6">
+                لقد طبقت خطوات القيادة الصحيحة وقواعد المرور بدون ارتكاب أي أخطاء خطيرة!
+            </p>
+
+            <button onclick="nextLessonModalAction()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm py-3 rounded-xl transition shadow-xl">
+                الانتقال للدرس التالي 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT & PHYSICS ENGINE -->
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'click') {
+                    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.05);
+                } else if (type === 'indicator') {
+                    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.04);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'success') {
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                }
+            } catch(e) {}
+        }
+
+        let currentLesson = 1;
+        let score = 100;
+        let violations = 0;
+
+        // Vehicle Safety & Checklist State
+        let seatbeltFastened = false;
+        let mirrorsAdjusted = false;
+        let handbrakeEngaged = true;
+        let engineRunning = false;
+        let currentGear = 'P';
+        let currentIndicator = null; 
+
+        // Car Physics
+        let car = {
+            x: 100,
+            y: 250,
+            angle: 0,
+            speed: 0,
+            maxSpeed: 4,
+            accel: 0.08,
+            friction: 0.03
+        };
+
+        let keys = { W: false, S: false, A: false, D: false };
+
+        // Canvas Elements
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Lesson Objectives Flags
+        let lessonStep = 0;
+        let stopSignStoppedTime = 0;
+        let isStoppedAtSign = false;
+        
+        // Define Cones for Parking Lesson
+        const parkingCones = [
+            {x: 530, y: 70}, {x: 530, y: 160},
+            {x: 630, y: 70}, {x: 630, y: 160},
+            {x: 580, y: 70}, {x: 580, y: 160}
+        ];
+
+        window.onload = function() {
+            setupKeyboard();
+            initSteeringWheel();
+            requestAnimationFrame(gameLoop);
+            loadLesson(1);
+        };
+
+        function setupKeyboard() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keys.W = true;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keys.S = true;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.A = true;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.D = true;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') keys.W = false;
+                if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') keys.S = false;
+                if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') keys.A = false;
+                if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') keys.D = false;
+            });
+        }
+
+        let isDraggingWheel = false;
+        let startDragX = 0;
+        let currentWheelRotation = 0; // Tracks rotation (-90 to 90)
+
+        function initSteeringWheel() {
+            const wheelEl = document.getElementById('steeringWheel');
+
+            const startDrag = (e) => {
+                isDraggingWheel = true;
+                wheelEl.classList.add('dragging');
+                startDragX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                // Prevent default to stop scrolling while steering
+                if(e.cancelable) e.preventDefault(); 
+            };
+
+            const onDrag = (e) => {
+                if (!isDraggingWheel) return;
+                let x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                let delta = x - startDragX;
+                currentWheelRotation += delta * 1.5; // Sensitivity multiplier
+                startDragX = x;
+
+                // Cap rotation
+                if (currentWheelRotation > 90) currentWheelRotation = 90;
+                if (currentWheelRotation < -90) currentWheelRotation = -90;
+
+                wheelEl.style.transform = `rotate(${currentWheelRotation}deg)`;
+            };
+
+            const stopDrag = () => {
+                isDraggingWheel = false;
+                wheelEl.classList.remove('dragging');
+                // Auto-center steering wheel when released
+                currentWheelRotation = 0;
+                wheelEl.style.transform = `rotate(0deg)`;
+            };
+
+            // Mouse Events
+            wheelEl.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('mouseup', stopDrag);
+
+            // Touch Events
+            wheelEl.addEventListener('touchstart', startDrag, {passive: false});
+            window.addEventListener('touchmove', onDrag, {passive: false});
+            window.addEventListener('touchend', stopDrag);
+        }
+
+        function toggleSeatbelt() {
+            playSound('click');
+            seatbeltFastened = !seatbeltFastened;
+            const btn = document.getElementById('btnSeatbelt');
+            if (seatbeltFastened) {
+                btn.className = "bg-emerald-900/60 border border-emerald-500 text-emerald-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+                checkLessonStep();
+            } else {
+                btn.className = "bg-rose-950/60 border border-rose-700/50 text-rose-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+            }
+        }
+
+        function adjustMirrors() {
+            playSound('click');
+            mirrorsAdjusted = true;
+            const btn = document.getElementById('btnMirrors');
+            btn.className = "bg-emerald-900/60 border border-emerald-500 text-emerald-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+            setInstructorText("تم تعديل المرايا الجانبية والرؤية الخلفية بنجاح!");
+            checkLessonStep();
+        }
+
+        function toggleHandbrake() {
+            playSound('click');
+            handbrakeEngaged = !handbrakeEngaged;
+            const btn = document.getElementById('btnHandbrake');
+            if (!handbrakeEngaged) {
+                btn.className = "bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+                checkLessonStep();
+            } else {
+                btn.className = "bg-rose-950/60 border border-rose-700/50 text-rose-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+            }
+        }
+
+        function toggleEngine() {
+            playSound('click');
+            engineRunning = !engineRunning;
+            const btn = document.getElementById('btnEngine');
+            if (engineRunning) {
+                btn.className = "bg-emerald-900/60 border border-emerald-500 text-emerald-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+                setInstructorText("المحرك يعمل الآن! صوت المحرك منتظم.");
+                checkLessonStep();
+            } else {
+                btn.className = "bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-bold py-1.5 rounded-lg flex items-center justify-center gap-1 transition";
+            }
+        }
+
+        function setGear(gear) {
+            playSound('click');
+            currentGear = gear;
+            ['P', 'R', 'N', 'D'].forEach(g => {
+                const b = document.getElementById('gear' + g);
+                if (g === gear) {
+                    b.className = "px-2 py-0.5 rounded-lg bg-blue-600 text-white shadow";
+                } else {
+                    b.className = "px-2 py-0.5 rounded-lg text-slate-500";
+                }
+            });
+            
+            // Helpful Instructor UI feedback for reversing
+            if (gear === 'R') {
+                setInstructorText("وضعية الرجوع للخلف (R): اضغط على البنزين (W) للتحرك للخلف! لا تستخدم الفرامل إلا للوقوف.");
+            } else if (gear === 'D') {
+                setInstructorText("وضعية القيادة (D): اضغط بنزين للتحرك للأمام.");
+            }
+            
+            checkLessonStep();
+        }
+
+        function toggleIndicator(side) {
+            playSound('indicator');
+            if (currentIndicator === side) {
+                currentIndicator = null;
+            } else {
+                currentIndicator = side;
+            }
+
+            document.getElementById('indicatorLeft').className = currentIndicator === 'left' ? "w-8 h-8 rounded-full bg-amber-500 text-slate-950 text-xs font-bold flex items-center justify-center animate-pulse" : "w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all";
+            document.getElementById('indicatorRight').className = currentIndicator === 'right' ? "w-8 h-8 rounded-full bg-amber-500 text-slate-950 text-xs font-bold flex items-center justify-center animate-pulse" : "w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all";
+        }
+
+        function pressGas(pressed) {
+            keys.W = pressed;
+            if(pressed) document.getElementById('pedalGas').classList.add('pedal-active');
+            else document.getElementById('pedalGas').classList.remove('pedal-active');
+        }
+
+        function pressBrake(pressed) {
+            keys.S = pressed;
+            if(pressed) document.getElementById('pedalBrake').classList.add('pedal-active');
+            else document.getElementById('pedalBrake').classList.remove('pedal-active');
+        }
+
+        function setInstructorText(text) {
+            document.getElementById('instructorText').innerText = text;
+        }
+
+        function registerViolation(reason) {
+            playSound('error');
+            violations++;
+            score = Math.max(0, score - 15);
+            document.getElementById('violationsText').innerText = violations;
+            document.getElementById('scoreText').innerText = score;
+            setInstructorText("⚠️ خطأ مروري: " + reason);
+        }
+
+        function loadLesson(num) {
+            currentLesson = num;
+            score = 100;
+            violations = 0;
+            document.getElementById('violationsText').innerText = '0';
+            document.getElementById('scoreText').innerText = '100';
+
+            // Reset Car Position
+            car.x = 80;
+            car.y = 250;
+            car.angle = 0;
+            car.speed = 0;
+            currentIndicator = null;
+            stopSignStoppedTime = 0;
+
+            // Reset visual indicators
+            document.getElementById('indicatorLeft').className = "w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all";
+            document.getElementById('indicatorRight').className = "w-8 h-8 rounded-full bg-slate-900/80 border border-slate-700 flex items-center justify-center text-slate-500 text-xs font-bold transition-all";
+
+            // Update Lesson Menu UI (Highlights the active lesson)
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById('lessonBtn' + i);
+                const titleSpan = btn.querySelector('span:first-child');
+                const icon = btn.querySelector('i.fa-solid');
+                
+                if (i === num) {
+                    btn.className = "w-full text-right bg-blue-900/40 border-2 border-blue-500 p-3 rounded-xl transition flex items-center justify-between";
+                    titleSpan.className = "text-xs font-extrabold text-blue-300 block";
+                    icon.className = "fa-solid fa-circle-play text-blue-400 text-base";
+                } else {
+                    btn.className = "w-full text-right bg-slate-800/80 border border-slate-700 hover:border-blue-500 p-3 rounded-xl transition flex items-center justify-between";
+                    titleSpan.className = "text-xs font-extrabold text-slate-200 block";
+                    icon.className = "fa-solid fa-lock text-slate-500 text-sm";
+                }
+            }
+
+            const nameMap = {
+                1: 'الدرس 1: خطوات البدء والتشغيل',
+                2: 'الدرس 2: التوقف التام عند إشارة Stop',
+                3: 'الدرس 3: الانعطاف واستخدام الغمازات',
+                4: 'الدرس 4: اصطفاف السيارة (الركن التوازي)'
+            };
+            document.getElementById('lessonTitleDisplay').innerText = nameMap[num];
+
+            if (num === 1) {
+                setInstructorText("الدرس 1: اتبع خطوات البدء الصحيحة بالترتيب (حزام الأمان ⬅️ المرايا ⬅️ تشغيل المحرك ⬅️ إنزال اليد ⬅️ القير D).");
+            } else if (num === 2) {
+                setInstructorText("الدرس 2: تحرك بالسيارة نحو لوحة STOP وقف وقوفاً تاماً قبل خط التوقف لمدة 3 ثوانٍ.");
+            } else if (num === 3) {
+                setInstructorText("الدرس 3: قبل الانعطاف نحو الحارة اليسرى، استخدم إشارة اليسار ثم انحرف بأمان.");
+            } else if (num === 4) {
+                setInstructorText("الدرس 4: استخدم وضعية (R) للرجوع للخلف واركن داخل المربع الأخضر دون الاصطدام بالمخروطات البرتقالية.");
+            }
+        }
+
+        function resetCurrentLesson() {
+            loadLesson(currentLesson);
+        }
+
+        function checkLessonStep() {
+            if (currentLesson === 1) {
+                if (!seatbeltFastened) {
+                    setInstructorText("خطوة 1: يرجى ربط حزام الأمان أولاً!");
+                    return;
+                }
+                if (!mirrorsAdjusted) {
+                    setInstructorText("خطوة 2: اضغط على تعديل المرايا الجانبية.");
+                    return;
+                }
+                if (!engineRunning) {
+                    setInstructorText("خطوة 3: قم بتشغيل المحرك الآن.");
+                    return;
+                }
+                if (handbrakeEngaged) {
+                    setInstructorText("خطوة 4: قم بإنزال فرملة اليد (الجلنط).");
+                    return;
+                }
+                if (currentGear !== 'D') {
+                    setInstructorText("خطوة 5: انقل ناقل الحركة (الغير) إلى وضع القيادة D.");
+                    return;
+                }
+                
+                triggerLessonSuccess("ممتاز! لقد تعلمت وقمت بجميع خطوات الفحص المسبق والتشغيل الصحيحة بأمان.");
+            }
+        }
+
+        function triggerLessonSuccess(msg) {
+            playSound('success');
+            document.getElementById('modalLessonSummary').innerText = msg;
+            document.getElementById('successModal').classList.remove('hidden');
+        }
+
+        function nextLessonModalAction() {
+            document.getElementById('successModal').classList.add('hidden');
+            if (currentLesson < 4) {
+                loadLesson(currentLesson + 1);
+            } else {
+                loadLesson(1); // loop back
+            }
+        }
+
+        function gameLoop() {
+            updatePhysics();
+            drawCanvas();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updatePhysics() {
+            // Check driving conditions
+            if (keys.W || keys.S) {
+                if (!seatbeltFastened && car.speed === 0) {
+                    registerViolation("التحرك بالسيارة بدون ربط حزام الأمان!");
+                }
+                if (handbrakeEngaged && car.speed === 0) {
+                    registerViolation("حاولت التحرك بينما فرملة اليد (الجلنط) مرفوعة!");
+                }
+                if (!engineRunning && car.speed === 0) {
+                    registerViolation("المحرك مطفأ! تشغيل السيارة أولاً.");
+                }
+            }
+
+            // Engine & Gear Physics
+            if (engineRunning && !handbrakeEngaged) {
+                if (currentGear === 'D') {
+                    if (keys.W) car.speed = Math.min(car.speed + car.accel, car.maxSpeed);
+                    if (keys.S) car.speed = Math.max(car.speed - car.accel * 1.5, 0); // Brake
+                } else if (currentGear === 'R') {
+                    // Reversing Logic (Gas moves backwards)
+                    if (keys.W) car.speed = Math.max(car.speed - car.accel, -car.maxSpeed * 0.5);
+                    if (keys.S) car.speed = Math.min(car.speed + car.accel * 1.5, 0); // Brake
+                }
+            }
+
+            // Friction
+            if (!keys.W && !keys.S) {
+                if (car.speed > 0) car.speed = Math.max(0, car.speed - car.friction);
+                if (car.speed < 0) car.speed = Math.min(0, car.speed + car.friction);
+            }
+
+            // Interactive Steering Logic mapped to physics
+            // wheelTurn represents a value from -1 (left) to 1 (right)
+            let wheelTurn = currentWheelRotation / 90; 
+            
+            // Turning only happens if the car is moving
+            if (Math.abs(car.speed) > 0.1) {
+                // Math.sign(car.speed) handles reversing (nose turns opposite way)
+                if (keys.A) {
+                    car.angle -= 0.04 * Math.sign(car.speed);
+                } else if (keys.D) {
+                    car.angle += 0.04 * Math.sign(car.speed);
+                } else if (Math.abs(wheelTurn) > 0.05) {
+                    // Turn using the touch/drag wheel
+                    car.angle += (wheelTurn * 0.04) * Math.sign(car.speed);
+                }
+            }
+
+            // Move Car Position
+            car.x += Math.cos(car.angle) * car.speed;
+            car.y += Math.sin(car.angle) * car.speed;
+
+            // Prevent going out of bounds completely
+            if(car.x < 0) car.x = 0; if(car.x > canvas.width) car.x = canvas.width;
+            if(car.y < 0) car.y = 0; if(car.y > canvas.height) car.y = canvas.height;
+
+            // Update UI Speedometer
+            const speedKmh = Math.round(Math.abs(car.speed) * 15);
+            document.getElementById('speedometerText').innerText = speedKmh + ' كم/س';
+
+            // LESSON SPECIFIC RULE EVALUATIONS
+            if (currentLesson === 2) {
+                // STOP Sign Zone Check
+                if (car.x >= 350 && car.x <= 410) {
+                    if (Math.abs(car.speed) < 0.05) {
+                        stopSignStoppedTime++;
+                        if (stopSignStoppedTime > 90) { // ~3 seconds
+                            triggerLessonSuccess("ممتاز! وقفت وقوفاً تاماً عند لوحة STOP وتأكدت من سلامة الطريق.");
+                        }
+                    } else if (car.x > 390 && stopSignStoppedTime < 60) {
+                        registerViolation("عدم الوقوف التام عند لوحة STOP لمدة كافية!");
+                        // Move car back a little to prevent spamming
+                        car.x -= 20;
+                    }
+                }
+            } else if (currentLesson === 3) {
+                // Turn Indicator Check
+                if (car.x > 450 && car.angle < -0.3) {
+                    if (currentIndicator === 'left') {
+                        triggerLessonSuccess("ممتاز! استخدمت إشارة اليسار قبل الانعطاف والتغيير للحارة بمهارة.");
+                    } else {
+                        registerViolation("انعطفت وحولت الحارة بدون استخدام الإشارة (الغماز)!");
+                        car.angle = 0; // reset angle to prevent spamming
+                    }
+                }
+            } else if (currentLesson === 4) {
+                // Cone collision detection
+                for (let cone of parkingCones) {
+                    let dist = Math.hypot(car.x - cone.x, car.y - cone.y);
+                    if (dist < 18) { // Hit distance
+                        registerViolation("اصطدمت بالمخروط المروري! انتبه للمسافات عند الركن.");
+                        // Push car slightly away to avoid infinite triggers
+                        car.x -= Math.cos(car.angle) * 10;
+                        car.y -= Math.sin(car.angle) * 10;
+                        car.speed = 0;
+                    }
+                }
+
+                // Parking Slot Target Check (Expanded zone for easier parking)
+                if (car.x >= 520 && car.x <= 640 && car.y >= 60 && car.y <= 180) {
+                    if (Math.abs(car.speed) < 0.05) {
+                        if (currentGear === 'P') {
+                            triggerLessonSuccess("رائع جداً! أتقنت ركن السيارة للوراء داخل المكان المخصص بأمان دون الاصطدام بالمخروطات.");
+                        } else {
+                            setInstructorText("ممتاز! السيارة داخل الموقف. ضع القير الآن على وضع الوقوف التام (P) لإنهاء الاختبار.");
+                        }
+                    }
+                }
+            }
+        }
+
+        function drawTopDownCone(ctx, x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+            // Orange Base
+            ctx.fillStyle = "#f97316"; 
+            ctx.beginPath();
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fill();
+            // White Stripe
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fill();
+            // Orange Tip
+            ctx.fillStyle = "#ea580c";
+            ctx.beginPath();
+            ctx.arc(0, 0, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Asphalt Road
+            ctx.fillStyle = "#334155";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Road Lanes Lines
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+            ctx.setLineDash([20, 15]);
+
+            ctx.beginPath();
+            ctx.moveTo(0, 190);
+            ctx.lineTo(canvas.width, 190);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset dash
+
+            // Draw Sidewalk Boulders
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(0, 0, canvas.width, 40);
+            ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+
+            // DRAW LESSON SCENARIO OVERLAYS
+            if (currentLesson === 2) {
+                // Draw STOP Sign Line
+                ctx.fillStyle = "#ef4444";
+                ctx.fillRect(400, 40, 8, 300);
+
+                // STOP Sign Post
+                ctx.fillStyle = "#dc2626";
+                ctx.beginPath();
+                ctx.arc(404, 80, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#ffffff";
+                ctx.font = "bold 10px Cairo";
+                ctx.textAlign = "center";
+                ctx.fillText("STOP", 404, 84);
+            } else if (currentLesson === 4) {
+                // Draw Parking Bay Zone
+                ctx.strokeStyle = "#10b981";
+                ctx.lineWidth = 3;
+                ctx.strokeRect(540, 80, 80, 70);
+
+                ctx.fillStyle = "rgba(16, 185, 129, 0.2)";
+                ctx.fillRect(540, 80, 80, 70);
+
+                ctx.fillStyle = "#10b981";
+                ctx.font = "bold 12px Cairo";
+                ctx.textAlign = "center";
+                ctx.fillText("مكان الركن 🅿️", 580, 120);
+
+                // Draw Cones
+                for(let cone of parkingCones) {
+                    drawTopDownCone(ctx, cone.x, cone.y);
+                }
+            }
+
+            // DRAW PLAYER CAR
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+
+            // Car Body Shadow
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.fillRect(-22, -12, 44, 24);
+
+            // Car Body
+            ctx.fillStyle = "#2563eb"; // Blue Sedan
+            ctx.beginPath();
+            ctx.roundRect(-20, -12, 40, 24, 6);
+            ctx.fill();
+
+            // Windshield & Glass
+            ctx.fillStyle = "#93c5fd";
+            ctx.fillRect(-2, -9, 12, 18);
+
+            // Headlights
+            ctx.fillStyle = "#fef08a";
+            ctx.fillRect(18, -10, 3, 5);
+            ctx.fillRect(18, 5, 3, 5);
+
+            // Tail Lights (Red Brake & White Reverse)
+            ctx.fillStyle = keys.S ? "#ef4444" : "#991b1b"; // Brake lights
+            ctx.fillRect(-20, -10, 2, 4);
+            ctx.fillRect(-20, 6, 2, 4);
+            
+            // White Reverse Lights (activated only in R gear)
+            if (currentGear === 'R') {
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(-20, -6, 2, 2);
+                ctx.fillRect(-20, 4, 2, 2);
+            }
+
+            // Turn Indicator Blinker Logic (Left / Right)
+            if (currentIndicator) {
+                const blinkOn = Math.floor(Date.now() / 300) % 2 === 0;
+                if (blinkOn) {
+                    ctx.fillStyle = "#f59e0b"; // Amber color
+                    if (currentIndicator === 'left') {
+                        ctx.fillRect(17, -12, 3, 3); // Front Left
+                        ctx.fillRect(-19, -12, 3, 3); // Back Left
+                    } else if (currentIndicator === 'right') {
+                        ctx.fillRect(17, 9, 3, 3);  // Front Right
+                        ctx.fillRect(-19, 9, 3, 3); // Back Right
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+    </script>
+</body>
+</html>
