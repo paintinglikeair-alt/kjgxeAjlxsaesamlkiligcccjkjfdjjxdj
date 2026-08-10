@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مهمة التروس: مختبر المهندس المبدع</title>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --motor-color: #3498db;
+            --gear-tiny: #1abc9c;
+            --gear-small: #e74c3c;
+            --gear-medium: #f39c12;
+            --gear-large: #9b59b6;
+            --gear-giant: #e67e22;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f1319;
+            color: #d2dae2;
+            margin: 0;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        #header {
+            background: linear-gradient(135deg, #1e272e, #2c3e50);
+            padding: 10px 15px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1400px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.7);
+            border: 2px solid #576574;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        #story {
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+            text-align: right;
+            padding: 0 20px;
+            color: #ecf0f1;
+            text-shadow: 1px 1px 2px #000;
+        }
+        #status-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        #status {
+            font-weight: bold;
+            font-size: 15px;
+            color: #e74c3c;
+            padding: 8px 15px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 8px;
+            flex-grow: 1;
+            text-align: center;
+            border: 1px solid #e74c3c;
+            transition: all 0.3s;
+        }
+        .btn-action {
+            display: none;
+            padding: 8px 20px;
+            background: linear-gradient(to bottom, #2ecc71, #27ae60);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .btn-action:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(46, 204, 113, 0.6); }
+        
+        .btn-belt {
+            display: inline-block !important;
+            background: linear-gradient(to bottom, #e67e22, #d35400);
+            box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4);
+        }
+        .btn-belt.active { background: linear-gradient(to bottom, #f1c40f, #f39c12); box-shadow: 0 0 15px #f1c40f; transform: scale(1.05); border: 2px solid #fff; color: #111;}
+        
+        .btn-wire {
+            display: inline-block !important;
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.4);
+        }
+        .btn-wire.active { background: linear-gradient(to bottom, #00d2ff, #3a7bd5); box-shadow: 0 0 15px #00d2ff; transform: scale(1.05); border: 2px solid #fff; color: #111;}
+
+        #game-area {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            flex-grow: 1;
+            background-color: #171f26;
+            border: 3px solid #3d4a57;
+            border-radius: 12px;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.7);
+            overflow: hidden;
+            position: relative;
+        }
+        .sidebar {
+            width: 270px;
+            background: #1e252d;
+            padding: 10px 5px 30px 5px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+        }
+        .scroll-hint {
+            position: sticky; bottom: 0; width: 100%; background: linear-gradient(transparent, #1e252d 80%);
+            color: #7f8c8d; font-size: 12px; font-weight: bold; text-align: center; padding: 15px 0 5px 0; pointer-events: none; z-index: 20;
+        }
+        #parts-toolbar { border-left: 3px solid #3d4a57; }
+        #gears-toolbar { border-right: 3px solid #3d4a57; }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: #13181d; }
+        .sidebar::-webkit-scrollbar-thumb { background: #4a5a6a; border-radius: 3px; }
+        .sidebar h3 { margin-top: 0; padding-bottom: 8px; border-bottom: 2px solid #3d4a57; width: 85%; text-align: center; font-size: 14px; }
+
+        .tool-item {
+            margin-bottom: 12px;
+            text-align: center;
+            cursor: grab;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 10px 0;
+            border-radius: 10px;
+            transition: background 0.3s;
+        }
+        .tool-item:hover { background: rgba(255,255,255,0.08); }
+        .tool-item p { font-size: 11px; color: #a4b0be; margin: 8px 0 0 0; font-weight: bold; }
+        
+        .tool-item .physics-obj {
+            position: relative !important;
+            left: 0 !important; top: 0 !important;
+        }
+
+        #workspace-wrapper { flex-grow: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        #sandbox-controls {
+            display: none; width: 100%;
+            background: rgba(44, 62, 80, 0.95); border-bottom: 3px solid #3498db;
+            flex-direction: column; padding: 5px; box-sizing: border-box; flex-shrink: 0;
+            z-index: 10;
+        }
+        .sandbox-row { display: flex; align-items: center; justify-content: center; overflow-x: auto; padding: 5px 10px; gap: 8px; }
+        .sandbox-row::-webkit-scrollbar { height: 4px; }
+        .sandbox-row::-webkit-scrollbar-track { background: transparent; }
+        .sandbox-row::-webkit-scrollbar-thumb { background: #3498db; border-radius: 2px; }
+        .sandbox-btn {
+            background: #34495e; color: white; border: 1px solid #7f8c8d; padding: 5px 12px;
+            border-radius: 5px; cursor: pointer; white-space: nowrap; font-size: 12px; transition: 0.2s;
+        }
+        .sandbox-btn:hover { background: #3498db; border-color: #2980b9; }
+        .sandbox-btn.active { background: #e74c3c; border-color: #c0392b; box-shadow: 0 0 10px #e74c3c; transform: scale(1.05); }
+        .sandbox-label { color: #f1c40f; font-weight: bold; font-size: 13px; white-space: nowrap; }
+        
+        .tool-danger { background: #c0392b !important; border-color: #e74c3c !important; }
+        .tool-magic { background: #8e44ad !important; border-color: #9b59b6 !important; }
+
+        #workspace {
+            flex-grow: 1; position: relative; background-color: #1a222a;
+            background-image: radial-gradient(rgba(255,255,255,0.05) 2px, transparent 2px); background-size: 30px 30px;
+            touch-action: none; overflow: hidden;
+        }
+        #blueprint-layer, #belts-layer, #wires-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        #wires-layer { z-index: 3; }
+        #belts-layer { z-index: 4; }
+        #objects-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
+        #effects-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:100; }
+
+        .physics-obj {
+            position: absolute; user-select: none; box-sizing: border-box; flex-shrink: 0;
+            display: flex; justify-content: center; align-items: center; transform-origin: center center;
+        }
+
+        /* ----- استعادة الأشكال الدائرية والأصلية بدقة ----- */
+        .gear, .motor, .motor-wind, .motor-water, .part-fan, .part-winch, .part-wheel, .part-robot, .part-car, .part-cam, .part-crank {
+            border-radius: 50% !important;
+            min-width: var(--size); min-height: var(--size); max-width: var(--size); max-height: var(--size);
+        }
+
+        .gear {
+            border: var(--border-size) dashed rgba(0,0,0,0.6); background: radial-gradient(circle at 30% 30%, var(--gear-color), #222);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), inset 2px 2px 5px rgba(255,255,255,0.3), 0 8px 15px rgba(0,0,0,0.6);
+        }
+        .gear::after {
+            content: ''; width: 30%; height: 30%; background: radial-gradient(circle, #ecf0f1, #95a5a6);
+            border-radius: 50%; border: 4px solid #2f3640; position: absolute; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6), 0 2px 4px rgba(255,255,255,0.2);
+        }
+        
+        .motor { 
+            background: radial-gradient(circle, #3498db, #2980b9); border: 8px solid #1abc9c; box-shadow: 0 0 25px rgba(52, 152, 219, 0.7), inset 0 0 10px #000; transition: box-shadow 0.3s; 
+        }
+        .motor::after { content: '⚡'; font-size: 28px; text-shadow: 0 0 10px #fff; }
+        .motor-wind { background: radial-gradient(circle, #ecf0f1, #bdc3c7); border: 8px solid #3498db; box-shadow: 0 0 20px rgba(52, 152, 219, 0.5); }
+        .motor-wind::after { content: '🌬️'; font-size: 28px; }
+        .motor-water { background: radial-gradient(circle, #2980b9, #34495e); border: 8px solid #f1c40f; box-shadow: 0 0 20px rgba(41, 128, 185, 0.5); }
+        .motor-water::after { content: '💧'; font-size: 28px; }
+
+        /* ---------- Electrical Components Fixed Sizes & Shapes ---------- */
+        .part-battery {
+            width: 50px !important; height: 80px !important; min-width: 50px !important; min-height: 80px !important;
+            border-radius: 8px !important; background: linear-gradient(180deg, #2c3e50 30%, #e74c3c 30%);
+            border: 4px solid #bdc3c7; box-shadow: 0 8px 15px rgba(0,0,0,0.7);
+        }
+        .part-battery::before { content: '+'; position: absolute; top: 2px; color: #fff; font-weight: bold; font-size: 16px; }
+        .part-battery::after { content: '-'; position: absolute; bottom: 2px; color: #fff; font-weight: bold; font-size: 16px; }
+        .part-battery-top { position: absolute; top: -12px; width: 20px; height: 8px; background: #bdc3c7; border-radius: 3px 3px 0 0; }
+
+        .part-switch {
+            width: 50px !important; height: 60px !important; min-width: 50px !important; min-height: 60px !important;
+            border-radius: 8px !important; background: #34495e; border: 4px solid #2c3e50; box-shadow: 0 8px 15px rgba(0,0,0,0.7);
+            cursor: pointer;
+        }
+        .part-switch::after {
+            content: 'OFF'; display:flex; justify-content:center; align-items:center; font-size:10px; color:#fff; font-weight:bold;
+            position: absolute; top: 5px; width: 30px; height: 24px; border-radius: 4px;
+            background: radial-gradient(circle, #e74c3c, #c0392b); border: 2px solid #111; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        .switch-on::after { content: 'ON'; top: 23px; background: radial-gradient(circle, #2ecc71, #27ae60); box-shadow: 0 0 15px #2ecc71; }
+
+        .part-bulb {
+            width: 50px !important; height: 50px !important; min-width: 50px !important; min-height: 50px !important;
+            border-radius: 50% 50% 10px 10px !important; background: radial-gradient(circle, #bdc3c7, #7f8c8d);
+            border: 3px solid #34495e; box-shadow: 0 5px 10px rgba(0,0,0,0.5); transition: all 0.3s;
+        }
+        .part-bulb::after { content: ''; position: absolute; bottom: -10px; width: 20px; height: 10px; background: #2c3e50; border-radius: 0 0 5px 5px; }
+        .bulb-on { background: radial-gradient(circle, #fff, #f1c40f) !important; border-color: #f39c12 !important; box-shadow: 0 0 40px #f1c40f, inset 0 0 20px #fff !important; }
+        .bulb-on::before { content: '💡'; position: absolute; font-size: 24px; text-shadow: 0 0 10px #fff; }
+
+        /* ---------- Crank Gear ---------- */
+        .part-crank { 
+            border: var(--border-size) dashed #8e44ad; background: radial-gradient(circle at 30% 30%, #9b59b6, #222); box-shadow: inset 0 0 15px rgba(0,0,0,0.8), inset 2px 2px 5px rgba(255,255,255,0.3), 0 8px 15px rgba(0,0,0,0.6); z-index: 10; 
+        }
+        .part-crank::before { content: ''; position: absolute; left: calc(50% + var(--size) * 0.35 - 10px); top: calc(50% - 10px); width: 20px; height: 20px; background: #f1c40f; border-radius: 50%; border: 3px solid #d35400; box-shadow: 0 5px 10px rgba(0,0,0,0.5); z-index: 15; }
+        .part-crank::after { content: ''; width: 30%; height: 30%; background: radial-gradient(circle, #ecf0f1, #95a5a6); border-radius: 50%; border: 4px solid #2f3640; position: absolute; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); z-index: 1; }
+
+        /* ---------- Slotted Levers Drawings ---------- */
+        .part-slot-straight { width: 180px !important; height: 40px !important; min-width: 180px !important; background-color: transparent !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 40'%3E%3Cdefs%3E%3Cmask id='mStraight'%3E%3Crect width='180' height='40' fill='white'/%3E%3Crect x='45' y='9' width='120' height='22' rx='11' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Crect x='2' y='5' width='176' height='30' rx='15' fill='%2395a5a6' stroke='%232c3e50' stroke-width='3' mask='url(%23mStraight)'/%3E%3Crect x='45' y='9' width='120' height='22' rx='11' fill='none' stroke='%232c3e50' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='8' fill='%232c3e50'/%3E%3C/svg%3E"); }
+        .part-slot-angled { width: 140px !important; height: 140px !important; min-width: 140px !important; background-color: transparent !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 140'%3E%3Cdefs%3E%3Cmask id='mAngled'%3E%3Crect width='140' height='140' fill='white'/%3E%3Crect x='9' y='15' width='22' height='80' rx='11' fill='black'/%3E%3Crect x='45' y='109' width='80' height='22' rx='11' fill='black'/%3E%3C/mask%3E%3C/defs%3E%3Cpath d='M5,15 Q5,5 15,5 L25,5 Q35,5 35,15 L35,100 L125,100 Q135,100 135,110 L135,130 Q135,140 125,140 L15,140 Q5,140 5,130 Z' fill='%2395a5a6' stroke='%232c3e50' stroke-width='3' mask='url(%23mAngled)'/%3E%3Crect x='9' y='15' width='22' height='80' rx='11' fill='none' stroke='%232c3e50' stroke-width='2'/%3E%3Crect x='45' y='109' width='80' height='22' rx='11' fill='none' stroke='%232c3e50' stroke-width='2'/%3E%3Ccircle cx='20' cy='120' r='8' fill='%232c3e50'/%3E%3C/svg%3E"); }
+        
+        /* Perfected Curved Slot - Beautiful C Shape Arc */
+        .part-slot-curved { width: 210px !important; height: 160px !important; min-width: 210px !important; background-color: transparent !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 210 160'%3E%3Cdefs%3E%3Cmask id='mCurve'%3E%3Crect width='210' height='160' fill='white'/%3E%3Cpath d='M 30,80 Q 105,0 180,80' fill='none' stroke='black' stroke-width='14' stroke-linecap='round'/%3E%3C/mask%3E%3C/defs%3E%3Cpath d='M 30,80 Q 105,0 180,80' fill='none' stroke='%2395a5a6' stroke-width='34' stroke-linecap='round' mask='url(%23mCurve)'/%3E%3Cpath d='M 30,80 Q 105,0 180,80' fill='none' stroke='%232c3e50' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='30' cy='80' r='8' fill='%232c3e50'/%3E%3C/svg%3E"); }
+
+        /* Cams */
+        .part-cam { box-shadow: 0 10px 15px rgba(0,0,0,0.6); }
+        .part-cam-egg { border-radius: 50% 50% 50% 50% / 70% 70% 30% 30% !important; background: radial-gradient(circle at 50% 70%, #9b59b6, #2c3e50); border: 6px solid #8e44ad; }
+        .part-cam-egg::after { content: ''; width: 20px; height: 20px; background: #ecf0f1; border-radius: 50%; position: absolute; top: 60%; border: 4px solid #2f3640; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); }
+        .part-cam-drop { border-radius: 50% 50% 50% 50% / 80% 80% 20% 20% !important; background: radial-gradient(circle at 50% 80%, #e74c3c, #2c3e50); border: 6px solid #c0392b; }
+        .part-cam-drop::after { content: ''; width: 20px; height: 20px; background: #ecf0f1; border-radius: 50%; position: absolute; top: 70%; border: 4px solid #2f3640; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); }
+        .part-cam-snail { border-radius: 50% !important; background-color: transparent !important; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50,50 L50,10 A40,40 0 0,1 90,50 A40,40 0 0,1 50,90 A40,40 0 0,1 10,50 A40,40 0 0,1 50,20 Z' fill='%23f1c40f' stroke='%23f39c12' stroke-width='4' stroke-linejoin='round'/%3E%3Ccircle cx='50' cy='50' r='10' fill='%23ecf0f1' stroke='%232f3640' stroke-width='3'/%3E%3C/svg%3E"); background-size: cover; box-shadow: none; border: none; }
+        .part-cam-wave { border-radius: 50% !important; clip-path: polygon(50% 0%, 61% 11%, 79% 9%, 83% 25%, 98% 35%, 92% 50%, 98% 65%, 83% 75%, 79% 91%, 61% 89%, 50% 100%, 39% 89%, 21% 91%, 17% 75%, 2% 65%, 8% 50%, 2% 35%, 17% 25%, 21% 9%, 39% 11%); background: radial-gradient(circle at 50% 50%, #1abc9c, #2c3e50); box-shadow: 0 10px 15px rgba(0,0,0,0.6); border: none; }
+        .part-cam-wave::after { content: ''; width: 20px; height: 20px; background: #ecf0f1; border-radius: 50%; position: absolute; top: 40%; border: 4px solid #2f3640; box-shadow: inset 0 3px 6px rgba(0,0,0,0.6); }
+
+        .part-piston { min-width: 30px !important; border-radius: 10px !important; width: 30px !important; height: 160px !important; background: linear-gradient(90deg, #7f8c8d, #bdc3c7, #7f8c8d); border: 3px solid #2c3e50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); transform-origin: center bottom; }
+        .part-piston::before { content: ''; position: absolute; bottom: 20px; width: 8px; height: 110px; background: #2c3e50; border-radius: 4px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.8); }
+        .part-piston-flat::after { content: ''; position: absolute; bottom: -5px; width: 50px; height: 15px; background: #e74c3c; border-radius: 8px; left: -13px; border: 2px solid #c0392b; }
+        .part-piston-roller::after { content: ''; position: absolute; bottom: -15px; width: 26px; height: 26px; background: radial-gradient(circle, #f1c40f, #e67e22); border-radius: 50%; left: -1px; border: 3px solid #2c3e50; box-shadow: 0 5px 10px rgba(0,0,0,0.5); }
+
+        /* Output Parts original styles */
+        .part-fan { background-color: #34495e; border: 8px solid #7f8c8d; background-image: conic-gradient(from 0deg, #2c3e50 0deg 40deg, #95a5a6 40deg 90deg, #2c3e50 90deg 130deg, #95a5a6 130deg 180deg, #2c3e50 180deg 220deg, #95a5a6 220deg 270deg, #2c3e50 270deg 310deg, #95a5a6 310deg 360deg); box-shadow: 0 10px 20px rgba(0,0,0,0.6); }
+        .part-fan::after { content:''; width:20%; height:20%; background:#222; border-radius:50%; position:absolute; }
+        .part-conveyor { border-radius: 30px !important; width: 160px !important; min-width: 160px !important; background: repeating-linear-gradient(45deg, #222, #222 20px, #f39c12 20px, #f39c12 40px); border: 5px solid #7f8c8d; box-shadow: 0 10px 15px rgba(0,0,0,0.6); }
+        .part-conveyor::before { content: ''; position: absolute; left: 0; top: 0; width: var(--size); height: var(--size); border-radius: 50%; background: radial-gradient(#95a5a6, #34495e); border: 5px dashed #111; box-sizing: border-box; }
+        .part-winch { background: radial-gradient(circle, #34495e, #111); border: 10px solid #f1c40f; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+        .part-winch::after { content: '🏗️'; font-size: 45px; position: absolute; }
+        .part-wheel { background: radial-gradient(circle, #7f8c8d 30%, #222 35%); border: 15px solid #111; box-shadow: 0 10px 20px rgba(0,0,0,0.7); }
+        .part-wheel::after { content: '🚲'; font-size: 35px; position: absolute; }
+        .part-robot { background: radial-gradient(circle, #2c3e50, #111); border: 8px solid #95a5a6; box-shadow: 0 0 25px rgba(26, 188, 156, 0.6), inset 0 0 15px #1abc9c; }
+        .part-robot::before { content: ''; position: absolute; width: 140%; height: 35%; background: linear-gradient(90deg, #7f8c8d, #bdc3c7, #7f8c8d); border-radius: 10px; z-index: -1; box-shadow: 0 5px 10px rgba(0,0,0,0.5); }
+        .part-robot::after { content: '⚙️'; font-size: 40px; position: absolute; color: #1abc9c; }
+        .part-car { background: radial-gradient(circle, #e74c3c 20%, #c0392b 40%, #111 45%); border: 15px dashed #222; box-shadow: 0 10px 25px rgba(0,0,0,0.8); }
+        .part-car::after { content: '🏎️'; font-size: 45px; position: absolute; }
+        
+        .machine-active { animation: machineVibrate 0.1s infinite alternate; }
+        @keyframes machineVibrate { from { transform: translate(0, 0) rotate(0deg); } to { transform: translate(1px, 1px) rotate(0.1deg); } }
+        .spark { position: absolute; width: 4px; height: 12px; background: #f1c40f; border-radius: 5px; box-shadow: 0 0 10px #f39c12, 0 0 20px #e67e22; pointer-events: none; z-index: 50; animation: shootSpark 0.5s linear forwards; }
+        @keyframes shootSpark { 0% { transform: scale(1) translateY(0); opacity: 1; } 100% { transform: scale(0) translateY(-50px) rotate(45deg); opacity: 0; } }
+        .jammed { border-color: #ff0000 !important; box-shadow: 0 0 30px #ff0000, inset 0 0 20px #ff0000 !important; }
+        .low-torque { border-color: #f1c40f !important; box-shadow: 0 0 30px #f1c40f !important; }
+        .dragging { z-index: 100 !important; cursor: grabbing !important; transform: scale(1.1); opacity: 0.9; }
+        .moving-peg { stroke: #f39c12 !important; fill: rgba(243, 156, 18, 0.4) !important; stroke-dasharray: none !important; }
+        
+        .belt-selectable { cursor: crosshair !important; outline: 3px dashed #e67e22; outline-offset: 5px; border-radius: 50%; }
+        .belt-selected { outline: 4px solid #f1c40f !important; outline-offset: 5px; background-color: rgba(241, 196, 15, 0.3); }
+        .wire-selectable { cursor: crosshair !important; outline: 3px dashed #3498db; outline-offset: 5px; border-radius: 50%; }
+        .wire-selected { outline: 4px solid #00d2ff !important; outline-offset: 5px; background-color: rgba(52, 152, 219, 0.3); }
+
+        #libraries-container { width: 100%; max-width: 1400px; margin-top: 10px; display: flex; gap: 15px; flex-shrink: 0; }
+        @media (max-width: 768px) { #libraries-container { flex-direction: column; } }
+        .library-wrapper { flex: 1; background: #1e272e; border: 2px solid #576574; border-radius: 10px; padding: 10px; box-sizing: border-box; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); overflow: hidden; }
+        .library-wrapper h3 { margin: 0 0 10px 0; font-size: 16px; text-align: center; }
+        .library-regular-title { color: #2ecc71; }
+        .library-custom-title { color: #f1c40f; }
+        .library-items { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 5px; justify-content: flex-start;}
+        .library-items::-webkit-scrollbar { height: 6px; }
+        .library-items::-webkit-scrollbar-track { background: #13181d; border-radius: 3px; }
+        .library-items::-webkit-scrollbar-thumb { background: #576574; border-radius: 3px; }
+        
+        .library-item { background: #2c3e50; border: 2px solid #34495e; border-radius: 8px; padding: 10px; cursor: pointer; min-width: 100px; text-align: center; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .library-item:hover { background: #34495e; transform: translateY(-5px); border-color: #f1c40f; box-shadow: 0 6px 12px rgba(241, 196, 15, 0.3); }
+        .library-icon { font-size: 35px; margin-bottom: 5px; }
+        .library-name { font-size: 12px; font-weight: bold; color: #ecf0f1; margin: 0; }
+
+        .item-action-btn { position: absolute; top: 5px; border: none; border-radius: 50%; color: white; cursor: pointer; width: 25px; height: 25px; font-size: 12px; z-index: 2; display: flex; justify-content: center; align-items: center; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .item-edit-btn { right: 5px; background: rgba(52, 152, 219, 0.8); }
+        .item-delete-btn { left: 5px; background: rgba(231, 76, 60, 0.8); }
+        .item-edit-btn:hover { background: #3498db; transform: scale(1.1); }
+        .item-delete-btn:hover { background: #e74c3c; transform: scale(1.1); }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .modal-content { background: linear-gradient(135deg, #2c3e50, #1a252f); border: 3px solid #f1c40f; border-radius: 15px; padding: 25px; width: 90%; max-width: 600px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.9); position: relative; animation: modalPop 0.3s ease-out; }
+        @keyframes modalPop { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 28px; color: #e74c3c; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .close-btn:hover { color: #c0392b; transform: scale(1.2); }
+        
+        #body-canvas { background: #1e272e; border: 2px dashed #7f8c8d; border-radius: 10px; cursor: crosshair; margin: 15px 0; touch-action: none; width: 100%; max-width: 600px; height: 300px; display: block;}
+        .file-upload-wrapper { margin: 10px 0; background: #34495e; padding: 10px; border-radius: 8px; }
+        .modal-btn { padding: 10px 20px; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin: 5px; transition: 0.3s; }
+        .modal-btn:hover { transform: scale(1.05); }
+        .canvas-tools { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; background: #2c3e50; padding: 10px; border-radius: 8px; flex-wrap: wrap;}
+        .canvas-tool-btn { background: #34495e; border: 1px solid #7f8c8d; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .canvas-tool-btn:hover { background: #3498db; }
+        .canvas-tool-btn.active { background: #e74c3c; border-color: #c0392b; }
+    </style>
+</head>
+<body onclick="initAudio()">
+
+    <div id="header">
+        <div id="story"></div>
+        <div id="status-container">
+            <div id="status">الآلة متوقفة 🛑</div>
+            <button id="toggle-belt-btn" class="btn-action btn-belt" onclick="toggleBeltMode()">🔗 أداة السيور</button>
+            <button id="toggle-wire-btn" class="btn-action btn-wire" onclick="toggleWireMode()">🔌 أداة الأسلاك</button>
+            <button id="next-level-btn" class="btn-action" onclick="goToNextLevel()">المهمة التالية ➡️</button>
+            <button id="go-sandbox-btn" class="btn-action" style="display:inline-block; background: #8e44ad;" onclick="goToSandbox()">الوضع الحر 🛠️</button>
+            <button id="save-sandbox-btn" class="btn-action" style="background: #9b59b6;" onclick="saveCustomMachine()">حفظ اختراعي 💾</button>
+        </div>
+    </div>
+
+    <div id="game-area">
+        <div id="parts-toolbar" class="sidebar">
+            <h3 style="color:#e74c3c">⚡ كهرباء وطاقة</h3>
+            <div class="tool-item" onpointerdown="createItem(event, 30, 'battery', 'part-battery', 'بطارية')">
+                <div class="physics-obj part-battery" style="position: relative;">
+                    <div class="part-battery-top"></div>
+                </div>
+                <p>بطارية طاقة</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 25, 'switch', 'part-switch', 'مفتاح كهرباء')">
+                <div class="physics-obj part-switch" style="position: relative;"></div>
+                <p>مفتاح كهرباء (ON/OFF)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 30, 'bulb', 'part-bulb', 'لمبة')">
+                <div class="physics-obj part-bulb" style="position: relative;"></div>
+                <p>لمبة إضاءة</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 40, 'motor', 'motor', 'المولد')">
+                <div class="physics-obj motor" style="position: relative; --size:80px;"></div>
+                <p>محرك كهربائي</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'motor', 'motor-wind', 'طاحونة هواء')">
+                <div class="physics-obj motor-wind" style="position: relative; --size:100px;"></div>
+                <p>طاحونة هواء</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'motor', 'motor-water', 'عجلة مائية')">
+                <div class="physics-obj motor-water" style="position: relative; --size:100px;"></div>
+                <p>عجلة مائية</p>
+            </div>
+            
+            <h3 style="color:#f39c12; margin-top:10px;">📐 المكابس والأذرع</h3>
+            <div class="tool-item" onpointerdown="createItem(event, 25, 'piston', 'part-piston part-piston-flat', 'مكبس مسطح')">
+                <div class="physics-obj part-piston part-piston-flat" style="position: relative;"></div>
+                <p>مكبس مسطح</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 25, 'piston', 'part-piston part-piston-roller', 'مكبس بعجلة')">
+                <div class="physics-obj part-piston part-piston-roller" style="position: relative;"></div>
+                <p>مكبس بعجلة</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 0, 'slot', 'part-slot part-slot-straight', 'ذراع مستقيم')">
+                <div class="physics-obj part-slot part-slot-straight" style="position: relative;"></div>
+                <p>ذراع مفرغ مستقيم</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 0, 'slot', 'part-slot part-slot-angled', 'ذراع زاوية')">
+                <div class="physics-obj part-slot part-slot-angled" style="position: relative;"></div>
+                <p>ذراع مفرغ زاوية (L)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 0, 'slot', 'part-slot part-slot-curved', 'ذراع مقوس')">
+                <div class="physics-obj part-slot part-slot-curved" style="position: relative;"></div>
+                <p>ذراع مفرغ مقوس</p>
+            </div>
+
+            <h3 style="color:#2ecc71; margin-top:10px;">⚙️ آلات ومخرجات</h3>
+            <div class="tool-item" onpointerdown="createItem(event, 60, 'fan', 'part-fan', 'المروحة')">
+                <div class="physics-obj part-fan" style="position: relative; --size:120px;"></div>
+                <p>مروحة تبريد</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 40, 'conveyor', 'part-conveyor', 'السير')">
+                <div class="physics-obj part-conveyor" style="position: relative; --size:80px; width: 160px;"></div>
+                <p>سير ناقل صناعي</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 60, 'winch', 'part-winch', 'الرافعة')">
+                <div class="physics-obj part-winch" style="position: relative; --size:120px;"></div>
+                <p>رافعة أثقال</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'wheel', 'part-wheel', 'عجلة')">
+                <div class="physics-obj part-wheel" style="position: relative; --size:100px;"></div>
+                <p>عجلة دراجة</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 60, 'robot', 'part-robot', 'روبوت')">
+                <div class="physics-obj part-robot" style="position: relative; --size:120px;"></div>
+                <p>مقبض روبوت</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 70, 'car', 'part-car', 'سيارة')">
+                <div class="physics-obj part-car" style="position: relative; --size:140px;"></div>
+                <p>عجلة سيارة</p>
+            </div>
+            <div class="scroll-hint">▼ مرر للأسفل لاستكشاف الباقي ▼</div>
+        </div>
+
+        <div id="workspace-wrapper">
+            <div id="sandbox-controls">
+                <div class="sandbox-row">
+                    <span class="sandbox-label">الهيكل الخارجي:</span>
+                    <button class="sandbox-btn tool-magic" onclick="openDrawingModal()">🎨 محرر رسم الهيكل المتقدم</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('car')">🏎️ سيارة</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('robot')">🦾 روبوت</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('ac')">❄️ تكييف</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('crane')">🏗️ رافعة</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('heli')">🚁 مروحية</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('ship')">🚢 سفينة</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('stage')">🎭 مسرح أوتوماتا</button>
+                    <button class="sandbox-btn" onclick="setSandboxBody('none')">❌ بدون هيكل</button>
+                </div>
+                <div class="sandbox-row">
+                    <span class="sandbox-label">التحكم بالدبابيس:</span>
+                    <button class="sandbox-btn" id="tool-motor" onclick="selectSandboxTool('motor')">➕ دبوس محرك</button>
+                    <button class="sandbox-btn" id="tool-electrical" onclick="selectSandboxTool('electrical')" style="background:#27ae60">➕ دبوس كهرباء</button>
+                    <button class="sandbox-btn" id="tool-part" onclick="selectSandboxTool('part')">➕ دبوس آلة/ذراع</button>
+                    <button class="sandbox-btn" id="tool-gear" onclick="selectSandboxTool('gear')">➕ دبوس ترس/كامة</button>
+                    <button class="sandbox-btn tool-warning" id="tool-move" onclick="selectSandboxTool('move')">✋ تحريك</button>
+                    <button class="sandbox-btn tool-danger" id="tool-delete" onclick="selectSandboxTool('delete')">🗑️ مسح</button>
+                    <button class="sandbox-btn" onclick="clearSandbox()" style="background:#7f8c8d">🧹 مسح الكل</button>
+                </div>
+            </div>
+
+            <div id="workspace">
+                <svg id="blueprint-layer"></svg>
+                <svg id="belts-layer"></svg>
+                <svg id="wires-layer"></svg>
+                <div id="objects-layer"></div>
+                <div id="effects-layer"></div>
+            </div>
+        </div>
+
+        <div id="gears-toolbar" class="sidebar">
+            <h3 style="color:#3498db">نواقل الحركة والتروس</h3>
+            
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'crank', 'part-crank', 'ترس المرفق')">
+                <div class="physics-obj part-crank" style="position: relative; --size:100px; --border-size:12px;"></div>
+                <p>ترس بمرفق (Crank)</p>
+            </div>
+
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'cam', 'part-cam part-cam-egg', 'كامة بيضاوية')">
+                <div class="physics-obj part-cam part-cam-egg" style="position: relative; --size:100px;"></div>
+                <p>كامة بيضاوية (صعود ناعم)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'cam', 'part-cam part-cam-drop', 'كامة قطرة')">
+                <div class="physics-obj part-cam part-cam-drop" style="position: relative; --size:100px;"></div>
+                <p>كامة قطرة (قفز سريع)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'cam', 'part-cam part-cam-snail', 'كامة حلزونية')">
+                <div class="physics-obj part-cam part-cam-snail" style="position: relative; --size:100px;"></div>
+                <p>كامة حلزونية (سقوط حر)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 50, 'cam', 'part-cam part-cam-wave', 'كامة مموجة')">
+                <div class="physics-obj part-cam part-cam-wave" style="position: relative; --size:100px;"></div>
+                <p>كامة مموجة (اهتزاز)</p>
+            </div>
+
+            <div class="tool-item" onpointerdown="createItem(event, 30, 'gear', 'gear', 'ترس دقيق')">
+                <div class="physics-obj gear" style="position: relative; --size:60px; --border-size:8px; --gear-color:var(--gear-tiny);"></div>
+                <p>ترس دقيق</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 40, 'gear', 'gear', 'ترس صغير')">
+                <div class="physics-obj gear" style="position: relative; --size:80px; --border-size:10px; --gear-color:var(--gear-small);"></div>
+                <p>ترس صغير</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 60, 'gear', 'gear', 'ترس متوسط')">
+                <div class="physics-obj gear" style="position: relative; --size:120px; --border-size:12px; --gear-color:var(--gear-medium);"></div>
+                <p>ترس متوسط</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 80, 'gear', 'gear', 'ترس كبير')">
+                <div class="physics-obj gear" style="position: relative; --size:160px; --border-size:14px; --gear-color:var(--gear-large);"></div>
+                <p>ترس كبير (عزم)</p>
+            </div>
+            <div class="tool-item" onpointerdown="createItem(event, 100, 'gear', 'gear', 'ترس عملاق')">
+                <div class="physics-obj gear" style="position: relative; --size:200px; --border-size:18px; --gear-color:var(--gear-giant);"></div>
+                <p>ترس عملاق (عزم جبار)</p>
+            </div>
+            <div class="scroll-hint">▼ مرر للأسفل للمزيد ▼</div>
+        </div>
+    </div>
+
+    <div id="libraries-container">
+        <div class="library-wrapper">
+            <h3 class="library-regular-title">مكتبة الآلات الأساسية 🏆</h3>
+            <div id="library-items-regular" class="library-items"></div>
+        </div>
+        <div class="library-wrapper">
+            <h3 class="library-custom-title">اختراعاتي الحرة 🌟</h3>
+            <div id="library-items-custom" class="library-items">
+                <p style="color: #7f8c8d; font-size: 14px; margin: 10px;">ادخل "الوضع الحر" من الأعلى واصنع آلتك!</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event, 'modal-overlay')">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="closeModal(null, 'modal-overlay')">&times;</span>
+            <h2 id="modal-title" style="color:#f1c40f">اسم الآلة</h2>
+            <div id="modal-icon" style="font-size:80px; margin:15px 0;">🤖</div>
+            <p id="modal-desc" style="color:#bdc3c7; margin-bottom:20px;">وصف الآلة...</p>
+            <button class="modal-btn" style="background:#2ecc71" onclick="viewMachine()">👁️ عرض أو تشغيل</button>
+            <button class="modal-btn" style="background:#3498db" onclick="replayMachine()">🔄 إعادة التركيب</button>
+        </div>
+    </div>
+
+    <div id="drawing-modal" class="modal-overlay" onclick="closeModal(event, 'drawing-modal')">
+        <div class="modal-content" style="max-width: 700px;" onclick="event.stopPropagation()">
+            <span class="close-btn" onclick="closeModal(null, 'drawing-modal')">&times;</span>
+            <h2 style="color:#3498db; margin-top:0;">🎨 محرر رسم الهيكل المتقدم</h2>
+            <div class="canvas-tools">
+                <button class="canvas-tool-btn active" id="d-tool-pencil" onclick="setDrawTool('pencil')">✏️ رسم حر</button>
+                <button class="canvas-tool-btn" id="d-tool-rect" onclick="setDrawTool('rect')">⬛ مستطيل</button>
+                <button class="canvas-tool-btn" id="d-tool-circle" onclick="setDrawTool('circle')">⭕ دائرة</button>
+                <button class="canvas-tool-btn" id="d-tool-move" onclick="setDrawTool('move')">✋ تحريك شكل</button>
+                <input type="color" id="d-color" value="#3498db" style="width:40px; height:30px; cursor:pointer;">
+            </div>
+            <canvas id="body-canvas" width="600" height="300"></canvas>
+            <div class="file-upload-wrapper">
+                <label style="color:#ecf0f1; font-weight:bold;">أو ارفع صورة للهيكل:</label>
+                <input type="file" id="image-upload" accept="image/*" style="margin-top:5px; color:#fff;">
+            </div>
+            <button class="modal-btn" style="background:#e74c3c" onclick="clearCanvas()">مسح الكل 🧹</button>
+            <button class="modal-btn" style="background:#2ecc71" onclick="saveCustomBody()">اعتماد التصميم ✔️</button>
+        </div>
+    </div>
+
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let actx = null; let engineOsc = null; let engineGain = null;
+        function initAudio() { if(!actx) actx = new AudioContext(); if(actx.state === 'suspended') actx.resume(); }
+        
+        function playMechanicalSound(isPlaying) {
+            if(!actx) return;
+            if(isPlaying) {
+                if(!engineOsc) {
+                    engineOsc = actx.createOscillator(); engineOsc.type = 'sawtooth'; engineOsc.frequency.value = 45; 
+                    engineGain = actx.createGain(); engineGain.gain.value = 0.05; 
+                    engineOsc.connect(engineGain); engineGain.connect(actx.destination); engineOsc.start();
+                }
+            } else { if(engineOsc) { engineOsc.stop(); engineOsc.disconnect(); engineOsc = null; } }
+        }
+
+        function playBellSound() {
+            if(!actx) return;
+            let osc1 = actx.createOscillator(); let osc2 = actx.createOscillator(); let osc3 = actx.createOscillator();
+            let gain = actx.createGain();
+            osc1.type = 'sine'; osc2.type = 'sine'; osc3.type = 'triangle';
+            osc1.frequency.setValueAtTime(400, actx.currentTime);
+            osc2.frequency.setValueAtTime(600, actx.currentTime);
+            osc3.frequency.setValueAtTime(800, actx.currentTime);
+            
+            gain.gain.setValueAtTime(0, actx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.8, actx.currentTime + 0.02); 
+            gain.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + 1.5); 
+            
+            osc1.connect(gain); osc2.connect(gain); osc3.connect(gain); gain.connect(actx.destination);
+            
+            osc1.start(); osc2.start(); osc3.start();
+            osc1.stop(actx.currentTime + 1.5); osc2.stop(actx.currentTime + 1.5); osc3.stop(actx.currentTime + 1.5);
+        }
+
+        function createSparks(x, y) {
+            const effectsLayer = document.getElementById('effects-layer');
+            for(let i=0; i<3; i++) {
+                const spark = document.createElement('div'); spark.className = 'spark';
+                spark.style.left = `${x}px`; spark.style.top = `${y}px`; spark.style.transform = `rotate(${Math.random() * 360}deg)`;
+                effectsLayer.appendChild(spark); setTimeout(() => spark.remove(), 500);
+            }
+        }
+
+        const drawingCanvas = document.getElementById('body-canvas'); const ctx = drawingCanvas.getContext('2d');
+        let drawShapes = []; let currentDrawTool = 'pencil'; let isDrawing = false; let startX, startY; let selectedShape = null; let dragOffsetX = 0, dragOffsetY = 0; let currentPath = null;
+        function renderCanvas() {
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+            drawShapes.forEach(shape => {
+                ctx.strokeStyle = shape.color; ctx.fillStyle = shape.color; ctx.lineWidth = 5; ctx.lineCap = 'round';
+                if (shape.type === 'path') { if (shape.points.length > 0) { ctx.beginPath(); ctx.moveTo(shape.points[0].x, shape.points[0].y); shape.points.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke(); }
+                } else if (shape.type === 'rect') { ctx.fillRect(shape.x, shape.y, shape.w, shape.h);
+                } else if (shape.type === 'circle') { ctx.beginPath(); ctx.arc(shape.cx, shape.cy, shape.r, 0, Math.PI * 2); ctx.fill();
+                } else if (shape.type === 'image') { ctx.drawImage(shape.img, shape.x, shape.y, shape.w, shape.h); }
+            });
+        }
+        function setDrawTool(tool) { currentDrawTool = tool; document.querySelectorAll('.canvas-tool-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('d-tool-' + tool).classList.add('active'); drawingCanvas.style.cursor = tool === 'move' ? 'grab' : 'crosshair'; }
+        drawingCanvas.addEventListener('mousedown', (e) => {
+            const rect = drawingCanvas.getBoundingClientRect(); const x = (e.clientX - rect.left) * (drawingCanvas.width / rect.width); const y = (e.clientY - rect.top) * (drawingCanvas.height / rect.height); const color = document.getElementById('d-color').value;
+            if (currentDrawTool === 'move') {
+                for (let i = drawShapes.length - 1; i >= 0; i--) { let s = drawShapes[i]; if (s.type === 'rect' || s.type === 'image') { if (x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h) { selectedShape = s; dragOffsetX = x - s.x; dragOffsetY = y - s.y; break; } } else if (s.type === 'circle') { if (Math.hypot(x - s.cx, y - s.cy) <= s.r) { selectedShape = s; dragOffsetX = x - s.cx; dragOffsetY = y - s.cy; break; } } }
+                if(selectedShape) { isDrawing = true; drawingCanvas.style.cursor = 'grabbing'; }
+            } else if (currentDrawTool === 'pencil') { isDrawing = true; currentPath = { type: 'path', color: color, points: [{x,y}] }; drawShapes.push(currentPath);
+            } else if (currentDrawTool === 'rect') { isDrawing = true; startX = x; startY = y; selectedShape = { type: 'rect', x: x, y: y, w: 0, h: 0, color: color }; drawShapes.push(selectedShape);
+            } else if (currentDrawTool === 'circle') { isDrawing = true; startX = x; startY = y; selectedShape = { type: 'circle', cx: x, cy: y, r: 0, color: color }; drawShapes.push(selectedShape); }
+        });
+        drawingCanvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return; const rect = drawingCanvas.getBoundingClientRect(); const x = (e.clientX - rect.left) * (drawingCanvas.width / rect.width); const y = (e.clientY - rect.top) * (drawingCanvas.height / rect.height);
+            if (currentDrawTool === 'move' && selectedShape) { if (selectedShape.type === 'rect' || selectedShape.type === 'image') { selectedShape.x = x - dragOffsetX; selectedShape.y = y - dragOffsetY; } else if (selectedShape.type === 'circle') { selectedShape.cx = x - dragOffsetX; selectedShape.cy = y - dragOffsetY; } } else if (currentDrawTool === 'pencil' && currentPath) { currentPath.points.push({x, y}); } else if (currentDrawTool === 'rect' && selectedShape) { selectedShape.w = x - startX; selectedShape.h = y - startY; } else if (currentDrawTool === 'circle' && selectedShape) { selectedShape.r = Math.hypot(x - startX, y - startY); } renderCanvas();
+        });
+        const stopCanvasAction = () => { isDrawing = false; selectedShape = null; currentPath = null; if(currentDrawTool === 'move') drawingCanvas.style.cursor = 'grab'; };
+        drawingCanvas.addEventListener('mouseup', stopCanvasAction); drawingCanvas.addEventListener('mouseout', stopCanvasAction);
+        function clearCanvas() { drawShapes = []; document.getElementById('image-upload').value = ''; renderCanvas(); }
+        document.getElementById('image-upload').addEventListener('change', function(e) {
+            const reader = new FileReader(); reader.onload = function(event) { const img = new Image(); img.onload = function() { let scale = Math.min(drawingCanvas.width / img.width, drawingCanvas.height / img.height) * 0.8; let w = img.width * scale; let h = img.height * scale; let x = (drawingCanvas.width - w) / 2; let y = (drawingCanvas.height - h) / 2; drawShapes.push({ type: 'image', img: img, x: x, y: y, w: w, h: h }); renderCanvas(); }; img.src = event.target.result; }; if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+        });
+        function saveCustomBody() { renderCanvas(); const dataURL = drawingCanvas.toDataURL('image/png'); customSandboxBody = `<image href="${dataURL}" x="10%" y="10%" width="80%" height="80%" preserveAspectRatio="xMidYMid meet" opacity="0.9"/>`; drawBlueprint(currentMode === 'sandbox' ? sandboxLevelObj : levels[currentLevel]); closeModal(null, 'drawing-modal'); }
+        function openDrawingModal() { clearCanvas(); document.getElementById('drawing-modal').style.display = 'flex'; }
+
+        const workspace = document.getElementById('workspace');
+        const objectsLayer = document.getElementById('objects-layer');
+        const blueprintLayer = document.getElementById('blueprint-layer');
+        const beltsLayer = document.getElementById('belts-layer');
+        const wiresLayer = document.getElementById('wires-layer');
+        const statusEl = document.getElementById('status');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const saveSandboxBtn = document.getElementById('save-sandbox-btn');
+        const storyEl = document.getElementById('story');
+        const gameArea = document.getElementById('game-area');
+        
+        let activeObjects = []; let draggedItem = null; let isSuccess = false; let currentLevel = 0; let currentMode = 'regular'; 
+        let animationFrameId = null; let conveyorOffset = 0; let levelPegs = []; let draggingPeg = null; 
+        let gearsData = { completedMachines: [], savedStates: {}, customLevels: [] };
+        let modalSelectedLevel = { idx: 0, mode: 'regular' }; let isSandboxActive = false; let activeTool = null;
+        let isBeltModeActive = false; let selectedGearForBelt = null; let activeBelts = []; let beltOffsetAnim = 0;
+        let isWireModeActive = false; let selectedNodeForWire = null; let activeWires = []; let dragPointerStartX = 0; let dragPointerStartY = 0;
+        let customSandboxBody = '';
+
+        function showNotification(msg, type = "success") {
+            statusEl.innerText = msg;
+            statusEl.style.background = type === "success" ? "#2ecc71" : "#e74c3c";
+            statusEl.style.color = "#fff";
+            setTimeout(() => {
+                statusEl.style.background = "rgba(0,0,0,0.5)";
+                statusEl.style.color = "#e74c3c";
+                statusEl.innerText = "الوضع الحر 🛠️ - أضف الهياكل والدبابيس";
+            }, 3000);
+        }
+
+        function getPivot(mainType, className, radius) {
+            if (mainType === 'slot') {
+                if(className.includes('slot-angled')) return { x: 20, y: 120 };
+                if(className.includes('slot-curved')) return { x: 30, y: 80 }; 
+                return { x: 20, y: 20 };
+            } else if (mainType === 'piston') {
+                return { x: 15, y: 120 };
+            } else if (mainType === 'battery') {
+                return { x: 25, y: 40 }; 
+            } else if (mainType === 'switch') {
+                return { x: 25, y: 30 };
+            } else if (mainType === 'bulb') {
+                return { x: 25, y: 25 };
+            }
+            return { x: radius, y: radius };
+        }
+
+        const sandboxBodies = {
+            'car': `<path d="M 60 300 L 60 220 L 220 180 L 370 100 L 620 100 L 820 200 L 900 200 L 900 300 Z" fill="url(#accentGrad)" stroke="#c0392b" stroke-width="6"/> <polygon points="380,110 600,110 770,190 420,190" fill="#2c3e50" stroke="#111" stroke-width="4"/> <polygon points="230,185 360,110 400,190" fill="#2c3e50" stroke="#111" stroke-width="4"/>`,
+            'robot': `<path d="M 80 480 L 220 480 L 190 380 L 110 380 Z" fill="url(#metalGrad)" stroke="#3498db" stroke-width="4"/> <rect x="70" y="480" width="160" height="20" rx="5" fill="#222" />`,
+            'ac': `<rect x="90" y="160" width="520" height="180" rx="20" fill="url(#metalGrad)" stroke="#1abc9c" stroke-width="4" opacity="0.85"/> <rect x="100" y="170" width="500" height="160" rx="15" fill="rgba(0,0,0,0.3)" />`,
+            'crane': `<rect x="50" y="380" width="650" height="30" fill="url(#metalGrad)" stroke="#f1c40f" stroke-width="3"/> <polygon points="560,380 640,380 600,50" fill="rgba(241, 196, 15, 0.1)" stroke="#f1c40f" stroke-width="4"/>`,
+            'stage': `<rect x="250" y="350" width="300" height="30" fill="#8e44ad" stroke="#2c3e50" stroke-width="4"/><rect x="270" y="100" width="260" height="250" fill="rgba(142, 68, 173, 0.1)" stroke="#f1c40f" stroke-width="8" rx="15"/><polygon points="250,100 550,100 400,30" fill="#c0392b" stroke="#2c3e50" stroke-width="5"/>`,
+            'heli': `<path d="M 300 200 C 400 200, 450 250, 400 300 L 200 300 C 150 300, 150 200, 300 200 Z" fill="url(#metalGrad)" stroke="#e74c3c" stroke-width="4"/><line x1="350" y1="200" x2="350" y2="100" stroke="#f39c12" stroke-width="12"/><line x1="200" y1="150" x2="500" y2="150" stroke="#34495e" stroke-width="8"/>`,
+            'ship': `<path d="M 100 250 L 600 250 L 550 380 L 150 380 Z" fill="url(#accentGrad)" stroke="#c0392b" stroke-width="4"/><rect x="250" y="120" width="200" height="130" fill="#ecf0f1" stroke="#34495e" stroke-width="6"/><rect x="330" y="60" width="40" height="60" fill="#e74c3c" stroke="#c0392b" stroke-width="4"/>`,
+            'none': ``
+        };
+
+        const levels = [
+            { name: "نظام التكييف", icon: "❄️", story: "<strong>المهمة 1 (نظام التبريد):</strong> ضع المولد والمروحة داخل <strong>هيكل التكييف</strong>.", bodySVG: sandboxBodies['ac'], lines: [ {x1: 150, y1: 250, x2: 530, y2: 250} ], pegs: [ { id: 'm1', x: 150, y: 250, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 250, y: 250, type: 'gear', expectedRadius: 60, label: '' }, { id: 'g2', x: 390, y: 250, type: 'gear', expectedRadius: 80, label: '' }, { id: 'p1', x: 530, y: 250, type: 'part', expectedRadius: 60, label: 'المروحة', acceptedPart: 'fan' } ], checkWin: (objs) => objs.some(o => o.type === 'fan' && Math.abs(o.speed) > 0) },
+            { name: "سير المصنع", icon: "📦", story: "<strong>المهمة 2 (خط الإنتاج):</strong> قم بتركيب المحرك وبكرة السير على منصة المصنع بدقة.", bodySVG: `<path d="M 120 220 L 600 220 L 600 450 L 570 450 L 570 250 L 150 250 L 150 450 L 120 450 Z" fill="url(#metalGrad)" stroke="#f39c12" stroke-width="3"/>`, lines: [ {x1: 150, y1: 200, x2: 510, y2: 200} ], pegs: [ { id: 'm1', x: 150, y: 200, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 290, y: 200, type: 'gear', expectedRadius: 100, label: '' }, { id: 'g2', x: 430, y: 200, type: 'gear', expectedRadius: 40, label: '' }, { id: 'p1', x: 510, y: 200, type: 'part', expectedRadius: 40, label: 'السير', acceptedPart: 'conveyor' } ], checkWin: (objs) => objs.some(o => o.type === 'conveyor' && Math.abs(o.speed) > 0) },
+            { name: "الرافعة العملاقة", icon: "🏗️", story: "<strong>المهمة 3 (الرافعة):</strong> ضع الترس العملاق في الدبوس الأخير لضمان قوة العزم.", bodySVG: sandboxBodies['crane'], lines: [ {x1: 100, y1: 350, x2: 600, y2: 350} ], pegs: [ { id: 'm1', x: 100, y: 350, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 200, y: 350, type: 'gear', expectedRadius: 60, label: '' }, { id: 'g2', x: 300, y: 350, type: 'gear', expectedRadius: 40, label: '' }, { id: 'g3', x: 440, y: 350, type: 'gear', expectedRadius: 100, label: 'ترس العزم' }, { id: 'p1', x: 600, y: 350, type: 'part', expectedRadius: 60, label: 'الرافعة', acceptedPart: 'winch' } ], checkWin: (objs) => objs.some(o => o.type === 'winch' && Math.abs(o.speed) > 0 && !o.lowTorque) },
+            { name: "دراجة السباق", icon: "🚲", story: "<strong>المهمة 4 (الدراجة):</strong> قم بتركيب نظام نقل الحركة.", bodySVG: `<path d="M 150 300 L 100 150 L 300 150 L 150 300 L 460 300 L 300 150" fill="none" stroke="url(#accentGrad)" stroke-width="15" stroke-linejoin="round" />`, lines: [ {x1: 150, y1: 300, x2: 460, y2: 300} ], pegs: [ { id: 'm1', x: 150, y: 300, type: 'motor', expectedRadius: 40, label: 'البدال' }, { id: 'g1', x: 270, y: 300, type: 'gear', expectedRadius: 80, label: '' }, { id: 'g2', x: 380, y: 300, type: 'gear', expectedRadius: 30, label: '' }, { id: 'p1', x: 460, y: 300, type: 'part', expectedRadius: 50, label: 'العجلة', acceptedPart: 'wheel' } ], checkWin: (objs) => objs.some(o => o.type === 'wheel' && Math.abs(o.speed) > 0) },
+            { name: "الذراع الآلي", icon: "🦾", story: "<strong>المهمة 5 (الروبوت):</strong> الذراع الهيدروليكي.", bodySVG: `<path d="M 80 480 L 220 480 L 190 380 L 110 380 Z" fill="url(#metalGrad)" stroke="#3498db" stroke-width="4"/><line x1="80" y1="480" x2="220" y2="480" stroke="#f1c40f" stroke-width="6" stroke-dasharray="15,10"/><path d="M 150 400 L 250 400 L 250 280 L 450 280" fill="none" stroke="url(#metalGrad)" stroke-width="85" stroke-linecap="round" stroke-linejoin="round" /><line x1="170" y1="380" x2="230" y2="340" stroke="#7f8c8d" stroke-width="12" stroke-linecap="round"/><line x1="270" y1="380" x2="330" y2="300" stroke="#7f8c8d" stroke-width="12" stroke-linecap="round"/><circle cx="250" cy="400" r="45" fill="#1e272e" stroke="#3498db" stroke-width="6"/><circle cx="250" cy="280" r="45" fill="#1e272e" stroke="#3498db" stroke-width="6"/>`, lines: [ {x1: 150, y1: 400, x2: 250, y2: 400}, {x1: 250, y1: 400, x2: 250, y2: 280}, {x1: 250, y1: 280, x2: 450, y2: 280} ], pegs: [ { id: 'm1', x: 150, y: 400, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 250, y: 400, type: 'gear', expectedRadius: 60, label: '' }, { id: 'g2', x: 250, y: 280, type: 'gear', expectedRadius: 60, label: '' }, { id: 'g3', x: 350, y: 280, type: 'gear', expectedRadius: 40, label: '' }, { id: 'p1', x: 450, y: 280, type: 'part', expectedRadius: 60, label: 'المقبض', acceptedPart: 'robot' } ], checkWin: (objs) => objs.some(o => o.type === 'robot' && Math.abs(o.speed) > 0) },
+            { name: "سيارة السباق", icon: "🏎️", story: "<strong>المهمة 6 (ناقل الحركة):</strong> المسافة طويلة. قم بتركيب التروس.", bodySVG: sandboxBodies['car'], lines: [ {x1: 100, y1: 300, x2: 780, y2: 300} ], pegs: [ { id: 'm1', x: 100, y: 300, type: 'motor', expectedRadius: 40, label: 'المحرك' }, { id: 'g1', x: 240, y: 300, type: 'gear', expectedRadius: 100, label: '' }, { id: 'g2', x: 380, y: 300, type: 'gear', expectedRadius: 40, label: '' }, { id: 'g3', x: 500, y: 300, type: 'gear', expectedRadius: 80, label: '' }, { id: 'g4', x: 640, y: 300, type: 'gear', expectedRadius: 60, label: '' }, { id: 'p1', x: 780, y: 300, type: 'part', expectedRadius: 70, label: 'العجلة', acceptedPart: 'car' } ], checkWin: (objs) => objs.some(o => o.type === 'car' && Math.abs(o.speed) > 0) },
+            { name: "طاحونة الهواء", icon: "🌬️", story: "<strong>المهمة 7 (الجاذبية):</strong> استخدم الطاحونة لتشغيل العجلة. احذر! إذا أفلت الترس بعيداً فسيسقط.", bodySVG: `<rect x="180" y="200" width="40" height="300" fill="#7f8c8d" stroke="#2c3e50" stroke-width="5"/> <rect x="580" y="300" width="40" height="200" fill="#7f8c8d" stroke="#2c3e50" stroke-width="5"/>`, lines: [ {x1: 200, y1: 200, x2: 600, y2: 300} ], pegs: [ { id: 'm1', x: 200, y: 200, type: 'motor', expectedRadius: 50, label: 'الهواء' }, { id: 'g1', x: 350, y: 233, type: 'gear', expectedRadius: 100, label: 'نقل' }, { id: 'g2', x: 480, y: 266, type: 'gear', expectedRadius: 30, label: 'تسريع' }, { id: 'p1', x: 600, y: 300, type: 'part', expectedRadius: 50, label: 'العجلة', acceptedPart: 'wheel' } ], checkWin: (objs) => objs.some(o => o.type === 'wheel' && Math.abs(o.speed) > 0) },
+            { name: "المضخة والسيور", icon: "🔗", story: "<strong>المهمة 8:</strong> استخدم زر <strong>(🔗 أداة السيور)</strong> لربط التروس المتباعدة معاً لتدوير المضخة.", bodySVG: `<path d="M 50 400 L 250 400 L 250 450 L 50 450 Z" fill="#3498db" opacity="0.6"/> <rect x="750" y="150" width="100" height="300" fill="url(#metalGrad)" stroke="#111" stroke-width="3"/>`, lines: [], pegs: [ { id: 'm1', x: 150, y: 350, type: 'motor', expectedRadius: 50, label: 'الماء' }, { id: 'g1', x: 300, y: 350, type: 'gear', expectedRadius: 60, label: 'ترس' }, { id: 'g2', x: 800, y: 150, type: 'gear', expectedRadius: 60, label: 'ترس بعيد' }, { id: 'p1', x: 800, y: 280, type: 'part', expectedRadius: 60, label: 'المضخة', acceptedPart: 'fan' } ], checkWin: (objs) => objs.some(o => o.type === 'fan' && Math.abs(o.speed) > 0) },
+            { name: "المسرح الخشبي", icon: "🎭", story: "<strong>المهمة 9 (الكامة والمكبس):</strong> ضع <strong>الكامة البيضاوية</strong> بجوار المحرك، ثم ضع <strong>المكبس المسطح</strong> فوقها مباشرة.", bodySVG: sandboxBodies['stage'] + `<g id="puppet-p1" style="transition: transform 0.1s linear;"><circle cx="400" cy="50" r="25" fill="#f1c40f" stroke="#e67e22" stroke-width="3"/><rect x="385" y="75" width="30" height="40" fill="#3498db" rx="5"/></g>`, lines: [ {x1: 400, y1: 300, x2: 400, y2: 120} ], pegs: [ { id: 'm1', x: 310, y: 300, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 400, y: 300, type: 'gear', expectedRadius: 50, label: 'دبوس الكامة' }, { id: 'p1', x: 400, y: 210, type: 'part', expectedRadius: 20, label: 'دبوس المكبس', acceptedPart: 'piston' } ], checkWin: (objs) => objs.some(o => o.type === 'piston' && Math.abs(o.speed) > 0) },
+            { name: "كسارة البندق", icon: "🔨", story: "<strong>المهمة 10 (السقوط الحر):</strong> استخدم <strong>الكامة الحلزونية</strong> لرفع المطرقة ببطء ثم إسقاطها فجأة!", bodySVG: `<rect x="150" y="350" width="400" height="40" fill="#7f8c8d" stroke="#2c3e50" stroke-width="5"/><rect x="430" y="300" width="20" height="50" fill="#bdc3c7" stroke="#34495e" stroke-width="2"/>` + `<g id="puppet-p1" style="transition: transform 0.1s linear;"><rect x="390" y="40" width="100" height="40" fill="#e74c3c" stroke="#c0392b" stroke-width="4" rx="10"/><rect x="430" y="80" width="20" height="30" fill="#e67e22" stroke="#d35400" stroke-width="3"/></g>`, lines: [ {x1: 440, y1: 300, x2: 440, y2: 150} ], pegs: [ { id: 'm1', x: 230, y: 300, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 330, y: 300, type: 'gear', expectedRadius: 60, label: 'نقل' }, { id: 'g2', x: 440, y: 300, type: 'gear', expectedRadius: 50, label: 'الكامة' }, { id: 'p1', x: 440, y: 210, type: 'part', expectedRadius: 20, label: 'المكبس', acceptedPart: 'piston' } ], checkWin: (objs) => objs.some(o => o.type === 'piston' && Math.abs(o.speed) > 0 && o.className.includes('piston-flat')) },
+            { name: "المسرح المزدوج", icon: "👯", story: "<strong>المهمة 11 (تحدي الخبراء):</strong> مسرح به شخصيتان. اليمين يقفز (كامة القطرة)، واليسار يرقص (كامة بيضاوية).", bodySVG: `<rect x="150" y="350" width="500" height="40" fill="#8e44ad" stroke="#2c3e50" stroke-width="4"/>` + `<g id="puppet-p1" style="transition: transform 0.1s linear;"><circle cx="300" cy="50" r="25" fill="#f1c40f" stroke="#e67e22" stroke-width="3"/><rect x="285" y="75" width="30" height="40" fill="#e74c3c" rx="5"/></g><g id="puppet-p2" style="transition: transform 0.1s linear;"><circle cx="500" cy="50" r="25" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="3"/><rect x="485" y="75" width="30" height="40" fill="#1abc9c" rx="5"/></g>`, lines: [ {x1: 300, y1: 300, x2: 300, y2: 120}, {x1: 500, y1: 300, x2: 500, y2: 120} ], pegs: [ { id: 'm1', x: 210, y: 300, type: 'motor', expectedRadius: 40, label: 'المحرك' }, { id: 'g1', x: 300, y: 300, type: 'gear', expectedRadius: 50, label: 'دبوس' }, { id: 'g2', x: 400, y: 300, type: 'gear', expectedRadius: 50, label: 'دبوس' }, { id: 'g3', x: 500, y: 300, type: 'gear', expectedRadius: 50, label: 'دبوس' }, { id: 'p1', x: 300, y: 210, type: 'part', expectedRadius: 20, label: 'مكبس', acceptedPart: 'piston' }, { id: 'p2', x: 500, y: 210, type: 'part', expectedRadius: 20, label: 'مكبس', acceptedPart: 'piston' } ], checkWin: (objs) => { let pistons = objs.filter(o => o.type === 'piston'); return pistons.length === 2 && pistons.every(p => Math.abs(p.speed) > 0); } },
+            { name: "الشبح المرتجف", icon: "👻", story: "<strong>المهمة 12:</strong> استخدم <strong>الكامة المموجة</strong> لجعل الشبح يرتجف ويرتعد بسرعة!", bodySVG: `<rect x="250" y="350" width="300" height="30" fill="#34495e" stroke="#2c3e50" stroke-width="4"/>` + `<g id="puppet-p1" style="transition: transform 0.05s linear;"><path d="M 375 70 C 375 30, 425 30, 425 70 L 425 110 L 415 100 L 400 110 L 385 100 L 375 110 Z" fill="#ecf0f1" stroke="#bdc3c7" stroke-width="3"/><circle cx="390" cy="55" r="4" fill="#2c3e50"/><circle cx="410" cy="55" r="4" fill="#2c3e50"/></g>`, lines: [ {x1: 400, y1: 300, x2: 400, y2: 120} ], pegs: [ { id: 'm1', x: 310, y: 300, type: 'motor', expectedRadius: 40, label: 'المولد' }, { id: 'g1', x: 400, y: 300, type: 'gear', expectedRadius: 50, label: 'الكامة' }, { id: 'p1', x: 400, y: 210, type: 'part', expectedRadius: 20, label: 'المكبس', acceptedPart: 'piston' } ], checkWin: (objs) => objs.some(o => o.type === 'piston' && Math.abs(o.speed) > 0) },
+
+            // --- مهام الأذرع المفرغة ---
+            {
+                name: "المنشار الميكانيكي", icon: "🪵",
+                story: "<strong>المهمة 13 (الذراع المستقيم):</strong> الذراع المفرغ يحول الحركة الدائرية لاهتزازية. ضع <strong>الذراع المستقيم</strong> على اليسار و<strong>ترس المرفق</strong> على اليمين ليحرك المنشار!",
+                bodySVG: `<rect x="100" y="320" width="400" height="20" fill="#7f8c8d" stroke="#2c3e50" stroke-width="3"/>
+                    <ellipse cx="120" cy="230" rx="30" ry="50" fill="#8e44ad" stroke="#2c3e50" stroke-width="4"/>
+                    <g id="puppet-p1" style="transition: transform 0.05s linear;">
+                        <path d="M 140 230 L 290 230 L 290 250 L 140 250 Z" fill="#bdc3c7" stroke="#7f8c8d"/>
+                        <path d="M 140 250 L 150 260 L 160 250 L 170 260 L 180 250 L 190 260 L 200 250 L 210 260 L 220 250 L 230 260 L 240 250 L 250 260 L 260 250 L 270 260 L 280 250 L 290 260 L 290 250 Z" fill="#bdc3c7" stroke="#7f8c8d"/>
+                        <rect x="290" y="220" width="20" height="40" fill="#c0392b" rx="5" stroke="#111"/>
+                    </g>
+                `, 
+                lines: [ {x1: 200, y1: 280, x2: 400, y2: 280} ],
+                pegs: [
+                    { id: 'p1', x: 200, y: 280, type: 'part', expectedRadius: 20, label: 'محور الذراع', acceptedPart: 'slot' },
+                    { id: 'g1', x: 300, y: 280, type: 'gear', expectedRadius: 50, label: 'المرفق' },
+                    { id: 'm1', x: 400, y: 280, type: 'motor', expectedRadius: 40, label: 'المحرك' }
+                ],
+                checkWin: (objs) => objs.some(o => o.type === 'slot' && Math.abs(o.speed) > 0)
+            },
+            {
+                name: "المنصة القافزة", icon: "📐",
+                story: "<strong>المهمة 14 (عكس الحركة):</strong> الذراع الزاوية (L) ينقل الحركة 90 درجة. عندما يرتفع الذراع، يقوم مفصل التوصيل بسحب الصندوق لأسفل، والعكس صحيح.",
+                bodySVG: `<rect x="150" y="320" width="350" height="30" fill="#34495e" stroke="#2c3e50" stroke-width="4"/>
+                    <line id="linkage-p1" x1="300" y1="280" x2="280" y2="150" stroke="#f1c40f" stroke-width="6" style="transition: all 0.05s linear; transform-origin: 300px 280px;"/>
+                    <g id="puppet-p1" style="transition: transform 0.05s linear;">
+                        <circle cx="280" cy="150" r="6" fill="#e74c3c" stroke="#111" stroke-width="2"/>
+                        <rect x="270" y="80" width="60" height="60" fill="#e67e22" stroke="#d35400" stroke-width="4" rx="5"/>
+                        <rect x="250" y="140" width="100" height="10" fill="#3498db" stroke="#2c3e50" stroke-width="2"/>
+                        <line x1="300" y1="150" x2="300" y2="300" stroke="#7f8c8d" stroke-width="8" stroke-dasharray="10,5"/>
+                    </g>
+                `, 
+                lines: [ {x1: 300, y1: 280, x2: 470, y2: 280} ],
+                pegs: [
+                    { id: 'p1', x: 300, y: 280, type: 'part', expectedRadius: 20, label: 'الذراع الزاوية', acceptedPart: 'slot' },
+                    { id: 'g1', x: 370, y: 280, type: 'gear', expectedRadius: 50, label: 'المرفق' },
+                    { id: 'm1', x: 470, y: 280, type: 'motor', expectedRadius: 40, label: 'المحرك' }
+                ],
+                checkWin: (objs) => objs.some(o => o.type === 'slot' && Math.abs(o.speed) > 0 && o.className.includes('slot-angled'))
+            },
+            {
+                name: "جرس البرج الكهربائي", icon: "🔔",
+                story: "<strong>المهمة 15 (الذراع المقوس والكهرباء):</strong> ضع مكونات الكهرباء في أماكنها الخضراء. استخدم <strong>(🔌 أداة الأسلاك)</strong> لربط الدائرة، وضع <strong>الذراع المقوس (C)</strong> ومرفقه. تأكد أن <strong>المفتاح (ON)</strong> لتشغيل محرك الآلة وقرع الجرس!",
+                bodySVG: `
+                    <!-- لوحة التحكم الكهربائية -->
+                    <rect x="40" y="50" width="370" height="260" fill="rgba(46, 204, 113, 0.1)" stroke="#2ecc71" stroke-width="3" stroke-dasharray="10,5" rx="15"/>
+                    <text x="225" y="85" fill="#2ecc71" font-size="18" font-weight="bold" text-anchor="middle">المخطط الكهربائي للآلة</text>
+                    
+                    <!-- مسارات الأسلاك الوهمية كدليل (بخطوط مستقيمة) -->
+                    <path d="M 120 130 L 330 130" fill="none" stroke="#34495e" stroke-width="4" stroke-dasharray="5,5"/>
+                    <path d="M 330 130 L 330 250 L 120 250 L 120 130" fill="none" stroke="#34495e" stroke-width="4" stroke-dasharray="5,5"/>
+
+                    <!-- منصة الجرس (يمين) -->
+                    <rect x="580" y="50" width="40" height="350" fill="#34495e" stroke="#2c3e50" stroke-width="4"/>
+                    <rect x="550" y="50" width="100" height="20" fill="#2c3e50" stroke="#111" stroke-width="3"/>
+                    
+                    <!-- الجرس -->
+                    <g id="puppet-p1" style="transition: transform 0.05s linear; transform-origin: 600px 150px;">
+                        <path d="M 600 150 L 570 230 Q 600 240 630 230 Z" fill="#f1c40f" stroke="#e67e22" stroke-width="4"/>
+                        <circle cx="600" cy="235" r="8" fill="#e74c3c"/>
+                        <!-- مفصلة الجرس الحمراء -->
+                        <circle cx="600" cy="150" r="12" fill="#e74c3c" stroke="#c0392b" stroke-width="3"/>
+                    </g>
+                `, 
+                lines: [ {x1: 600, y1: 250, x2: 710, y2: 250} ],
+                pegs: [
+                    // Electrical Pegs (Green dashed squares)
+                    { id: 'b1', x: 120, y: 130, type: 'electrical', expectedRadius: 25, label: 'بطارية', acceptedPart: 'battery' },
+                    { id: 's1', x: 330, y: 130, type: 'electrical', expectedRadius: 25, label: 'مفتاح', acceptedPart: 'switch' },
+                    { id: 'l1', x: 330, y: 250, type: 'electrical', expectedRadius: 25, label: 'لمبة', acceptedPart: 'bulb' },
+                    { id: 'em1', x: 120, y: 250, type: 'electrical', expectedRadius: 40, label: 'محرك الدائرة', acceptedPart: 'motor' },
+
+                    // Mechanical Pegs
+                    { id: 'p1', x: 600, y: 150, type: 'part', expectedRadius: 20, label: 'مفصل الذراع', acceptedPart: 'slot' }, 
+                    { id: 'g1', x: 600, y: 250, type: 'gear', expectedRadius: 50, label: 'المرفق' },
+                    { id: 'm1', x: 710, y: 250, type: 'motor', expectedRadius: 40, label: 'محرك الآلة' }
+                ],
+                checkWin: (objs) => {
+                    let slotMoving = objs.some(o => o.type === 'slot' && Math.abs(o.speed) > 0);
+                    let circuitMotorPowered = objs.some(o => o.type === 'motor' && o.currentPeg && o.currentPeg.id === 'em1' && o.isPowered);
+                    return slotMoving && circuitMotorPowered;
+                }
+            }
+        ];
+
+        const sandboxLevelObj = {
+            name: "الوضع الحر", icon: "🛠️",
+            story: "<strong>المهمة الحرة (مختبر الإبداع المفتوح):</strong> أنت الآن المهندس! صمم الهيكل، أضف الكهرباء والسيور والأذرع، وابنِ أي اختراع تريده.",
+            isSandbox: true, bodySVG: ``, lines: [], pegs: [],
+            checkWin: (objs) => {
+                const parts = objs.filter(o => o.type === 'part' || o.type === 'piston' || o.type === 'slot' || o.type === 'bulb');
+                if(parts.length === 0) return false;
+                return parts.every(p => {
+                    if (p.type === 'bulb') return p.isPowered;
+                    return Math.abs(p.speed) > 0;
+                }) && objs.some(o => o.type === 'motor' && (Math.abs(o.speed) > 0 || o.className.includes('battery')));
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                let defaultCompleted = Array.from(Array(15).keys()); // 15 missions now
+                const saved = localStorage.getItem('gearsGameV31');
+                if (saved) {
+                    gearsData = JSON.parse(saved);
+                    gearsData.customLevels.forEach(customLevel => {
+                        customLevel.checkWin = (objs) => {
+                            const parts = objs.filter(o => o.type === 'part' || o.type === 'piston' || o.type === 'slot' || o.type === 'bulb');
+                            if(parts.length === 0) return false;
+                            return parts.every(p => {
+                                if (p.type === 'bulb') return p.isPowered;
+                                return Math.abs(p.speed) > 0;
+                            }) && objs.some(o => o.type === 'motor' && (Math.abs(o.speed) > 0 || o.className.includes('battery')));
+                        };
+                    });
+                    if (!gearsData.completedMachines || gearsData.completedMachines.length < 15) {
+                        gearsData.completedMachines = defaultCompleted;
+                    }
+                } else {
+                    gearsData.completedMachines = defaultCompleted;
+                }
+                // دائماً اعرض كل المهمات فوراً
+                renderLibrary();
+            } catch(e) { console.error("Error loading saves", e); }
+        });
+
+        function saveGameState() { try { localStorage.setItem('gearsGameV31', JSON.stringify(gearsData)); } catch(e) {} }
+
+        function serializeState(objects) {
+            return objects.map(o => ({ radius: o.radius, mainType: o.type, className: o.className, x: o.x, y: o.y, pegId: o.currentPeg ? o.currentPeg.id : null, isOn: o.isOn || false }));
+        }
+
+        function toggleBeltMode() {
+            if(isWireModeActive) toggleWireMode(); 
+            isBeltModeActive = !isBeltModeActive;
+            const btn = document.getElementById('toggle-belt-btn');
+            if (isBeltModeActive) {
+                btn.classList.add('active');
+                statusEl.innerText = "أداة السيور نشطة: انقر على ترسين لربطهما معاً 🔗";
+                statusEl.style.color = "#f1c40f"; statusEl.style.borderColor = "#f1c40f";
+                activeObjects.forEach(o => { if(o.type==='gear' || o.type==='motor' || o.type==='cam' || o.type==='crank') o.element.classList.add('belt-selectable'); });
+            } else {
+                btn.classList.remove('active');
+                if(selectedGearForBelt) { selectedGearForBelt.element.classList.remove('belt-selected'); selectedGearForBelt = null; }
+                activeObjects.forEach(o => o.element.classList.remove('belt-selectable'));
+                updatePhysics(true); 
+            }
+        }
+
+        function toggleWireMode() {
+            if(isBeltModeActive) toggleBeltMode(); 
+            isWireModeActive = !isWireModeActive;
+            const btn = document.getElementById('toggle-wire-btn');
+            if (isWireModeActive) {
+                btn.classList.add('active');
+                statusEl.innerText = "أداة الأسلاك نشطة: انقر لتوصيل أجزاء الكهرباء ببعضها 🔌";
+                statusEl.style.color = "#00d2ff"; statusEl.style.borderColor = "#00d2ff";
+                activeObjects.forEach(o => { if(o.type==='motor' || o.type==='battery' || o.type==='switch' || o.type==='bulb') o.element.classList.add('wire-selectable'); });
+            } else {
+                btn.classList.remove('active');
+                if(selectedNodeForWire) { selectedNodeForWire.element.classList.remove('wire-selected'); selectedNodeForWire = null; }
+                activeObjects.forEach(o => o.element.classList.remove('wire-selectable'));
+                updatePhysics(true); 
+            }
+        }
+
+        function drawBeltsSVG() {
+            let svg = '';
+            activeBelts.forEach(belt => {
+                svg += `<line x1="${belt.g1.x}" y1="${belt.g1.y}" x2="${belt.g2.x}" y2="${belt.g2.y}" stroke="#2c3e50" stroke-width="20" stroke-linecap="round" />`;
+                svg += `<line x1="${belt.g1.x}" y1="${belt.g1.y}" x2="${belt.g2.x}" y2="${belt.g2.y}" stroke="#e67e22" stroke-width="12" stroke-linecap="round" stroke-dasharray="15,10" stroke-dashoffset="${beltOffsetAnim}" />`;
+            });
+            beltsLayer.innerHTML = svg;
+        }
+
+        function drawWiresSVG() {
+            let svg = '';
+            activeWires.forEach(wire => {
+                let isPowered = wire.n1.isPowered && wire.n2.isPowered;
+                let color = isPowered ? '#e74c3c' : '#34495e';
+                let glow = isPowered ? `filter="drop-shadow(0 0 5px #ff0000)"` : '';
+                
+                let startX = wire.n1.x; let startY = wire.n1.y;
+                let endX = wire.n2.x; let endY = wire.n2.y;
+                let midX = (startX + endX) / 2;
+                
+                // رسم مسار كهربائي بزوايا قائمة (Orthogonal Routing)
+                let pathD = `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+                
+                svg += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="6" stroke-linejoin="round" ${glow} />`;
+                if (isPowered) {
+                    svg += `<path d="${pathD}" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="10,15" stroke-dashoffset="${-beltOffsetAnim*0.5}" stroke-linejoin="round" />`;
+                }
+            });
+            wiresLayer.innerHTML = svg;
+        }
+
+        function breakBeltsConnectedTo(obj) { 
+            activeBelts = activeBelts.filter(b => b.g1 !== obj && b.g2 !== obj); drawBeltsSVG(); 
+            activeWires = activeWires.filter(w => w.n1 !== obj && w.n2 !== obj); drawWiresSVG();
+        }
+
+        function drawBlueprint(level) {
+            let svg = `
+                <defs>
+                    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#7f8c8d;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#2c3e50;stop-opacity:1" />
+                    </linearGradient>
+                    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:0.9" />
+                        <stop offset="100%" style="stop-color:#c0392b;stop-opacity:0.9" />
+                    </linearGradient>
+                </defs>
+            `;
+            if (level.isSandbox || level.isCustom) svg += customSandboxBody;
+            else if (level.bodySVG) svg += level.bodySVG;
+
+            level.lines.forEach(line => {
+                svg += `<line x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" stroke="#2c3e50" stroke-width="25" stroke-linecap="round" />`;
+                svg += `<line x1="${line.x1}" y1="${line.y1}" x2="${line.x2}" y2="${line.y2}" stroke="#1e272e" stroke-width="15" stroke-linecap="round" />`;
+            });
+
+            levelPegs.forEach(peg => {
+                let isDraggingStyle = (draggingPeg && draggingPeg.id === peg.id) ? 'moving-peg' : '';
+                if(peg.type === 'motor') {
+                    svg += `<circle cx="${peg.x}" cy="${peg.y}" r="${peg.expectedRadius + 5}" class="${isDraggingStyle}" fill="rgba(52, 152, 219, 0.25)" stroke="#3498db" stroke-width="3" stroke-dasharray="8,4" />`;
+                    svg += `<text x="${peg.x}" y="${peg.y - peg.expectedRadius - 15}" fill="#3498db" font-size="16" font-weight="bold" text-anchor="middle">${peg.label}</text>`;
+                } else if(peg.type === 'electrical') {
+                    // Visual for electrical pegs (green square)
+                    svg += `<rect x="${peg.x - peg.expectedRadius}" y="${peg.y - peg.expectedRadius}" width="${peg.expectedRadius*2}" height="${peg.expectedRadius*2}" rx="8" class="${isDraggingStyle}" fill="rgba(46, 204, 113, 0.2)" stroke="#2ecc71" stroke-width="3" stroke-dasharray="6,4" />`;
+                    svg += `<text x="${peg.x}" y="${peg.y - peg.expectedRadius - 10}" fill="#2ecc71" font-size="14" font-weight="bold" text-anchor="middle">${peg.label}</text>`;
+                } else if(peg.type === 'part') {
+                    svg += `<circle cx="${peg.x}" cy="${peg.y}" r="${peg.expectedRadius + 5}" class="${isDraggingStyle}" fill="rgba(231, 76, 60, 0.25)" stroke="#e74c3c" stroke-width="3" stroke-dasharray="8,4" />`;
+                    svg += `<text x="${peg.x}" y="${peg.y - peg.expectedRadius - 15}" fill="#e74c3c" font-size="16" font-weight="bold" text-anchor="middle">${peg.label}</text>`;
+                } else {
+                    svg += `<circle cx="${peg.x}" cy="${peg.y}" r="14" class="${isDraggingStyle}" fill="#3d4a57" stroke="#111" stroke-width="4" />`;
+                    svg += `<circle cx="${peg.x}" cy="${peg.y}" r="5" fill="#ecf0f1" />`;
+                    if(peg.label) {
+                        svg += `<text x="${peg.x}" y="${peg.y - 25}" fill="#f1c40f" font-size="14" font-weight="bold" text-anchor="middle">${peg.label}</text>`;
+                    }
+                }
+            });
+            blueprintLayer.innerHTML = svg;
+        }
+
+        function renderLibrary() {
+            const regContainer = document.getElementById('library-items-regular'); 
+            const custContainer = document.getElementById('library-items-custom');
+            regContainer.innerHTML = ''; 
+            levels.forEach((data, levelIdx) => {
+                const item = document.createElement('div'); item.className = 'library-item';
+                item.innerHTML = `<div class="library-icon">${data.icon}</div><p class="library-name">${data.name}</p>`; 
+                item.onclick = () => openModal(levelIdx, 'regular', data); 
+                regContainer.appendChild(item);
+            });
+            if (gearsData.customLevels.length === 0) {
+                custContainer.innerHTML = '<p style="color: #7f8c8d; font-size: 14px; margin: 10px;">ادخل "الوضع الحر" من الأعلى واصنع آلتك!</p>';
+            } else {
+                custContainer.innerHTML = '';
+                gearsData.customLevels.forEach((data, idx) => {
+                    const item = document.createElement('div'); item.className = 'library-item'; item.style.position = 'relative'; 
+                    item.innerHTML = ` <button class="item-action-btn item-edit-btn" title="تعديل" onclick="editCustomMachine(event, ${idx})">✏️</button> <button class="item-action-btn item-delete-btn" title="حذف" onclick="deleteCustomMachine(event, ${idx})">🗑️</button> <div class="library-icon" style="margin-top:10px;">${data.icon}</div> <p class="library-name">${data.name}</p> `;
+                    item.onclick = () => openModal(idx, 'custom', data); 
+                    custContainer.appendChild(item);
+                });
+            }
+        }
+
+        function openModal(idx, mode, data) { modalSelectedLevel = { idx, mode }; document.getElementById('modal-title').innerText = data.name; document.getElementById('modal-icon').innerText = data.icon; document.getElementById('modal-desc').innerHTML = data.story; document.getElementById('modal-overlay').style.display = 'flex'; }
+        function closeModal(event, modalId) { if (event && event.target.id !== modalId && !event.target.classList.contains('close-btn')) return; document.getElementById(modalId).style.display = 'none'; }
+        function viewMachine() { closeModal(null, 'modal-overlay'); loadLevel(modalSelectedLevel.idx, modalSelectedLevel.mode, true); }
+        function replayMachine() { closeModal(null, 'modal-overlay'); loadLevel(modalSelectedLevel.idx, modalSelectedLevel.mode, false); }
+        function goToSandbox() { loadLevel(0, 'sandbox'); }
+
+        function editCustomMachine(e, idx) {
+            e.stopPropagation(); let customLevelData = gearsData.customLevels[idx]; loadLevel(0, 'sandbox'); customSandboxBody = customLevelData.bodySVG; levelPegs = JSON.parse(JSON.stringify(customLevelData.pegs)); levelPegs.forEach(p => p.occupiedBy = null); drawBlueprint(sandboxLevelObj); statusEl.innerText = "وضع الإبداع المفتوح 🛠️ - (جاري تعديل: " + customLevelData.name + ")";
+        }
+
+        function deleteCustomMachine(e, idx) {
+            e.stopPropagation(); 
+            gearsData.customLevels.splice(idx, 1); 
+            let newSavedStates = {}; 
+            for(let key in gearsData.savedStates) { if(!key.startsWith('custom_')) { newSavedStates[key] = gearsData.savedStates[key]; } } 
+            gearsData.customLevels.forEach((_, i) => { let oldKey = 'custom_' + (i >= idx ? i + 1 : i); if(gearsData.savedStates[oldKey]) { newSavedStates['custom_' + i] = gearsData.savedStates[oldKey]; } }); 
+            gearsData.savedStates = newSavedStates; saveGameState(); renderLibrary();
+            showNotification("تم الحذف بنجاح", "success");
+        }
+
+        function setSandboxBody(type) { customSandboxBody = sandboxBodies[type]; drawBlueprint(currentMode === 'sandbox' ? sandboxLevelObj : levels[currentLevel]); }
+        function selectSandboxTool(tool) { document.querySelectorAll('.sandbox-btn').forEach(btn => btn.classList.remove('active')); document.getElementById('tool-' + tool).classList.add('active'); activeTool = tool; }
+        function clearSandbox() { levelPegs = []; objectsLayer.innerHTML = ''; activeObjects = []; activeBelts = []; activeWires = []; drawBeltsSVG(); drawWiresSVG(); drawBlueprint(currentMode === 'sandbox' ? sandboxLevelObj : levels[currentLevel]); }
+
+        workspace.addEventListener('pointerdown', (e) => {
+            if(currentMode !== 'sandbox' || !activeTool || draggedItem || isBeltModeActive || isWireModeActive) return; initAudio(); const rect = workspace.getBoundingClientRect(); let x = e.clientX - rect.left; let y = e.clientY - rect.top;
+            if (activeTool === 'delete') { let clickedIdx = levelPegs.findIndex(p => Math.hypot(p.x - x, p.y - y) < 35); if(clickedIdx > -1) { let p = levelPegs[clickedIdx]; if(p.occupiedBy) { objectsLayer.removeChild(p.occupiedBy.element); breakBeltsConnectedTo(p.occupiedBy); activeObjects = activeObjects.filter(o => o.id !== p.occupiedBy.id); } levelPegs.splice(clickedIdx, 1); drawBlueprint(sandboxLevelObj); } return; }
+            if (activeTool === 'move') { draggingPeg = levelPegs.find(p => Math.hypot(p.x - x, p.y - y) < 35); if(draggingPeg && draggingPeg.occupiedBy) { objectsLayer.removeChild(draggingPeg.occupiedBy.element); breakBeltsConnectedTo(draggingPeg.occupiedBy); activeObjects = activeObjects.filter(o => o.id !== draggingPeg.occupiedBy.id); draggingPeg.occupiedBy = null; } return; }
+            let existingIdx = levelPegs.findIndex(p => Math.hypot(p.x - x, p.y - y) < 35);
+            if(existingIdx === -1) {
+                if(activeTool === 'motor') levelPegs.push({ id: 'm_'+Date.now(), x, y, type: 'motor', expectedRadius: 40, label: 'محرك' });
+                else if(activeTool === 'electrical') levelPegs.push({ id: 'e_'+Date.now(), x, y, type: 'electrical', expectedRadius: 30, label: 'كهرباء', acceptedPart: 'any' });
+                else if(activeTool === 'gear') levelPegs.push({ id: 'g_'+Date.now(), x, y, type: 'gear', expectedRadius: 50, label: '' });
+                else if(activeTool === 'part') levelPegs.push({ id: 'p_'+Date.now(), x, y, type: 'part', expectedRadius: 60, label: 'آلة', acceptedPart: 'any' });
+                drawBlueprint(sandboxLevelObj);
+            }
+        });
+
+        function saveCustomMachine() {
+            if(!isSandboxActive) return; 
+            let name = "اختراع " + (gearsData.customLevels.length + 1);
+            const savedPegs = levelPegs.map(p => ({ id: p.id, x: p.x, y: p.y, type: p.type, expectedRadius: p.expectedRadius, label: p.label, acceptedPart: p.acceptedPart, occupiedBy: null }));
+            const customLevel = { name: name, icon: "🌟", story: `<strong>اختراع المهندس: ${name}</strong> - آلة حرة إبداعية. قم بتركيبها!`, isSandbox: false, isCustom: true, bodySVG: customSandboxBody, lines: [], pegs: savedPegs, checkWin: (objs) => { const parts = objs.filter(o => o.type === 'part' || o.type === 'piston' || o.type === 'slot' || o.type === 'bulb'); if(parts.length === 0) return false; return parts.every(p => { if(p.type === 'bulb') return p.isPowered; return Math.abs(p.speed) > 0; }) && objs.some(o => o.type === 'motor' && (Math.abs(o.speed) > 0 || o.className.includes('battery'))); } };
+            gearsData.customLevels.push(customLevel); const newIndex = gearsData.customLevels.length - 1; gearsData.savedStates['custom_' + newIndex] = serializeState(activeObjects); saveGameState(); renderLibrary(); 
+            showNotification("تم حفظ اختراعك بنجاح! 🌟", "success");
+        }
+
+        function restoreSavedObjects(savedObjects) {
+            savedObjects.forEach(item => {
+                const el = document.createElement('div'); el.className = `physics-obj ${item.className}`;
+                
+                if (item.mainType === 'battery') { el.innerHTML = '<div class="part-battery-top"></div>'; }
+                
+                if (item.mainType !== 'switch' && item.mainType !== 'bulb' && item.mainType !== 'piston' && item.mainType !== 'slot' && item.mainType !== 'battery') { 
+                    el.style.setProperty('--size', `${item.radius * 2}px`); 
+                }
+                
+                let internalMainType = (item.mainType === 'crank') ? 'gear' : item.mainType;
+                
+                if(item.className.includes('gear') || item.className.includes('crank')) {
+                    if(item.radius===30) { el.style.setProperty('--gear-color', 'var(--gear-tiny)'); el.style.setProperty('--border-size', '8px'); }
+                    if(item.radius===40) { el.style.setProperty('--gear-color', 'var(--gear-small)'); el.style.setProperty('--border-size', '10px'); }
+                    if(item.radius===50 && item.className.includes('crank')) { el.style.setProperty('--border-size', '10px'); }
+                    if(item.radius===60) { el.style.setProperty('--gear-color', 'var(--gear-medium)'); el.style.setProperty('--border-size', '12px'); }
+                    if(item.radius===80) { el.style.setProperty('--gear-color', 'var(--gear-large)'); el.style.setProperty('--border-size', '14px'); }
+                    if(item.radius===100){ el.style.setProperty('--gear-color', 'var(--gear-giant)'); el.style.setProperty('--border-size', '18px'); }
+                }
+                
+                let pivot = getPivot(item.mainType, item.className, item.radius);
+                el.style.left = `${item.x - pivot.x}px`;
+                el.style.top = `${item.y - pivot.y}px`;
+                if(item.mainType === 'slot') el.style.transformOrigin = `${pivot.x}px ${pivot.y}px`;
+                
+                if(item.isOn && item.type === 'switch') el.classList.add('switch-on');
+
+                objectsLayer.appendChild(el);
+                const newItem = { id: 'obj_' + Math.random().toString(36).substr(2, 9), x: item.x, y: item.y, radius: item.radius, speed: 0, angle: 0, element: el, type: internalMainType, className: item.className, currentPeg: null, drivenBy: null, lowTorque: false, isFalling: false, velocity_y: 0, offsetY: 0, pivotX: pivot.x, pivotY: pivot.y, isOn: item.isOn, isPowered: false };
+                activeObjects.push(newItem);
+                if(item.pegId) { let peg = levelPegs.find(p => p.id === item.pegId); if(peg) { newItem.currentPeg = peg; peg.occupiedBy = newItem; attachPointerDown(newItem); } }
+            });
+        }
+
+        function attachPointerDown(obj) {
+            obj.element.onpointerdown = (event) => {
+                if(isSuccess && !isSandboxActive) return;
+                
+                dragPointerStartX = event.clientX;
+                dragPointerStartY = event.clientY;
+
+                if (isBeltModeActive) {
+                    if (obj.type === 'gear' || obj.type === 'motor' || obj.type === 'cam' || obj.type === 'crank') {
+                        if (!selectedGearForBelt) { selectedGearForBelt = obj; obj.element.classList.add('belt-selected'); } 
+                        else if (selectedGearForBelt !== obj) { activeBelts.push({ g1: selectedGearForBelt, g2: obj }); selectedGearForBelt.element.classList.remove('belt-selected'); selectedGearForBelt = null; toggleBeltMode(); drawBeltsSVG(); } 
+                        else { selectedGearForBelt.element.classList.remove('belt-selected'); selectedGearForBelt = null; }
+                    } return;
+                }
+                
+                if (isWireModeActive) {
+                    if (obj.type === 'motor' || obj.type === 'battery' || obj.type === 'switch' || obj.type === 'bulb') {
+                        if (!selectedNodeForWire) { selectedNodeForWire = obj; obj.element.classList.add('wire-selected'); } 
+                        else if (selectedNodeForWire !== obj) { activeWires.push({ n1: selectedNodeForWire, n2: obj }); selectedNodeForWire.element.classList.remove('wire-selected'); selectedNodeForWire = null; toggleWireMode(); drawWiresSVG(); } 
+                        else { selectedNodeForWire.element.classList.remove('wire-selected'); selectedNodeForWire = null; }
+                    } return;
+                }
+
+                draggedItem = obj; draggedItem.isFalling = false; draggedItem.velocity_y = 0; 
+                if(obj.type !== 'switch') draggedItem.element.classList.add('dragging'); 
+                
+                if(draggedItem.currentPeg) { draggedItem.currentPeg.occupiedBy = null; draggedItem.currentPeg = null; } 
+                breakBeltsConnectedTo(draggedItem);
+            };
+        }
+
+        function loadLevel(index, mode = 'regular', restoreState = false) {
+            objectsLayer.innerHTML = ''; document.getElementById('effects-layer').innerHTML = ''; activeObjects = []; activeBelts = []; activeWires = []; drawBeltsSVG(); drawWiresSVG(); isSuccess = false; currentLevel = index; currentMode = mode; gameArea.classList.remove('machine-active'); playMechanicalSound(false); if(isBeltModeActive) toggleBeltMode(); if(isWireModeActive) toggleWireMode();
+            let levelData;
+            if (mode === 'regular') { levelData = levels[index]; document.getElementById('go-sandbox-btn').style.display = 'inline-block'; } 
+            else if (mode === 'custom') { levelData = gearsData.customLevels[index]; document.getElementById('go-sandbox-btn').style.display = 'inline-block'; } 
+            else { levelData = sandboxLevelObj; document.getElementById('go-sandbox-btn').style.display = 'none'; }
+            storyEl.innerHTML = levelData.story; isSandboxActive = levelData.isSandbox || false;
+            
+            if (isSandboxActive) {
+                document.getElementById('sandbox-controls').style.display = 'flex'; saveSandboxBtn.style.display = 'inline-block';
+                statusEl.innerText = "وضع الإبداع المفتوح 🛠️ - أضف الهياكل والدبابيس"; statusEl.style.color = "#3498db"; statusEl.style.borderColor = "#3498db";
+                activeTool = null; document.querySelectorAll('.sandbox-btn').forEach(btn => btn.classList.remove('active')); customSandboxBody = ''; 
+            } else {
+                document.getElementById('sandbox-controls').style.display = 'none'; saveSandboxBtn.style.display = 'none';
+                statusEl.innerText = "الآلة غير مكتملة 🛑 - ركب الأجزاء بعناية"; statusEl.style.color = "#e74c3c"; statusEl.style.borderColor = "#e74c3c";
+                if(levelData.isCustom) customSandboxBody = levelData.bodySVG; 
+            }
+            statusEl.style.background = "rgba(0,0,0,0.5)"; nextLevelBtn.style.display = 'none';
+            levelPegs = JSON.parse(JSON.stringify(levelData.pegs)); levelPegs.forEach(p => p.occupiedBy = null);
+            drawBlueprint(levelData);
+            if (restoreState) { let stateKey = mode === 'regular' ? index : (mode === 'custom' ? 'custom_' + index : null); if (stateKey !== null && gearsData.savedStates[stateKey]) { restoreSavedObjects(gearsData.savedStates[stateKey]); } }
+            if (!animationFrameId) updatePhysics();
+        }
+
+        function goToNextLevel() {
+            if (currentMode === 'regular') {
+                currentLevel++;
+                if(currentLevel < levels.length) { loadLevel(currentLevel, 'regular'); } 
+                else { statusEl.innerHTML = "أنت مهندس أسطوري! 🏆 أتممت جميع المهمات والميكانيكا والكهرباء!"; nextLevelBtn.style.display = 'none'; }
+            }
+        }
+
+        window.createItem = function(e, radius, mainType, className, name) {
+            if(isSuccess && !isSandboxActive) return; if(isBeltModeActive) toggleBeltMode(); if(isWireModeActive) toggleWireMode(); initAudio();
+            const rect = workspace.getBoundingClientRect(); let startX = e.clientX - rect.left; let startY = e.clientY - rect.top;
+            const el = document.createElement('div'); el.className = `physics-obj ${className} dragging`;
+            
+            if (mainType === 'battery') { el.innerHTML = '<div class="part-battery-top"></div>'; }
+            
+            if (mainType !== 'switch' && mainType !== 'bulb' && mainType !== 'piston' && mainType !== 'slot' && mainType !== 'battery') { 
+                el.style.setProperty('--size', `${radius * 2}px`); 
+            }
+            
+            let internalMainType = (mainType === 'crank') ? 'gear' : mainType;
+            
+            if(className.includes('gear') || className.includes('crank')) {
+                if(radius===30) { el.style.setProperty('--gear-color', 'var(--gear-tiny)'); el.style.setProperty('--border-size', '8px'); }
+                if(radius===40) { el.style.setProperty('--gear-color', 'var(--gear-small)'); el.style.setProperty('--border-size', '10px'); }
+                if(radius===50 && className.includes('crank')) { el.style.setProperty('--border-size', '10px'); }
+                if(radius===60) { el.style.setProperty('--gear-color', 'var(--gear-medium)'); el.style.setProperty('--border-size', '12px'); }
+                if(radius===80) { el.style.setProperty('--gear-color', 'var(--gear-large)'); el.style.setProperty('--border-size', '14px'); }
+                if(radius===100){ el.style.setProperty('--gear-color', 'var(--gear-giant)'); el.style.setProperty('--border-size', '18px'); }
+            }
+            
+            let pivot = getPivot(mainType, className, radius);
+            el.style.left = `${startX - pivot.x}px`;
+            el.style.top = `${startY - pivot.y}px`;
+            if(mainType === 'slot') el.style.transformOrigin = `${pivot.x}px ${pivot.y}px`;
+            
+            objectsLayer.appendChild(el);
+            const newItem = { id: 'obj_' + Math.random().toString(36).substr(2, 9), x: startX, y: startY, radius: radius, speed: 0, angle: 0, element: el, type: internalMainType, className: className, currentPeg: null, drivenBy: null, lowTorque: false, isFalling: false, velocity_y: 0, offsetY: 0, pivotX: pivot.x, pivotY: pivot.y, isOn: false, isPowered: false };
+            attachPointerDown(newItem); activeObjects.push(newItem); draggedItem = newItem;
+        };
+
+        window.addEventListener('pointermove', (e) => {
+            const rect = workspace.getBoundingClientRect(); let x = e.clientX - rect.left; let y = e.clientY - rect.top;
+            if (draggingPeg) { draggingPeg.x = x; draggingPeg.y = y; drawBlueprint(currentMode === 'sandbox' ? sandboxLevelObj : levels[currentLevel]); return; }
+            if (!draggedItem) return;
+            draggedItem.x = x; draggedItem.y = y;
+            if (draggedItem.type !== 'switch') draggedItem.element.classList.add('dragging');
+            draggedItem.element.style.left = `${x - draggedItem.pivotX}px`;
+            draggedItem.element.style.top = `${y - draggedItem.pivotY}px`;
+        });
+
+        window.addEventListener('pointerup', (e) => {
+            if (draggingPeg) { draggingPeg = null; drawBlueprint(currentMode === 'sandbox' ? sandboxLevelObj : levels[currentLevel]); return; }
+            if (draggedItem) {
+                if (draggedItem.type === 'switch') {
+                    let distMoved = Math.hypot(e.clientX - dragPointerStartX, e.clientY - dragPointerStartY);
+                    if (distMoved < 5) {
+                        draggedItem.isOn = !draggedItem.isOn;
+                        if(draggedItem.isOn) draggedItem.element.classList.add('switch-on');
+                        else draggedItem.element.classList.remove('switch-on');
+                        
+                        if(draggedItem.currentPeg) {
+                            draggedItem.x = draggedItem.currentPeg.x; draggedItem.y = draggedItem.currentPeg.y;
+                            draggedItem.element.style.left = `${draggedItem.x - draggedItem.pivotX}px`;
+                            draggedItem.element.style.top = `${draggedItem.y - draggedItem.pivotY}px`;
+                        }
+                    }
+                }
+
+                draggedItem.element.classList.remove('dragging'); let closestPeg = null; let minDistance = 80; 
+                for (let peg of levelPegs) {
+                    let dist = Math.hypot(draggedItem.x - peg.x, draggedItem.y - peg.y);
+                    if (dist < minDistance) {
+                        let isValid = false;
+                        if(peg.type === 'motor' && (draggedItem.type === 'motor')) isValid = true;
+                        if(peg.type === 'electrical' && (draggedItem.type === 'battery' || draggedItem.type === 'switch' || draggedItem.type === 'bulb' || draggedItem.type === 'motor')) isValid = true;
+                        if(peg.type === 'part' && (draggedItem.className.includes(`part-${peg.acceptedPart}`) || peg.acceptedPart === 'any' || draggedItem.type === 'piston' || draggedItem.type === 'slot' || draggedItem.type === 'bulb' || draggedItem.type === 'switch' || draggedItem.type === 'battery')) isValid = true;
+                        if(peg.type === 'gear' && (draggedItem.type === 'gear' || draggedItem.type === 'cam' || draggedItem.className.includes('crank'))) isValid = true;
+                        if (isValid && !peg.occupiedBy) { closestPeg = peg; minDistance = dist; }
+                    }
+                }
+                if (closestPeg) {
+                    draggedItem.x = closestPeg.x; draggedItem.y = closestPeg.y;
+                    draggedItem.element.style.left = `${closestPeg.x - draggedItem.pivotX}px`;
+                    draggedItem.element.style.top = `${closestPeg.y - draggedItem.pivotY}px`;
+                    draggedItem.currentPeg = closestPeg; closestPeg.occupiedBy = draggedItem;
+                } else if (draggedItem.type !== 'switch' || Math.hypot(e.clientX - dragPointerStartX, e.clientY - dragPointerStartY) >= 5) {
+                    draggedItem.isFalling = true; draggedItem.velocity_y = 0; draggedItem.currentPeg = null;
+                }
+                draggedItem = null;
+            }
+        });
+
+        function updatePhysics(forceUpdate = false) {
+            for (let i = activeObjects.length - 1; i >= 0; i--) {
+                let o = activeObjects[i];
+                if (o.isFalling && o !== draggedItem) {
+                    o.velocity_y += 0.5; o.y += o.velocity_y;
+                    o.element.style.top = `${o.y - o.pivotY}px`;
+                    if (o.y - (o.radius||50) > workspace.clientHeight + 100) { o.element.remove(); activeObjects.splice(i, 1); breakBeltsConnectedTo(o); }
+                }
+            }
+
+            activeObjects.forEach(o => { o.visited = false; o.element.classList.remove('jammed', 'low-torque'); o.lowTorque = false; o.isPowered = false; if (o.type !== 'motor' && o.type !== 'battery') { o.speed = 0; o.drivenBy = null; } });
+            
+            // --- ميكانيكا الكهرباء المحسنة (اكتشاف الدوائر المغلقة وتأثير المفتاح) ---
+            let batteries = activeObjects.filter(o => o.type === 'battery' && o.currentPeg);
+            let hasAnyElectricalPeg = levelPegs.some(p => p.type === 'electrical');
+            let requiresCircuitMotor = levelPegs.some(p => p.type === 'electrical' && p.acceptedPart === 'motor');
+            let poweredNodes = new Set();
+
+            let adj = new Map();
+            activeObjects.forEach(o => {
+                if (['battery', 'switch', 'bulb', 'motor'].includes(o.type) && o.currentPeg) adj.set(o, []);
+            });
+            activeWires.forEach(w => {
+                if (adj.has(w.n1) && adj.has(w.n2)) {
+                    adj.get(w.n1).push(w.n2); adj.get(w.n2).push(w.n1);
+                }
+            });
+
+            batteries.forEach(bat => {
+                let visited = new Set();
+                function findCircuit(curr, parent, path) {
+                    visited.add(curr); path.push(curr);
+                    let neighbors = adj.get(curr) || [];
+                    for (let n of neighbors) {
+                        if (n === parent) continue; 
+                        if (n.type === 'switch' && !n.isOn) continue; 
+                        
+                        if (n === bat) { 
+                            path.forEach(p => poweredNodes.add(p));
+                        } else if (!visited.has(n)) {
+                            findCircuit(n, curr, path);
+                        }
+                    }
+                    path.pop(); visited.delete(curr);
+                }
+                findCircuit(bat, null, []);
+                bat.isPowered = true; 
+            });
+
+            activeObjects.forEach(o => {
+                if (poweredNodes.has(o)) o.isPowered = true;
+                if (o.type === 'bulb') {
+                    if (o.isPowered) o.element.classList.add('bulb-on');
+                    else o.element.classList.remove('bulb-on');
+                }
+            });
+            drawWiresSVG();
+
+            // --- ميكانيكا التروس والمحركات ---
+            let isJammed = false; let lowTorqueError = false; let isMoving = false;
+            let activeMotors = activeObjects.filter(o => o.type === 'motor' && o.currentPeg);
+
+            activeMotors.forEach(motorObj => {
+                let baseSpeed = 0;
+                
+                if(motorObj.className.includes('motor-wind')) {
+                    baseSpeed = 1.5; motorObj.element.style.boxShadow = "0 0 20px rgba(52, 152, 219, 0.5)";
+                } else if(motorObj.className.includes('motor-water')) {
+                    baseSpeed = 2.0; motorObj.element.style.boxShadow = "0 0 20px rgba(41, 128, 185, 0.5)";
+                } else {
+                    if (motorObj.currentPeg.type === 'electrical') {
+                        if(motorObj.isPowered) {
+                            baseSpeed = 2.5; motorObj.element.style.boxShadow = "0 0 35px #2ecc71, inset 0 0 15px #27ae60";
+                        } else {
+                            baseSpeed = 0; motorObj.element.style.boxShadow = "0 0 25px rgba(52, 152, 219, 0.7), inset 0 0 10px #000";
+                        }
+                    } else {
+                        if (requiresCircuitMotor) {
+                            let circuitMotorActive = activeObjects.some(o => o.type === 'motor' && o.currentPeg && o.currentPeg.type === 'electrical' && o.isPowered);
+                            baseSpeed = circuitMotorActive ? 2.5 : 0;
+                        } else if (hasAnyElectricalPeg) {
+                            baseSpeed = motorObj.isPowered ? 2.5 : 0;
+                        } else {
+                            baseSpeed = 2.5; 
+                        }
+                        motorObj.element.style.boxShadow = (baseSpeed > 0) ? "0 0 35px #2ecc71, inset 0 0 15px #27ae60" : "0 0 25px rgba(52, 152, 219, 0.7), inset 0 0 10px #000";
+                    }
+                }
+
+                if(baseSpeed === 0) return; 
+                
+                motorObj.speed = baseSpeed; motorObj.visited = true; let queue = [motorObj];
+
+                while(queue.length > 0) {
+                    let current = queue.shift();
+                    for (let other of activeObjects) {
+                        if (other === current || !other.currentPeg || other.type === 'piston' || other.type === 'slot' || other.type === 'battery' || other.type === 'switch' || other.type === 'bulb') continue; 
+                        let distance = Math.hypot(current.x - other.x, current.y - other.y);
+                        let optimalDistance = current.radius + other.radius;
+                        let tolerance = isSandboxActive || currentMode === 'custom' ? 25 : 10;
+                        if (Math.abs(distance - optimalDistance) <= tolerance) {
+                            let expectedSpeed = -current.speed * (current.radius / other.radius);
+                            if (!other.visited) { other.visited = true; other.speed = expectedSpeed; other.drivenBy = current; queue.push(other); } 
+                            else { if (Math.sign(other.speed) !== Math.sign(expectedSpeed) || Math.abs(other.speed - expectedSpeed) > 0.5) { isJammed = true; current.element.classList.add('jammed'); other.element.classList.add('jammed'); } }
+                        } else if (distance < optimalDistance - 15) { isJammed = true; current.element.classList.add('jammed'); other.element.classList.add('jammed'); }
+                    }
+                    for (let belt of activeBelts) {
+                        let other = null; if (belt.g1 === current) other = belt.g2; if (belt.g2 === current) other = belt.g1;
+                        if (other && other.currentPeg && other.type !== 'piston' && other.type !== 'slot' && other.type !== 'battery' && other.type !== 'switch' && other.type !== 'bulb') {
+                            let expectedSpeed = current.speed * (current.radius / other.radius);
+                            if (!other.visited) { other.visited = true; other.speed = expectedSpeed; other.drivenBy = current; queue.push(other); } 
+                            else { if (Math.sign(other.speed) !== Math.sign(expectedSpeed)) { isJammed = true; current.element.classList.add('jammed'); other.element.classList.add('jammed'); } }
+                        }
+                    }
+                }
+
+                activeObjects.forEach(o => {
+                    if (o.className.includes('part-winch') && Math.abs(o.speed) > 0 && o.drivenBy) {
+                        if (o.drivenBy.radius < 100 && o.drivenBy.type !== 'motor') { o.lowTorque = true; o.element.classList.add('low-torque'); o.drivenBy.element.classList.add('low-torque'); lowTorqueError = true; }
+                    }
+                });
+            });
+
+            if (isJammed) {
+                activeObjects.forEach(o => { if(o.type!=='motor'&&o.type!=='battery') o.speed = 0; });
+                if(!isBeltModeActive && !isWireModeActive) { statusEl.innerText = "⚠️ التروس متداخلة أو السيور متعارضة (عطل ميكانيكي)!"; statusEl.style.color = "#ff0000"; statusEl.style.borderColor = "#ff0000"; }
+                gameArea.classList.remove('machine-active'); playMechanicalSound(false);
+            } else if (lowTorqueError) {
+                activeObjects.forEach(o => { if(o.type!=='motor'&&o.type!=='battery') o.speed = 0; });
+                if(!isBeltModeActive && !isWireModeActive) { statusEl.innerText = "⚡ العزم غير كافٍ! الرافعة تحتاج الترس العملاق قبلها."; statusEl.style.color = "#f1c40f"; statusEl.style.borderColor = "#f1c40f"; }
+                gameArea.classList.remove('machine-active'); playMechanicalSound(false);
+            } else {
+                let now = Date.now();
+                activeObjects.forEach(o => {
+                    if (o.type !== 'piston' && o.type !== 'slot' && o.type !== 'battery' && o.type !== 'switch' && o.type !== 'bulb') {
+                        o.angle += o.speed;
+                        if (Math.abs(o.speed) > 0) isMoving = true;
+                    }
+
+                    if (o.type === 'conveyor') { 
+                        if (Math.abs(o.speed) > 0) conveyorOffset -= o.speed; 
+                        o.element.style.backgroundPosition = `${conveyorOffset}px 0`; 
+                    } else if (o.type === 'piston' && o.currentPeg) {
+                        let nearestCam = null; let minDist = 150; 
+                        activeObjects.forEach(cam => {
+                            if (cam.type === 'cam' && Math.abs(cam.x - o.x) < 25 && cam.y > o.y) {
+                                let dist = cam.y - o.y; if (dist < minDist) { minDist = dist; nearestCam = cam; }
+                            }
+                        });
+
+                        if (nearestCam && Math.abs(nearestCam.speed) > 0) {
+                            let topAngleDeg = (nearestCam.angle - 90) % 360;
+                            if (topAngleDeg < 0) topAngleDeg += 360;
+                            let topAngleRad = (topAngleDeg * Math.PI) / 180;
+                            let lift = 0;
+
+                            if (nearestCam.className.includes('cam-egg')) lift = 35 * Math.pow(Math.cos(topAngleRad), 2);
+                            else if (nearestCam.className.includes('cam-drop')) lift = 40 * (Math.cos(topAngleRad) > 0 ? Math.pow(Math.cos(topAngleRad), 6) : 0);
+                            else if (nearestCam.className.includes('cam-snail')) lift = 45 * (1 - (topAngleDeg / 360));
+                            else if (nearestCam.className.includes('cam-wave')) lift = 15 + 15 * Math.sin(topAngleRad * 6);
+
+                            let targetOffsetY = -lift; 
+                            
+                            if (o.offsetY < targetOffsetY) { o.offsetY += 2; if (o.offsetY > targetOffsetY) o.offsetY = targetOffsetY; } 
+                            else { o.offsetY = targetOffsetY; }
+                            
+                            o.speed = nearestCam.speed; isMoving = true;
+                        } else {
+                            if (o.offsetY < 0) { o.offsetY += 2; if (o.offsetY > 0) o.offsetY = 0; }
+                            o.speed = 0;
+                        }
+                        
+                        o.element.style.transform = `translateY(${o.offsetY}px)`;
+                        let puppet = document.getElementById('puppet-' + o.currentPeg.id);
+                        if (puppet) { puppet.style.transform = `translateY(${o.offsetY}px)`; }
+                        
+                    } else if (o.type === 'slot' && o.currentPeg) {
+                        let nearestCrank = null; let minDist = 250;
+                        activeObjects.forEach(crank => {
+                            if (crank.className.includes('crank') && Math.abs(crank.speed) > 0) {
+                                let dist = Math.hypot(crank.x - o.x, crank.y - o.y);
+                                if (dist < minDist) { minDist = dist; nearestCrank = crank; }
+                            }
+                        });
+
+                        if (nearestCrank) {
+                            let pinAngleRad = nearestCrank.angle * Math.PI / 180;
+                            let pinRadius = nearestCrank.radius * 0.70; 
+                            let pinX = nearestCrank.x + pinRadius * Math.cos(pinAngleRad);
+                            let pinY = nearestCrank.y + pinRadius * Math.sin(pinAngleRad);
+
+                            let dx = pinX - o.x; let dy = pinY - o.y;
+                            let dist = Math.hypot(dx, dy);
+                            let targetAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+                            // Handle curved slot geometry (C-Shape curve mapping)
+                            if (o.className.includes('slot-curved')) {
+                                let clampedDist = Math.min(dist, 150);
+                                let localY = -clampedDist * (150 - clampedDist) * (160 / 22500);
+                                let offsetAngle = Math.atan2(localY, clampedDist) * 180 / Math.PI;
+                                o.angle = targetAngle - offsetAngle;
+                            } else {
+                                o.angle = targetAngle;
+                            }
+
+                            o.speed = nearestCrank.speed; isMoving = true;
+                            o.element.style.transform = `rotate(${o.angle}deg)`;
+                            
+                            let puppet = document.getElementById('puppet-' + o.currentPeg.id);
+                            let linkage = document.getElementById('linkage-' + o.currentPeg.id);
+                            
+                            if (puppet) {
+                                let normalizedAngle = o.angle;
+                                if (normalizedAngle > 180) normalizedAngle -= 360;
+                                if (normalizedAngle < -180) normalizedAngle += 360;
+                                
+                                if (o.className.includes('slot-straight')) {
+                                    puppet.style.transform = `translateX(${normalizedAngle * 3}px)`;
+                                } else if (o.className.includes('slot-angled')) {
+                                    puppet.style.transform = `translateY(${-normalizedAngle * 2.5}px)`;
+                                    if(linkage) linkage.style.transform = `rotate(${normalizedAngle}deg)`;
+                                } else if (o.className.includes('slot-curved')) {
+                                    // تأرجح الجرس بصورة مذهلة
+                                    puppet.style.transform = `rotate(${normalizedAngle - 10}deg)`;
+                                    
+                                    // منطق صوت الجرس الحقيقي بناءً على تغير اتجاه الحركة!
+                                    let currentDelta = o.angle - (o.lastAngle || o.angle);
+                                    let prevDelta = o.lastDelta || currentDelta;
+                                    
+                                    // إذا تم انعكاس الاتجاه (ضربة الجرس)
+                                    if (currentDelta * prevDelta <= 0 && Math.abs(o.angle) > 5) {
+                                        if (!o.lastRing || now - o.lastRing > 400) {
+                                            playBellSound();
+                                            o.lastRing = now;
+                                        }
+                                    }
+                                    o.lastDelta = currentDelta;
+                                    o.lastAngle = o.angle;
+                                }
+                            }
+                        } else {
+                            o.speed = 0;
+                        }
+                    } else if (o.type !== 'piston' && o.type !== 'slot' && o.type !== 'battery' && o.type !== 'switch' && o.type !== 'bulb') { 
+                        o.element.style.transform = `rotate(${o.angle}deg)`; 
+                    }
+                });
+
+                let anyMotorMoving = activeMotors.some(m => Math.abs(m.speed) > 0);
+                if (anyMotorMoving && activeBelts.length > 0) { beltOffsetAnim -= 2.5; drawBeltsSVG(); }
+
+                let levelData = currentMode === 'regular' ? levels[currentLevel] : (currentMode === 'custom' ? gearsData.customLevels[currentLevel] : sandboxLevelObj);
+
+                if (levelData.checkWin(activeObjects)) {
+                    if(!isSuccess && anyMotorMoving) { gameArea.classList.add('machine-active'); activeObjects.forEach(o => { if(Math.abs(o.speed) > 0 && o.type !== 'piston' && o.type !== 'slot' && o.type !== 'battery') createSparks(o.x, o.y); }); playMechanicalSound(true); } 
+                    else if (anyMotorMoving && !levelData.name.includes("جرس")) { playMechanicalSound(true); } 
+                    else { playMechanicalSound(false); }
+                    
+                    if(!isSandboxActive && !isBeltModeActive && !isWireModeActive) { statusEl.innerHTML = "هندسة مثالية! الآلة تعمل بكفاءة! 🌟🛠️"; statusEl.style.color = "#fff"; statusEl.style.borderColor = "#2ecc71"; statusEl.style.background = "#27ae60"; }
+                    if (!isSandboxActive && currentMode === 'regular' && !gearsData.completedMachines.includes(currentLevel)) { gearsData.completedMachines.push(currentLevel); gearsData.savedStates[currentLevel] = serializeState(activeObjects); saveGameState(); renderLibrary(); } 
+                    else if (!isSandboxActive && currentMode === 'custom') { gearsData.savedStates['custom_' + currentLevel] = serializeState(activeObjects); saveGameState(); }
+                    
+                    isSuccess = true; if(currentMode === 'regular' && currentLevel < levels.length - 1 && !isSandboxActive) { nextLevelBtn.style.display = 'inline-block'; }
+                } else {
+                    isSuccess = false; gameArea.classList.remove('machine-active'); playMechanicalSound(false);
+                    if(!isSandboxActive && !isBeltModeActive && !isWireModeActive) {
+                        if(requiresCircuitMotor && !activeMotors.some(m => m.currentPeg && m.currentPeg.type === 'electrical' && m.isPowered)) {
+                            statusEl.innerText = "🔌 الدائرة الكهربائية مفتوحة! تأكد من إغلاق الدائرة وأن المفتاح (ON)."; statusEl.style.color = "#00d2ff"; statusEl.style.borderColor = "#00d2ff";
+                        } else if(hasAnyElectricalPeg && !activeMotors.some(m => m.isPowered)) {
+                            statusEl.innerText = "🔌 الدائرة الكهربائية مفتوحة! تأكد من إغلاق الدائرة وأن المفتاح (ON)."; statusEl.style.color = "#00d2ff"; statusEl.style.borderColor = "#00d2ff";
+                        } else {
+                            statusEl.innerText = "المحرك يعمل 🟢 - أكمل التركيب للوصول للهدف"; statusEl.style.color = "#f39c12"; statusEl.style.borderColor = "#f39c12"; 
+                        }
+                    }
+                }
+            }
+            if (!activeMotors.length || !isMoving) {
+                isSuccess = false; gameArea.classList.remove('machine-active'); playMechanicalSound(false);
+                if(!isSandboxActive && !isBeltModeActive && !isWireModeActive) { statusEl.innerText = "الآلة متوقفة 🛑 - ابدأ التركيب داخل الهيكل المرسوم"; statusEl.style.color = "#e74c3c"; statusEl.style.borderColor = "#e74c3c"; statusEl.style.background = "rgba(0,0,0,0.5)"; }
+            }
+            if(!forceUpdate) animationFrameId = requestAnimationFrame(() => updatePhysics(false));
+        }
+
+        loadLevel(0, 'regular');
+    </script>
+</body>
+</html>
