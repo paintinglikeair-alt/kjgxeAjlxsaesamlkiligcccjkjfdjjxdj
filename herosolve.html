@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Solve and Business</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.js"></script>
+    <style>
+        .fish-diagram {
+            position: relative;
+            height: 400px;
+            margin: 2rem 0;
+            overflow: visible;
+        }
+        .fish-head {
+            width: 0;
+            height: 0;
+            border-top: 50px solid transparent;
+            border-bottom: 50px solid transparent;
+            border-right: 100px solid #3b82f6;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%)scaleX(-1);
+            z-index: 2;
+        }
+        .fish-tail {
+            width: 0;
+            height: 0;
+            border-top: 25px solid transparent;
+            border-bottom: 25px solid transparent;
+            border-right: 50px solid #3b82f6;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%) scaleX(-1);
+            z-index: 2;
+        }
+        .fish-spine {
+            position: absolute;
+            height: 4px;
+            background-color: #3b82f6;
+            width: calc(100% - 340px);
+            left: 220px;
+            top: 50%;
+        
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .fish-bone {
+            position: absolute;
+            width: 80px;
+            height: 2px;
+            background-color: #60a5fa;
+            transform-origin: right center;
+            z-index: 1;
+        }
+        .bone-label {
+            position: absolute;
+            font-size: 12px;
+            white-space: nowrap;
+            background-color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 3;
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .canvas-box {
+            min-height: 150px;
+            border: 2px dashed #ccc;
+            transition: all 0.3s;
+        }
+        .canvas-box:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .hero-character {
+            width: 200px;
+            height: 250px;
+            position: relative;
+            margin: 0 auto 30px;
+            transform-style: preserve-3d;
+        }
+        .hero-head {
+            width: 100px;
+            height: 100px;
+            background-color: #eebd84;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 50px;
+            z-index: 3;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .hero-body {
+            width: 120px;
+            height: 150px;
+            background-color: #4169E1;
+            border-radius: 20px;
+            position: absolute;
+            top: 80px;
+            left: 40px;
+            z-index: 2;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .hero-cape {
+            width: 160px;
+            height: 130px;
+            background: linear-gradient(135deg, #DC143C, #FF6347);
+            position: absolute;
+            top: 90px;
+            left: 20px;
+            border-radius: 0 0 80px 80px;
+            z-index: 1;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transform: rotateY(5deg);
+        }
+        .hero-eye {
+            width: 20px;
+            height: 20px;
+            background-color: #11a2e6;
+            border-radius: 50%;
+            position: absolute;
+            top: 40px;
+        }
+        .hero-eye.left {
+            left: 20px;
+        }
+        .hero-eye.right {
+            right: 20px;
+        }
+        .hero-mouth {
+            width: 40px;
+            height: 15px;
+            border-bottom: 4px solid #e74040;
+            border-radius: 0 0 20px 20px;
+            position: absolute;
+            bottom: 25px;
+            left: 30px;
+        }
+        .hero-emblem {
+            width: 40px;
+            height: 40px;
+            background-color: #eebd84;
+            border-radius: 50%;
+            position: absolute;
+            top: 50px;
+            left: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #4169E1;
+            font-size: 18px;
+            border: 2px solid #4169E1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .hero-hair {
+            width: 80px;
+            height: 30px;
+            background-color: #0f519c;
+            position: absolute;
+            top: -15px;
+            left: -10px;
+            border-radius: 30px 30px 0 0;
+            z-index: 4;
+        }
+        .hero-hair-detail {
+            position: absolute;
+            width: 10px;
+            height: 20px;
+            background-color: #183ea5;
+            border-radius: 5px;
+        }
+        .hero-belt {
+            width: 80px;
+            height: 20px;
+            background-color: #4c0eaf;
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            z-index: 3;
+        }
+        .hero-gloves {
+            width: 40px;
+            height: 60px;
+            background-color: #eebd84;
+            position: absolute;
+            top: 80px;
+            z-index: 3;
+            border-radius: 10px;
+        }
+        .hero-gloves.left {
+            left: 20px;
+        }
+        .hero-gloves.right {
+            right: 20px;
+        }
+        .hero-boots {
+            width: 60px;
+            height: 30px;
+            background-color: #380d9b;
+            position: absolute;
+            bottom: 0;
+            z-index: 3;
+            border-radius: 0 0 15px 15px;
+        }
+        .hero-boots.left {
+            left: 50px;
+        }
+        .hero-boots.right {
+            right: 50px;
+        }
+        .hero-muscles {
+            position: absolute;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+        .hero-muscle.left {
+            width: 20px;
+            height: 30px;
+            top: 90px;
+            left: 50px;
+        }
+        .hero-muscle.right {
+            width: 20px;
+            height: 30px;
+            top: 90px;
+            right: 50px;
+        }
+        .export-btn {
+            transition: all 0.3s;
+        }
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .problem-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .problem-title-input {
+            border: none;
+            background: transparent;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e40af;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+        .problem-title-input:focus {
+            outline: 2px solid #3b82f6;
+            background: white;
+        }
+        .edit-icon {
+            cursor: pointer;
+            color: #3b82f6;
+        }
+        .best-idea-preview {
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Site Header with Hero Character -->
+        <div class="text-center mb-8">
+            <div class="hero-character">
+                <div class="hero-cape"></div>
+                <div class="hero-body">
+                    <div class="hero-muscle left"></div>
+                    <div class="hero-muscle right"></div>
+                    <div class="hero-emblem">HSB</div>
+                    <div class="hero-belt"></div>
+                    <div class="hero-buckle">H</div>
+                </div>
+                <div class="hero-head">
+                    <div class="hero-hair"></div>
+                    <div class="hero-eye left"></div>
+                    <div class="hero-eye right"></div>
+                    <div class="hero-mouth"></div>
+                </div>
+                <div class="hero-gloves left"></div>
+                <div class="hero-gloves right"></div>
+                <div class="hero-boots left"></div>
+                <div class="hero-boots right"></div>
+            </div>
+            <h1 class="text-5xl font-bold text-blue-800 mb-2">Hero Solve and Business</h1>
+            <p class="text-xl text-gray-600">Become a problem-solving superhero!</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex border-b border-gray-200 mb-8">
+            <button class="tab-btn py-2 px-4 font-medium text-blue-600 border-b-2 border-blue-600" data-page="page1">Problem Management</button>
+            <button class="tab-btn py-2 px-4 font-medium text-gray-500 hover:text-blue-600" data-page="page2">Solution Details</button>
+            <button class="tab-btn py-2 px-4 font-medium text-gray-500 hover:text-blue-600" data-page="page3">Business Model</button>
+        </div>
+
+        <!-- Page 1: Problem Management -->
+        <div id="page1" class="page active">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Problem Management</h2>
+            
+            <!-- Add Problem Box -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Add New Problem</h3>
+                <div class="flex">
+                    <input type="text" id="problemName" placeholder="Enter problem name" class="flex-grow px-4 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="addProblemBtn" class="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700 transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>Add Problem
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Problems Container -->
+            <div id="problemsContainer"></div>
+        </div>
+
+        <!-- Page 2: Solution Details -->
+        <div id="page2" class="page">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Solution Details</h2>
+            <div id="solutionDetailsContainer"></div>
+        </div>
+
+        <!-- Page 3: Business Model -->
+        <div id="page3" class="page">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Business Model Canvas</h2>
+            <div id="businessModelContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let problems = [];
+        let currentProblemId = null;
+        let editingProblemId = null;
+
+        // DOM Elements
+        const problemsContainer = document.getElementById('problemsContainer');
+        const solutionDetailsContainer = document.getElementById('solutionDetailsContainer');
+        const businessModelContainer = document.getElementById('businessModelContainer');
+        const problemNameInput = document.getElementById('problemName');
+        const addProblemBtn = document.getElementById('addProblemBtn');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            // Load any saved problems from localStorage
+            loadProblems();
+            
+            // Render existing problems
+            renderProblems();
+            renderSolutionDetails();
+            renderBusinessModels();
+            
+            // Set up event listeners
+            addProblemBtn.addEventListener('click', addProblem);
+            
+            // Tab navigation
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const pageId = button.getAttribute('data-page');
+                    switchPage(pageId);
+                });
+            });
+        });
+
+        // Function to switch between pages
+        function switchPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            document.getElementById(pageId).classList.add('active');
+            
+            tabButtons.forEach(button => {
+                if (button.getAttribute('data-page') === pageId) {
+                    button.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                    button.classList.remove('text-gray-500');
+                } else {
+                    button.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                    button.classList.add('text-gray-500');
+                }
+            });
+        }
+
+        // Function to load problems from localStorage
+        function loadProblems() {
+            const savedProblems = localStorage.getItem('problems');
+            if (savedProblems) {
+                problems = JSON.parse(savedProblems);
+            }
+        }
+
+        // Function to save problems to localStorage
+        function saveProblems() {
+            localStorage.setItem('problems', JSON.stringify(problems));
+        }
+
+        // Function to add a new problem
+        function addProblem() {
+            const problemName = problemNameInput.value.trim();
+            if (!problemName) return;
+            
+            const newProblem = {
+                id: Date.now().toString(),
+                name: problemName,
+                causes: [],
+                solutions: [],
+                bestIdea: '',
+                swot: {
+                    strengths: '',
+                    weaknesses: '',
+                    opportunities: '',
+                    threats: ''
+                },
+                businessModel: {
+                    keyPartners: '',
+                    valuePropositions: '',
+                    customerSegments: '',
+                    keyActivities: '',
+                    channels: '',
+                    customerRelationships: '',
+                    keyResources: '',
+                    costStructure: '',
+                    revenueStreams: ''
+                }
+            };
+            
+            problems.push(newProblem);
+            saveProblems();
+            renderProblems();
+            renderSolutionDetails();
+            renderBusinessModels();
+            
+            // Clear the input
+            problemNameInput.value = '';
+        }
+
+        // Function to delete a problem
+        function deleteProblem(id) {
+            problems = problems.filter(problem => problem.id !== id);
+            saveProblems();
+            renderProblems();
+            renderSolutionDetails();
+            renderBusinessModels();
+        }
+
+        // Function to update problem name
+        function updateProblemName(id, newName) {
+            const problem = problems.find(p => p.id === id);
+            if (problem) {
+                problem.name = newName;
+                saveProblems();
+                renderProblems();
+                renderSolutionDetails();
+                renderBusinessModels();
+            }
+        }
+
+        // Function to toggle edit mode for problem name
+        function toggleEditProblemName(id) {
+            editingProblemId = editingProblemId === id ? null : id;
+            renderProblems();
+        }
+
+        // Function to add a cause to a problem
+        function addCause(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.causes.push({
+                    id: Date.now().toString(),
+                    description: ''
+                });
+                saveProblems();
+                renderProblems();
+            }
+        }
+
+        // Function to delete a cause from a problem
+        function deleteCause(problemId, causeId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.causes = problem.causes.filter(cause => cause.id !== causeId);
+                saveProblems();
+                renderProblems();
+            }
+        }
+
+        // Function to add a solution to a problem
+        function addSolution(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.solutions.push({
+                    id: Date.now().toString(),
+                    description: ''
+                });
+                saveProblems();
+                renderProblems();
+            }
+        }
+
+        // Function to delete a solution from a problem
+        function deleteSolution(problemId, solutionId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.solutions = problem.solutions.filter(solution => solution.id !== solutionId);
+                saveProblems();
+                renderProblems();
+            }
+        }
+
+        // Function to update a cause description
+        function updateCause(problemId, causeId, description) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                const cause = problem.causes.find(c => c.id === causeId);
+                if (cause) {
+                    cause.description = description;
+                    saveProblems();
+                }
+            }
+        }
+
+        // Function to update a solution description
+        function updateSolution(problemId, solutionId, description) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                const solution = problem.solutions.find(s => s.id === solutionId);
+                if (solution) {
+                    solution.description = description;
+                    saveProblems();
+                }
+            }
+        }
+
+        // Function to update the best idea
+        function updateBestIdea(problemId, bestIdea) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.bestIdea = bestIdea;
+                saveProblems();
+                renderProblems();
+                renderSolutionDetails();
+                renderBusinessModels();
+            }
+        }
+
+        // Function to update SWOT analysis
+        function updateSwot(problemId, field, value) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.swot[field] = value;
+                saveProblems();
+            }
+        }
+
+        // Function to update business model
+        function updateBusinessModel(problemId, field, value) {
+            const problem = problems.find(p => p.id === problemId);
+            if (problem) {
+                problem.businessModel[field] = value;
+                saveProblems();
+            }
+        }
+
+        // Function to render all problems
+        function renderProblems() {
+            problemsContainer.innerHTML = '';
+            
+            if (problems.length === 0) {
+                problemsContainer.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+                        No problems added yet. Add your first problem above.
+                    </div>
+                `;
+                return;
+            }
+            
+            problems.forEach(problem => {
+                const problemElement = document.createElement('div');
+                problemElement.className = 'bg-white rounded-lg shadow-md p-6 mb-8';
+                problemElement.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="problem-title">
+                            ${editingProblemId === problem.id ? `
+                                <input type="text" value="${problem.name}" 
+                                    onblur="updateProblemName('${problem.id}', this.value)"
+                                    onkeydown="if(event.key === 'Enter') { updateProblemName('${problem.id}', this.value); toggleEditProblemName('${problem.id}'); }"
+                                    class="problem-title-input" autofocus>
+                            ` : `
+                                <h3 class="text-xl font-semibold text-gray-800">${problem.name}</h3>
+                            `}
+                            <i class="fas fa-edit edit-icon" onclick="toggleEditProblemName('${problem.id}')"></i>
+                        </div>
+                        <button onclick="deleteProblem('${problem.id}')" class="text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium text-gray-700 mb-2">The Causes of the Problem</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cause</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${problem.causes.map(cause => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="text" value="${cause.description}" 
+                                                    onchange="updateCause('${problem.id}', '${cause.id}', this.value)"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <button onclick="deleteCause('${problem.id}', '${cause.id}')" class="text-red-500 hover:text-red-700 mr-2">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr>
+                                        <td colspan="2" class="px-6 py-4 text-center">
+                                            <button onclick="addCause('${problem.id}')" class="text-blue-600 hover:text-blue-800">
+                                                <i class="fas fa-plus-circle mr-1"></i> Add Cause
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium text-gray-700 mb-2">Fishbone Diagram</h4>
+                        <div class="fish-diagram" id="fishbone-${problem.id}"></div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h4 class="text-lg font-medium text-gray-700 mb-2">Proposed Solutions</h4>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solution</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${problem.solutions.map(solution => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="text" value="${solution.description}" 
+                                                    onchange="updateSolution('${problem.id}', '${solution.id}', this.value)"
+                                                    class="w-full px-2 py-1 border border-gray-300 rounded">
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <button onclick="deleteSolution('${problem.id}', '${solution.id}')" class="text-red-500 hover:text-red-700 mr-2">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr>
+                                        <td colspan="2" class="px-6 py-4 text-center">
+                                            <button onclick="addSolution('${problem.id}')" class="text-blue-600 hover:text-blue-800">
+                                                <i class="fas fa-plus-circle mr-1"></i> Add Solution
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="text-lg font-medium text-gray-700 mb-2">Best Idea</h4>
+                        <textarea onchange="updateBestIdea('${problem.id}', this.value)" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">${problem.bestIdea}</textarea>
+                    </div>
+                `;
+                
+                problemsContainer.appendChild(problemElement);
+                
+                // Render fishbone diagram for this problem
+                renderFishboneDiagram(problem);
+            });
+        }
+
+        // Function to render fishbone diagram
+        function renderFishboneDiagram(problem) {
+            const container = document.getElementById(`fishbone-${problem.id}`);
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // Create fish elements
+            const head = document.createElement('div');
+            head.className = 'fish-head';
+            container.appendChild(head);
+            
+            const tail = document.createElement('div');
+            tail.className = 'fish-tail';
+            container.appendChild(tail);
+            
+            const spine = document.createElement('div');
+            spine.className = 'fish-spine';
+            container.appendChild(spine);
+            
+            // Calculate spacing based on number of causes
+            const numCauses = problem.causes.length;
+            const spacing = numCauses > 0 ? 80 / numCauses : 0;
+            
+            // Add bones for each cause
+            problem.causes.forEach((cause, index) => {
+                const bone = document.createElement('div');
+                bone.className = 'fish-bone';
+                
+                // Position bones alternately above and below the spine
+                const angle = index % 2 === 0 ? 45 : -45;
+                bone.style.transform = `rotate(${angle}deg)`;
+                bone.style.top = `${50 + (index % 2 === 0 ? -20 : 20)}%`;
+                bone.style.left = `${20 + (index * spacing)}%`;
+                
+                container.appendChild(bone);
+                
+                // Add label
+                const label = document.createElement('div');
+                label.className = 'bone-label';
+                label.textContent = cause.description || `Cause ${index + 1}`;
+                label.style.top = `${50 + (index % 2 === 0 ? -40 : 40)}%`;
+                label.style.left = `${20 + (index * spacing)}%`;
+                label.style.transform = `rotate(${angle}deg)`;
+                label.style.transformOrigin = 'left center';
+                
+                container.appendChild(label);
+            });
+        }
+
+        // Function to render solution details (SWOT)
+        function renderSolutionDetails() {
+            solutionDetailsContainer.innerHTML = '';
+            
+            if (problems.length === 0) {
+                solutionDetailsContainer.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+                        No problems added yet. Add problems on the Problem Management page to see solution details.
+                    </div>
+                `;
+                return;
+            }
+            
+            problems.forEach(problem => {
+                const solutionElement = document.createElement('div');
+                solutionElement.className = 'bg-white rounded-lg shadow-md p-6 mb-8';
+                solutionElement.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">${problem.name}</h3>
+                            ${problem.bestIdea ? `
+                                <div class="best-idea-preview">
+                                    <strong>Best Idea:</strong> ${problem.bestIdea}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div>
+                            <button onclick="exportProblemToWord('${problem.id}')" class="export-btn bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 mr-2">
+                                <i class="fas fa-file-word mr-2"></i>Export to Word
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-lg font-medium text-gray-700 mb-4">Solution Details (SWOT Analysis)</h4>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="border border-gray-200 rounded p-4">
+                            <h5 class="font-medium text-green-600 mb-2">Strengths</h5>
+                            <textarea onchange="updateSwot('${problem.id}', 'strengths', this.value)"
+                                class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">${problem.swot.strengths}</textarea>
+                        </div>
+                        <div class="border border-gray-200 rounded p-4">
+                            <h5 class="font-medium text-red-600 mb-2">Weaknesses</h5>
+                            <textarea onchange="updateSwot('${problem.id}', 'weaknesses', this.value)"
+                                class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500">${problem.swot.weaknesses}</textarea>
+                        </div>
+                        <div class="border border-gray-200 rounded p-4">
+                            <h5 class="font-medium text-yellow-600 mb-2">Opportunities</h5>
+                            <textarea onchange="updateSwot('${problem.id}', 'opportunities', this.value)"
+                                class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">${problem.swot.opportunities}</textarea>
+                        </div>
+                        <div class="border border-gray-200 rounded p-4">
+                            <h5 class="font-medium text-purple-600 mb-2">Threats</h5>
+                            <textarea onchange="updateSwot('${problem.id}', 'threats', this.value)"
+                                class="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500">${problem.swot.threats}</textarea>
+                        </div>
+                    </div>
+                `;
+                
+                solutionDetailsContainer.appendChild(solutionElement);
+            });
+        }
+
+        // Function to render business models
+        function renderBusinessModels() {
+            businessModelContainer.innerHTML = '';
+            
+            if (problems.length === 0) {
+                businessModelContainer.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
+                        No problems added yet. Add problems on the Problem Management page to see business models.
+                    </div>
+                `;
+                return;
+            }
+            
+            problems.forEach(problem => {
+                const modelElement = document.createElement('div');
+                modelElement.className = 'bg-white rounded-lg shadow-md p-6 mb-8';
+                modelElement.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-gray-800">${problem.name}</h3>
+                            ${problem.bestIdea ? `
+                                <div class="best-idea-preview">
+                                    <strong>Best Idea:</strong> ${problem.bestIdea}
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div>
+                            <button onclick="exportCanvasAsImage('${problem.id}')" class="export-btn bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 mr-2">
+                                <i class="fas fa-image mr-2"></i>Save as Image
+                            </button>
+                            <button onclick="exportCanvasToWord('${problem.id}')" class="export-btn bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+                                <i class="fas fa-file-word mr-2"></i>Save as Word
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-lg font-medium text-gray-700 mb-4">Business Model Canvas</h4>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <!-- First Row -->
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Key Partners</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'keyPartners', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.keyPartners}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Value Propositions</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'valuePropositions', this.value"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.valuePropositions}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Customer Segments</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'customerSegments', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.customerSegments}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <!-- Second Row -->
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Key Activities</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'keyActivities', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.keyActivities}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Channels</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'channels', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.channels}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Customer Relationships</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'customerRelationships', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.customerRelationships}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Third Row -->
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Key Resources</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'keyResources', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.keyResources}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Cost Structure</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'costStructure', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.costStructure}</textarea>
+                        </div>
+                        <div class="canvas-box p-4">
+                            <h5 class="font-medium text-gray-700 mb-2">Revenue Streams</h5>
+                            <textarea onchange="updateBusinessModel('${problem.id}', 'revenueStreams', this.value)"
+                                class="w-full h-24 px-2 py-1 border border-gray-200 rounded focus:outline-none">${problem.businessModel.revenueStreams}</textarea>
+                        </div>
+                    </div>
+                `;
+                
+                businessModelContainer.appendChild(modelElement);
+            });
+        }
+
+        // Function to export canvas as image
+        function exportCanvasAsImage(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (!problem) return;
+            
+            const container = document.querySelector(`#businessModelContainer div:has(h3:contains('${problem.name}'))`);
+            if (!container) return;
+            
+            html2canvas(container).then(canvas => {
+                canvas.toBlob(function(blob) {
+                    saveAs(blob, `Business_Model_${problem.name.replace(/ /g, '_')}.png`);
+                });
+            });
+        }
+
+        // Function to export canvas to Word
+        function exportCanvasToWord(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (!problem) return;
+            
+            const { docx } = window;
+            const doc = new docx.Document();
+            
+            const title = new docx.Paragraph({
+                text: `Business Model Canvas: ${problem.name}`,
+                heading: docx.HeadingLevel.HEADING_1,
+                spacing: { after: 200 }
+            });
+            
+            if (problem.bestIdea) {
+                doc.addParagraph(new docx.Paragraph({
+                    text: `Best Idea: ${problem.bestIdea}`,
+                    heading: docx.HeadingLevel.HEADING_2,
+                    spacing: { after: 200 }
+                }));
+            }
+            
+            const sections = [];
+            
+            // Add Key Partners
+            if (problem.businessModel.keyPartners) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Key Partners:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.keyPartners,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Value Propositions
+            if (problem.businessModel.valuePropositions) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Value Propositions:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.valuePropositions,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Customer Segments
+            if (problem.businessModel.customerSegments) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Customer Segments:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.customerSegments,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Key Activities
+            if (problem.businessModel.keyActivities) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Key Activities:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.keyActivities,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Channels
+            if (problem.businessModel.channels) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Channels:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.channels,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Customer Relationships
+            if (problem.businessModel.customerRelationships) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Customer Relationships:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.customerRelationships,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Key Resources
+            if (problem.businessModel.keyResources) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Key Resources:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.keyResources,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Cost Structure
+            if (problem.businessModel.costStructure) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Cost Structure:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.costStructure,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            // Add Revenue Streams
+            if (problem.businessModel.revenueStreams) {
+                sections.push(
+                    new docx.Paragraph({
+                        text: "Revenue Streams:",
+                        heading: docx.HeadingLevel.HEADING_2,
+                        spacing: { after: 100 }
+                    }),
+                    new docx.Paragraph({
+                        text: problem.businessModel.revenueStreams,
+                        spacing: { after: 200 }
+                    })
+                );
+            }
+            
+            doc.addSection({
+                children: [title, ...sections]
+            });
+            
+            docx.Packer.toBlob(doc).then(blob => {
+                saveAs(blob, `Business_Model_${problem.name.replace(/ /g, '_')}.docx`);
+            });
+        }
+
+        // Function to export entire problem to Word
+        function exportProblemToWord(problemId) {
+            const problem = problems.find(p => p.id === problemId);
+            if (!problem) return;
+            
+            const { docx } = window;
+            const doc = new docx.Document();
+            
+            // Problem Title
+            const title = new docx.Paragraph({
+                text: `Problem Analysis: ${problem.name}`,
+                heading: docx.HeadingLevel.HEADING_1,
+                spacing: { after: 200 }
+            });
+            
+            // Best Idea
+            if (problem.bestIdea) {
+                doc.addParagraph(new docx.Paragraph({
+                    text: `Best Idea: ${problem.bestIdea}`,
+                    heading: docx.HeadingLevel.HEADING_2,
+                    spacing: { after: 200 }
+                }));
+            }
+            
+            // Problem Causes
+            const causesTitle = new docx.Paragraph({
+                text: "Causes of the Problem:",
+                heading: docx.HeadingLevel.HEADING_2,
+                spacing: { after: 100 }
+            });
+            
+            const causesList = problem.causes.map(cause => 
+                new docx.Paragraph({
+                    text: `• ${cause.description}`,
+                    bullet: { level: 0 },
+                    spacing: { after: 100 }
+                })
+            );
+            
+            // Proposed Solutions
+            const solutionsTitle = new docx.Paragraph({
+                text: "Proposed Solutions:",
+                heading: docx.HeadingLevel.HEADING_2,
+                spacing: { after: 100 }
+            });
+            
+            const solutionsList = problem.solutions.map(solution => 
+                new docx.Paragraph({
+                    text: `• ${solution.description}`,
+                    bullet: { level: 0 },
+                    spacing: { after: 100 }
+                })
+            );
+            
+            // Best Idea
+            const bestIdeaTitle = new docx.Paragraph({
+                text: "Best Idea:",
+                heading: docx.HeadingLevel.HEADING_2,
+                spacing: { after: 100 }
+            });
+            
+            const bestIdeaContent = new docx.Paragraph({
+                text: problem.bestIdea,
+                spacing: { after: 200 }
+            });
+            
+            // SWOT Analysis
+            const swotTitle = new docx.Paragraph({
+                text: "SWOT Analysis:",
+                heading: docx.HeadingLevel.HEADING_2,
+                spacing: { after: 100 }
+            });
+            
+            const swotContent = [
+                new docx.Paragraph({
+                    text: "Strengths:",
+                    heading: docx.HeadingLevel.HEADING_3,
+                    spacing: { after: 50 }
+                }),
+                new docx.Paragraph({
+                    text: problem.swot.strengths,
+                    spacing: { after: 100 }
+                }),
+                new docx.Paragraph({
+                    text: "Weaknesses:",
+                    heading: docx.HeadingLevel.HEADING_3,
+                    spacing: { after: 50 }
+                }),
+                new docx.Paragraph({
+                    text: problem.swot.weaknesses,
+                    spacing: { after: 100 }
+                }),
+                new docx.Paragraph({
+                    text: "Opportunities:",
+                    heading: docx.HeadingLevel.HEADING_3,
+                    spacing: { after: 50 }
+                }),
+                new docx.Paragraph({
+                    text: problem.swot.opportunities,
+                    spacing: { after: 100 }
+                }),
+                new docx.Paragraph({
+                    text: "Threats:",
+                    heading: docx.HeadingLevel.HEADING_3,
+                    spacing: { after: 50 }
+                }),
+                new docx.Paragraph({
+                    text: problem.swot.threats,
+                    spacing: { after: 200 }
+                })
+            ];
+            
+            // Business Model
+            const businessTitle = new docx.Paragraph({
+                text: "Business Model Canvas:",
+                heading: docx.HeadingLevel.HEADING_2,
+                spacing: { after: 100 }
+            });
+            
+            const businessContent = Object.entries(problem.businessModel)
+                .filter(([_, value]) => value)
+                .map(([key, value]) => [
+                    new docx.Paragraph({
+                        text: `${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:`,
+                        heading: docx.HeadingLevel.HEADING_3,
+                        spacing: { after: 50 }
+                    }),
+                    new docx.Paragraph({
+                        text: value,
+                        spacing: { after: 100 }
+                    })
+                ])
+                .flat();
+            
+            doc.addSection({
+                children: [
+                    title,
+                    causesTitle,
+                    ...causesList,
+                    solutionsTitle,
+                    ...solutionsList,
+                    bestIdeaTitle,
+                    bestIdeaContent,
+                    swotTitle,
+                    ...swotContent,
+                    businessTitle,
+                    ...businessContent
+                ]
+            });
+            
+            docx.Packer.toBlob(doc).then(blob => {
+                saveAs(blob, `Problem_Analysis_${problem.name.replace(/ /g, '_')}.docx`);
+            });
+        }
+    </script>
+</body>
+</html>
