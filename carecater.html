@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استوديو الكاريكاتير الاحترافي - إصدار الفيكتور</title>
+    <!-- مكتبة الفيكتور الاحترافية -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <!-- مكتبة تصوير الشاشة للتصدير -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #6c5ce7; --secondary: #00cec9; --dark: #2d3436; 
+            --light: #f5f6fa; --border: #dfe6e9; --danger: #ff7675; --warning: #fdcb6e;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--dark); margin: 0; padding: 10px; color: #333; }
+        
+        /* الشريط العلوي للمشروع */
+        .top-bar { display: flex; justify-content: space-between; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 10px; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .top-bar h2 { margin: 0; color: var(--primary); }
+        .project-btns { display: flex; gap: 10px; }
+        .btn-project { padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;}
+        .btn-save-proj { background: #27ae60; } .btn-load-proj { background: #2980b9; }
+        .btn-project:hover { filter: brightness(1.1); }
+
+        .main-layout { display: grid; grid-template-columns: 300px 1fr 300px; gap: 15px; height: calc(95vh - 60px); }
+        .panel { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow-y: auto; }
+        h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; font-size: 16px;}
+
+        /* --- عمود الرفع --- */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; }
+        select, input[type="text"], input[type="file"] { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; box-sizing: border-box; }
+        .btn-upload { width: 100%; background: var(--secondary); color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn-upload:hover { background: #00b8b5; }
+        .btn-empty { background: #a29bfe; } .btn-empty:hover { background: #8174ff; }
+
+        /* --- عمود العرض والتحكم --- */
+        .preview-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; flex-wrap: wrap; gap: 5px;}
+        .view-btn, .tool-btn, .export-btn { padding: 6px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .view-btn { background: #34495e; color: white; } .view-btn.active { background: var(--primary); }
+        .tool-btn { background: #eee; border: 2px solid var(--border); } .tool-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .export-btn { background: #e84393; color: white; } .export-btn:hover { background: #d63031; }
+        
+        .canvas-container { background: var(--light); height: 500px; border-radius: 10px; position: relative; border: 2px dashed #b2bec3; overflow: hidden; display: flex; justify-content: center; user-select: none; }
+        #mannequin { position: relative; width: 400px; height: 100%; }
+        
+        /* إعدادات المفاصل والأجزاء الحرة */
+        .part { position: absolute; background: rgba(255, 234, 167, 0.4); border: 1px dashed #fab1a0; display: flex; justify-content: center; align-items: center; font-size: 10px; color: #d63031; cursor: move; transition: outline 0.2s; background-size: contain; background-repeat: no-repeat; background-position: center; transform-origin: 50% 15%; }
+        .part:hover { outline: 2px solid var(--primary); z-index: 100 !important; }
+        .part.selected { outline: 3px solid var(--secondary); box-shadow: 0 0 10px var(--secondary); z-index: 100 !important; }
+        
+        /* تمييز الإكسسوارات الحرة */
+        .accessory-part { background: rgba(155, 89, 182, 0.2); border-color: #9b59b6; color: #9b59b6; width: 80px; height: 80px; left: 160px; top: 100px; z-index: 50 !important; transform-origin: 50% 50%; }
+
+        .part-label { pointer-events: none; }
+        .part img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; pointer-events: none; }
+        
+        /* إخفاء حسب الزاوية */
+        .front-view .part > img[data-view="side"] { display: none !important; }
+        .side-view .part > img[data-view="front"] { display: none !important; }
+        .front-view .part.has-front-img { background: transparent; border: none; }
+        .front-view .part.has-front-img > .part-label { display: none; }
+        .side-view .part.has-side-img { background: transparent; border: none; }
+        .side-view .part.has-side-img > .part-label { display: none; }
+
+        /* إخفاء الإكسسوارات بناءً على الزاوية التي أضيفت فيها */
+        .front-view .accessory-part[data-acc-view="side"] { display: none !important; }
+        .side-view .accessory-part[data-acc-view="front"] { display: none !important; }
+
+        /* وضع التصدير (Export Mode) - لإخفاء المربعات والنصوص عند حفظ الصورة */
+        .export-mode .part { background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; }
+        .export-mode .part-label { display: none !important; }
+
+        /* إحداثيات المانيكان */
+        .front-view .chest { width: 120px; height: 90px; left: 140px; top: 145px; border-radius: 20px 20px 10px 10px; z-index: 6; }
+        .front-view .neck { width: 30px; height: 30px; left: 45px; top: -25px; border-radius: 5px; z-index: 5; }
+        .front-view .head { width: 90px; height: 110px; left: -30px; top: -100px; border-radius: 40% 40% 50% 50%; z-index: 10; }
+        .front-view .ear_r { width: 15px; height: 35px; left: -15px; top: 40px; border-radius: 10px 0 0 10px; z-index: -1; }
+        .front-view .ear_l { width: 15px; height: 35px; left: 90px; top: 40px; border-radius: 0 10px 10px 0; z-index: -1; }
+        .front-view .eyes { width: 60px; height: 30px; left: 15px; top: 40px; border: none; z-index: 11; }
+        .front-view .nose { width: 20px; height: 30px; left: 35px; top: 60px; border: none; z-index: 11; }
+        .front-view .mouth { width: 40px; height: 20px; left: 25px; top: 85px; border: none; z-index: 11; }
+        .front-view .hair { width: 110px; height: 60px; left: -10px; top: -10px; border: none; z-index: 12; transform-origin: 50% 50%;}
+        .front-view .pelvis { width: 110px; height: 60px; left: 5px; top: 85px; border-radius: 10px 10px 30px 30px; z-index: 6; }
+        .front-view .arm_upper_r { width: 35px; height: 80px; left: -40px; top: 5px; border-radius: 15px; z-index: 4; }
+        .front-view .arm_lower_r { width: 30px; height: 80px; left: 2px; top: 70px; border-radius: 15px; z-index: 4; }
+        .front-view .hand_r { width: 25px; height: 35px; left: 3px; top: 75px; border-radius: 10px; z-index: 4; }
+        .front-view .arm_upper_l { width: 35px; height: 80px; left: 125px; top: 5px; border-radius: 15px; z-index: 4; }
+        .front-view .arm_lower_l { width: 30px; height: 80px; left: 2px; top: 70px; border-radius: 15px; z-index: 4; }
+        .front-view .hand_l { width: 25px; height: 35px; left: 3px; top: 75px; border-radius: 10px; z-index: 4; }
+        .front-view .leg_upper_r { width: 45px; height: 100px; left: 0px; top: 50px; border-radius: 20px; z-index: 5; }
+        .front-view .leg_lower_r { width: 35px; height: 100px; left: 5px; top: 90px; border-radius: 15px; z-index: 5; }
+        .front-view .foot_r { width: 45px; height: 25px; left: -5px; top: 95px; border-radius: 10px 15px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+        .front-view .leg_upper_l { width: 45px; height: 100px; left: 65px; top: 50px; border-radius: 20px; z-index: 5; }
+        .front-view .leg_lower_l { width: 35px; height: 100px; left: 5px; top: 90px; border-radius: 15px; z-index: 5; }
+        .front-view .foot_l { width: 45px; height: 25px; left: -5px; top: 95px; border-radius: 15px 10px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+
+        .side-view .chest { width: 80px; height: 95px; left: 165px; top: 145px; border-radius: 20px; z-index: 6; }
+        .side-view .neck { width: 25px; height: 35px; left: 20px; top: -25px; z-index: 5; }
+        .side-view .head { width: 100px; height: 110px; left: -35px; top: -100px; border-radius: 40% 60% 60% 40%; z-index: 10; }
+        .side-view .ear_r { display: none; }
+        .side-view .ear_l { width: 20px; height: 35px; left: 45px; top: 45px; border-radius: 10px; z-index: 12; }
+        .side-view .eyes { width: 30px; height: 30px; left: 60px; top: 40px; border: none; z-index: 11; }
+        .side-view .nose { width: 25px; height: 30px; left: 85px; top: 60px; border: none; z-index: 11; }
+        .side-view .mouth { width: 25px; height: 20px; left: 75px; top: 85px; border: none; z-index: 11; }
+        .side-view .hair { width: 110px; height: 70px; left: 0px; top: -10px; border: none; z-index: 12; transform-origin: 50% 50%;}
+        .side-view .pelvis { width: 85px; height: 65px; left: -5px; top: 85px; border-radius: 20px; z-index: 6; }
+        .side-view .arm_upper_r, .side-view .leg_upper_r { display: none; }
+        .side-view .arm_upper_l { width: 40px; height: 85px; left: 20px; top: 5px; border-radius: 20px; z-index: 7; }
+        .side-view .arm_lower_l { width: 35px; height: 85px; left: 2px; top: 75px; border-radius: 15px; z-index: 7; }
+        .side-view .hand_l { width: 30px; height: 40px; left: 3px; top: 75px; border-radius: 10px; z-index: 7; }
+        .side-view .leg_upper_l { width: 55px; height: 105px; left: 15px; top: 50px; border-radius: 25px; z-index: 5; }
+        .side-view .leg_lower_l { width: 40px; height: 105px; left: 5px; top: 95px; border-radius: 20px; z-index: 5; }
+        .side-view .foot_l { width: 60px; height: 30px; left: -10px; top: 95px; border-radius: 20px 5px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+
+        .transform-controls { margin-top: 10px; background: #eee; padding: 10px; border-radius: 10px; display: none; }
+        .slider-group { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+        .slider-group label { width: 50px; margin: 0; font-size: 11px; font-weight: bold;}
+        .slider-group input { flex: 1; }
+        .btn-unequip { background: var(--danger); color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; margin-top: 5px; font-size: 12px; font-weight: bold; width: 100%; transition: 0.2s;}
+        .btn-unequip:hover { background: #d63031; }
+
+        /* --- عمود المكتبة --- */
+        .library-filters { margin-bottom: 10px; display: flex; gap: 5px; }
+        .library-filters select { flex: 1; padding: 5px; border-radius: 5px; }
+        .library-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .library-item { position: relative; border: 2px solid var(--border); border-radius: 8px; padding: 25px 5px 5px 5px; text-align: center; cursor: pointer; background: var(--light); transition: 0.2s; }
+        .library-item:hover { border-color: var(--primary); }
+        .library-item img { width: 100%; height: 60px; object-fit: contain; background: repeating-conic-gradient(#eee 0% 25%, transparent 0% 50%) 50% / 20px 20px; border-radius: 5px;}
+        .library-item p { margin: 5px 0 0 0; font-size: 11px; font-weight: bold; }
+        
+        .item-actions { position: absolute; top: 2px; right: 2px; left: 2px; display: flex; justify-content: flex-end; gap: 2px; z-index: 10; }
+        .icon-btn { width: 22px; height: 22px; border: none; border-radius: 50%; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; }
+        .icon-btn.delete { background: var(--danger); }
+        .icon-btn.edit { background: var(--warning); }
+        .icon-btn.draw { background: var(--primary); }
+        .icon-btn.download { background: #27ae60; }
+        .icon-btn:hover { transform: scale(1.1); }
+
+        /* --- النوافذ والمحرر الفيكتور --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 20px; border-radius: 15px; width: 400px; max-width: 90%; }
+        
+        /* تصميم محرر الفيكتور */
+        .vector-editor-modal { width: 900px; max-width: 95%; display: flex; flex-direction: column; gap: 15px; }
+        .editor-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .editor-header h3 { margin: 0; border: none; padding: 0;}
+        
+        .editor-body { display: flex; gap: 15px; }
+        
+        /* أدوات الفيكتور (يسار) */
+        .vector-tools { width: 260px; background: #f8f9fa; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; max-height: 500px; overflow-y: auto;}
+        .tool-section { border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .tool-section h4 { margin: 0 0 10px 0; font-size: 13px; color: var(--primary); }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .v-btn { padding: 8px; font-size: 11px; font-weight: bold; border: 1px solid #ccc; background: white; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;}
+        .v-btn:hover { background: #eee; }
+        .v-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        
+        .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .prop-row input[type="color"] { width: 30px; height: 30px; padding: 0; border: none; cursor: pointer; }
+        .prop-row input[type="range"] { width: 120px; }
+
+        /* مساحة العمل الفيكتور (يمين) */
+        .vector-canvas-wrapper { flex: 1; border: 2px dashed #b2bec3; background: repeating-conic-gradient(#eee 0% 25%, transparent 0% 50%) 50% / 20px 20px; display: flex; justify-content: center; align-items: center; height: 500px;}
+        
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+        
+        .btn-save-edit { 
+            background: #27ae60 !important; color: white !important; padding: 10px 25px; 
+            border: 2px solid #2ecc71; border-radius: 8px; cursor: pointer; 
+            font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            transition: all 0.2s ease;
+        }
+        .btn-save-edit:hover { background: #219ca1 !important; transform: scale(1.05); }
+        .btn-cancel { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; background: #b2bec3; color: white;}
+
+    </style>
+</head>
+<body>
+
+    <!-- الشريط العلوي -->
+    <div class="top-bar">
+        <h2>🎨 استوديو الكاريكاتير الاحترافي</h2>
+        <div class="project-btns">
+            <input type="file" id="load-project-input" style="display: none;" accept=".json" onchange="loadProject(event)">
+            <button class="btn-project btn-load-proj" onclick="document.getElementById('load-project-input').click()">📂 استيراد مشروع</button>
+            <button class="btn-project btn-save-proj" onclick="saveProject()">💾 حفظ المشروع بالكامل</button>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <!-- 1. مكتبة العناصر -->
+        <div class="panel">
+            <h3>🎨 المكتبة</h3>
+            <div class="library-filters">
+                <select id="filter-category" onchange="renderLibrary()"><option value="all">كل الأجزاء</option></select>
+                <select id="filter-view" onchange="renderLibrary()">
+                    <option value="front">أمامي</option>
+                    <option value="side">جانبي</option>
+                </select>
+            </div>
+            <div class="library-grid" id="library-container"></div>
+        </div>
+
+        <!-- 2. لوحة العرض والتحكم -->
+        <div class="panel">
+            <div class="preview-header">
+                <div style="display: flex; gap: 5px;">
+                    <button class="view-btn active" id="btn-front" onclick="switchView('front')">أمامي</button>
+                    <button class="view-btn" id="btn-side" onclick="switchView('side')">جانبي</button>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="export-btn" onclick="exportCharacter('front')">📸 تصدير أمامي</button>
+                    <button class="export-btn" onclick="exportCharacter('side')">📸 تصدير جانبي</button>
+                </div>
+            </div>
+            <div class="preview-header" style="justify-content: center; gap: 10px; background: #eee; padding: 5px; border-radius: 5px;">
+                <button class="tool-btn active" id="tool-move" onclick="setCanvasTool('move')" title="تحريك العنصر">✋ تحريك</button>
+                <button class="tool-btn" id="tool-rotate" onclick="setCanvasTool('rotate')" title="تدوير العنصر 360 درجة من المفصل">🔄 تدوير</button>
+            </div>
+            
+            <div class="canvas-container" id="main-canvas-container" onclick="deselectPart(event)">
+                <div id="mannequin" class="front-view">
+                    <!-- الصدر هو المركز الأساسي (Root) -->
+                    <div class="part chest" id="part-chest" onclick="selectPart(event, 'part-chest')"><span class="part-label">صدر</span>
+                        <div class="part neck" id="part-neck" onclick="selectPart(event, 'part-neck')"><span class="part-label">رقبة</span>
+                            <div class="part head" id="part-head" onclick="selectPart(event, 'part-head')"><span class="part-label">رأس</span>
+                                <div class="part ear_r" id="part-ear_r" onclick="selectPart(event, 'part-ear_r')"><span class="part-label">أذن ي</span></div>
+                                <div class="part ear_l" id="part-ear_l" onclick="selectPart(event, 'part-ear_l')"><span class="part-label">أذن س</span></div>
+                                <div class="part eyes" id="part-eyes" onclick="selectPart(event, 'part-eyes')"><span class="part-label">عيون</span></div>
+                                <div class="part nose" id="part-nose" onclick="selectPart(event, 'part-nose')"><span class="part-label">أنف</span></div>
+                                <div class="part mouth" id="part-mouth" onclick="selectPart(event, 'part-mouth')"><span class="part-label">فم</span></div>
+                                <div class="part hair" id="part-hair" onclick="selectPart(event, 'part-hair')"><span class="part-label">شعر</span></div>
+                            </div>
+                        </div>
+                        <div class="part arm_upper_r" id="part-arm_upper_r" onclick="selectPart(event, 'part-arm_upper_r')"><span class="part-label">زند ي</span>
+                            <div class="part arm_lower_r" id="part-arm_lower_r" onclick="selectPart(event, 'part-arm_lower_r')"><span class="part-label">ساعد ي</span>
+                                <div class="part hand_r" id="part-hand_r" onclick="selectPart(event, 'part-hand_r')"><span class="part-label">كف ي</span></div>
+                            </div>
+                        </div>
+                        <div class="part arm_upper_l" id="part-arm_upper_l" onclick="selectPart(event, 'part-arm_upper_l')"><span class="part-label">زند س</span>
+                            <div class="part arm_lower_l" id="part-arm_lower_l" onclick="selectPart(event, 'part-arm_lower_l')"><span class="part-label">ساعد س</span>
+                                <div class="part hand_l" id="part-hand_l" onclick="selectPart(event, 'part-hand_l')"><span class="part-label">كف س</span></div>
+                            </div>
+                        </div>
+                        <div class="part pelvis" id="part-pelvis" onclick="selectPart(event, 'part-pelvis')"><span class="part-label">حوض</span>
+                            <div class="part leg_upper_r" id="part-leg_upper_r" onclick="selectPart(event, 'part-leg_upper_r')"><span class="part-label">فخذ ي</span>
+                                <div class="part leg_lower_r" id="part-leg_lower_r" onclick="selectPart(event, 'part-leg_lower_r')"><span class="part-label">ساق ي</span>
+                                    <div class="part foot_r" id="part-foot_r" onclick="selectPart(event, 'part-foot_r')"><span class="part-label">قدم ي</span></div>
+                                </div>
+                            </div>
+                            <div class="part leg_upper_l" id="part-leg_upper_l" onclick="selectPart(event, 'part-leg_upper_l')"><span class="part-label">فخذ س</span>
+                                <div class="part leg_lower_l" id="part-leg_lower_l" onclick="selectPart(event, 'part-leg_lower_l')"><span class="part-label">ساق س</span>
+                                    <div class="part foot_l" id="part-foot_l" onclick="selectPart(event, 'part-foot_l')"><span class="part-label">قدم س</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="transform-controls" id="transform-panel">
+                <h4 style="margin-top:0; color: #d63031;">تعديل: <span id="selected-part-name">...</span></h4>
+                <div class="slider-group">
+                    <label>العرض:</label><input type="range" id="scale-x" min="0.5" max="3" step="0.1" value="1" oninput="applyTransform()">
+                </div>
+                <div class="slider-group">
+                    <label>الطول:</label><input type="range" id="scale-y" min="0.5" max="3" step="0.1" value="1" oninput="applyTransform()">
+                </div>
+                <div class="slider-group">
+                    <label>الكلي:</label><input type="range" id="scale-all" min="0.5" max="3" step="0.1" value="1" oninput="applyTransformAll()">
+                </div>
+                <div class="slider-group" style="background: #eccc68; padding: 5px; border-radius: 5px; margin-top: 5px;">
+                    <label>التدوير:</label><input type="range" id="rotate-deg" min="-180" max="180" step="1" value="0" oninput="applyTransform()">
+                </div>
+                <button class="btn-unequip" id="btn-unequip" onclick="unequipCurrentPart()">↩️ إزالة الصورة واسترجاع المركز</button>
+            </div>
+        </div>
+
+        <!-- 3. لوحة الرفع والتصنيف -->
+        <div class="panel">
+            <h3>📥 إضافة عنصر جديد</h3>
+            <div class="form-group">
+                <label>الجزء الأساسي:</label>
+                <select id="upload-category">
+                    <option value="head">الرأس</option> <option value="ear_r">أذن يمنى</option> <option value="ear_l">أذن يسرى</option>
+                    <option value="eyes">العيون</option> <option value="nose">الأنف</option> <option value="mouth">الفم</option> <option value="hair">الشعر</option>
+                    <option value="neck">الرقبة</option> <option value="chest">الصدر</option> <option value="pelvis">الحوض / الوسط</option>
+                    <option value="arm_upper_r">الزند الأيمن</option> <option value="arm_lower_r">الساعد الأيمن</option> <option value="hand_r">كف يمنى</option>
+                    <option value="arm_upper_l">الزند الأيسر</option> <option value="arm_lower_l">الساعد الأيسر</option> <option value="hand_l">كف يسرى</option>
+                    <option value="leg_upper_r">الفخذ الأيمن</option> <option value="leg_lower_r">الساق اليمنى</option> <option value="foot_r">قدم يمنى</option>
+                    <option value="leg_upper_l">الفخذ الأيسر</option> <option value="leg_lower_l">الساق اليسرى</option> <option value="foot_l">قدم يسرى</option>
+                    <!-- إضافة تصنيف الإكسسوارات الحرة -->
+                    <option value="accessory" style="background: #e1b12c; color: white; font-weight: bold;">💎 إكسسوارات وملابس (حُر)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>زاوية الرؤية:</label>
+                <select id="upload-view"><option value="front">أمامي</option><option value="side">جانبي</option></select>
+            </div>
+            <div class="form-group">
+                <label>اسم أو وصف العنصر:</label>
+                <input type="text" id="upload-name" placeholder="مثال: نظارة، سيف، قبعة...">
+            </div>
+            <div class="form-group">
+                <label>صورة العنصر (PNG شفافة):</label>
+                <input type="file" id="upload-file" accept="image/png">
+            </div>
+            <button class="btn-upload" onclick="handleUpload()">⬆️ رفع للمكتبة</button>
+            <button class="btn-upload btn-empty" onclick="createEmptyItem()">✨ إنشاء عنصر فيكتور فارغ</button>
+        </div>
+    </div>
+
+    <!-- نافذة محرر الفيكتور المتقدم (Fabric.js) -->
+    <div class="modal-overlay" id="vector-editor-modal">
+        <div class="modal-content vector-editor-modal">
+            <div class="editor-header">
+                <h3>✒️ محرر الفيكتور المتقدم</h3>
+                <button class="btn-cancel" onclick="closeModal('vector-editor-modal')" style="background:none; border:none; font-size:20px; cursor:pointer;">❌</button>
+            </div>
+            
+            <div class="editor-body">
+                <!-- لوحة الأدوات والخصائص -->
+                <div class="vector-tools">
+                    <div class="tool-section">
+                        <h4>أدوات الإضافة</h4>
+                        <div class="action-grid">
+                            <button class="v-btn active" id="vtool-select" onclick="setMode('select')">👆 تحديد</button>
+                            <button class="v-btn" id="vtool-draw" onclick="setMode('draw')">🖌️ رسم حر</button>
+                            <button class="v-btn" onclick="addShape('rect')">⬛ مربع</button>
+                            <button class="v-btn" onclick="addShape('circle')">⭕ دائرة</button>
+                            <button class="v-btn" onclick="addShape('triangle')">🔺 مثلث</button>
+                            <!-- أشكال جديدة -->
+                            <button class="v-btn" onclick="addShape('star')">⭐ نجمة</button>
+                            <button class="v-btn" onclick="addShape('polygon')">⬟ مضلع</button>
+                            <button class="v-btn" onclick="addShape('heart')">❤️ قلب</button>
+                            <button class="v-btn" onclick="addShape('bubble')">💬 فقاعة</button>
+                            <button class="v-btn" onclick="addShape('arrow')">➡️ سهم</button>
+                            <button class="v-btn" onclick="addShape('line')">➖ خط</button>
+                        </div>
+                        
+                        <!-- زر إضافة ملصق -->
+                        <input type="file" id="sticker-upload" accept="image/*" style="display:none;" onchange="addSticker(event)">
+                        <button class="btn-upload" style="background:#27ae60; margin-top: 10px; width: 100%; font-size:12px; padding:8px;" onclick="document.getElementById('sticker-upload').click()">🖼️ إضافة ملصق (صورة من الجهاز)</button>
+                    </div>
+                    
+                    <div class="tool-section" id="props-panel">
+                        <h4>خصائص العنصر/الفرشاة</h4>
+                        <div class="prop-row">
+                            <span>لون التعبئة:</span>
+                            <input type="color" id="v-fill-color" value="#ffffff" onchange="updateObjProp('fill', this.value)">
+                        </div>
+                        <div class="prop-row">
+                            <span>لون الإطار/الفرشاة:</span>
+                            <input type="color" id="v-stroke-color" value="#000000" onchange="updateObjProp('stroke', this.value)">
+                        </div>
+                        <div class="prop-row">
+                            <span>سمك الإطار: <span id="val-stroke">2</span></span>
+                            <input type="range" id="v-stroke-width" min="0" max="20" value="2" oninput="updateObjProp('strokeWidth', parseInt(this.value)); document.getElementById('val-stroke').innerText=this.value;">
+                        </div>
+                        <div class="prop-row">
+                            <span>الشفافية: <span id="val-opacity">1</span></span>
+                            <input type="range" id="v-opacity" min="0.1" max="1" step="0.1" value="1" oninput="updateObjProp('opacity', parseFloat(this.value)); document.getElementById('val-opacity').innerText=this.value;">
+                        </div>
+                    </div>
+
+                    <div class="tool-section">
+                        <h4>الترتيب والتحكم</h4>
+                        <div class="action-grid">
+                            <button class="v-btn" onclick="fabricAction('front')">⏫ للمقدمة</button>
+                            <button class="v-btn" onclick="fabricAction('back')">⏬ للخلفية</button>
+                            <button class="v-btn" onclick="fabricAction('forward')">🔼 للأمام</button>
+                            <button class="v-btn" onclick="fabricAction('backward')">🔽 للخلف</button>
+                            <button class="v-btn" onclick="fabricAction('group')">🔗 تجميع</button>
+                            <button class="v-btn" onclick="fabricAction('ungroup')">✂️ تفكيك</button>
+                            <button class="v-btn" onclick="fabricAction('clone')">👯 تكرار</button>
+                            <button class="v-btn" onclick="fabricAction('flipX')">↔️ عكس أفقي</button>
+                            <button class="v-btn" onclick="fabricAction('flipY')">↕️ عكس رأسي</button>
+                            <button class="v-btn" style="color:var(--danger); border-color:var(--danger);" onclick="fabricAction('delete')">🗑️ حذف</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- مساحة الفيكتور -->
+                <div class="vector-canvas-wrapper">
+                    <canvas id="fab-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal('vector-editor-modal')">إلغاء</button>
+                <button class="btn-save-edit" onclick="saveVectorDrawing()">💾 حفظ الرسمة للمكتبة</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل التصنيف -->
+    <div class="modal-overlay" id="edit-cat-modal">
+        <div class="modal-content">
+            <h3>تعديل تصنيف العنصر</h3>
+            <input type="hidden" id="edit-item-id">
+            <div class="form-group"><label>الجزء الأساسي:</label><select id="edit-category"></select></div>
+            <div class="form-group"><label>زاوية الرؤية:</label><select id="edit-view"><option value="front">أمامي</option><option value="side">جانبي</option></select></div>
+            <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('edit-cat-modal')">إلغاء</button><button class="btn-save" onclick="saveCategory()" style="background:#27ae60; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">حفظ</button></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. إعدادات الفيكتور (Fabric.js) ---
+        let canvas = new fabric.Canvas('fab-canvas', { width: 500, height: 500, isDrawingMode: false });
+        let editingItemId = null;
+
+        // تهيئة الفرشاة
+        canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+        canvas.freeDrawingBrush.color = '#000000';
+        canvas.freeDrawingBrush.width = 2;
+
+        canvas.on('selection:created', updatePropsFromSelection);
+        canvas.on('selection:updated', updatePropsFromSelection);
+
+        function setMode(mode) {
+            canvas.isDrawingMode = (mode === 'draw');
+            document.getElementById('vtool-select').classList.toggle('active', mode === 'select');
+            document.getElementById('vtool-draw').classList.toggle('active', mode === 'draw');
+        }
+
+        // إضافة الملصق (صورة خارجية)
+        function addSticker(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(f) {
+                const data = f.target.result;
+                fabric.Image.fromURL(data, function(img) {
+                    img.scaleToWidth(150);
+                    img.set({ left: 150, top: 150 });
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+                    setMode('select');
+                });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = ''; // لإعادة التعيين لو تم اختيار نفس الصورة
+        }
+
+        function addShape(type) {
+            setMode('select');
+            let shape, fill = document.getElementById('v-fill-color').value, stroke = document.getElementById('v-stroke-color').value, sw = parseInt(document.getElementById('v-stroke-width').value);
+            const opts = { left: 200, top: 200, fill: fill, stroke: stroke, strokeWidth: sw };
+            
+            if(type === 'rect') shape = new fabric.Rect({ ...opts, width: 80, height: 80 });
+            else if(type === 'circle') shape = new fabric.Circle({ ...opts, radius: 40 });
+            else if(type === 'triangle') shape = new fabric.Triangle({ ...opts, width: 80, height: 80 });
+            else if(type === 'line') shape = new fabric.Line([50, 50, 150, 50], { ...opts, stroke: fill, strokeWidth: Math.max(sw, 5) });
+            else if(type === 'star') {
+                const path = 'M 50 0 L 61 35 L 98 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 2 35 L 39 35 Z';
+                shape = new fabric.Path(path, opts);
+                shape.scale(1.5);
+            }
+            else if(type === 'arrow') {
+                const path = 'M 0 15 L 40 15 L 40 0 L 70 25 L 40 50 L 40 35 L 0 35 Z';
+                shape = new fabric.Path(path, opts);
+                shape.scale(1.5);
+            }
+            else if(type === 'polygon') {
+                shape = new fabric.Polygon([{x: 25, y: 0}, {x: 75, y: 0}, {x: 100, y: 43}, {x: 75, y: 86}, {x: 25, y: 86}, {x: 0, y: 43}], { ...opts, width: 100, height: 86 });
+            }
+            else if(type === 'heart') {
+                const path = 'M 27.27 10.45 C 27.27 5.75 22.36 2.45 17.5 2.45 C 13.55 2.45 10 5.45 10 9 C 10 5.45 6.45 2.45 2.5 2.45 C -2.36 2.45 -7.27 5.75 -7.27 10.45 C -7.27 17.27 10 28.55 10 28.55 C 10 28.55 27.27 17.27 27.27 10.45 Z';
+                shape = new fabric.Path(path, opts);
+                shape.scale(2);
+            }
+            else if(type === 'bubble') {
+                 const path = 'M 0 0 L 100 0 L 100 70 L 60 70 L 40 100 L 40 70 L 0 70 Z';
+                 shape = new fabric.Path(path, opts);
+            }
+            
+            canvas.add(shape);
+            canvas.setActiveObject(shape);
+        }
+
+        function updateObjProp(prop, value) {
+            if (canvas.isDrawingMode) {
+                if (prop === 'stroke') canvas.freeDrawingBrush.color = value;
+                if (prop === 'strokeWidth') canvas.freeDrawingBrush.width = value;
+                return;
+            }
+            const activeObj = canvas.getActiveObject();
+            if (activeObj) {
+                if(activeObj.type === 'group' && prop === 'fill') {
+                    activeObj._objects.forEach(obj => obj.set(prop, value));
+                } else {
+                    activeObj.set(prop, value);
+                }
+                canvas.renderAll();
+            }
+        }
+
+        function updatePropsFromSelection() {
+            const obj = canvas.getActiveObject();
+            if(!obj) return;
+            if(obj.fill) document.getElementById('v-fill-color').value = obj.fill;
+            if(obj.stroke) document.getElementById('v-stroke-color').value = obj.stroke;
+            if(obj.strokeWidth !== undefined) {
+                document.getElementById('v-stroke-width').value = obj.strokeWidth;
+                document.getElementById('val-stroke').innerText = obj.strokeWidth;
+            }
+            if(obj.opacity !== undefined) {
+                document.getElementById('v-opacity').value = obj.opacity;
+                document.getElementById('val-opacity').innerText = obj.opacity;
+            }
+        }
+
+        function fabricAction(action) {
+            const activeObj = canvas.getActiveObject();
+            if (!activeObj && action !== 'clear') return;
+
+            switch(action) {
+                case 'front': activeObj.bringToFront(); break;
+                case 'back': activeObj.sendToBack(); break;
+                case 'forward': activeObj.bringForward(); break;
+                case 'backward': activeObj.sendBackwards(); break;
+                case 'flipX': activeObj.set('flipX', !activeObj.flipX); break;
+                case 'flipY': activeObj.set('flipY', !activeObj.flipY); break;
+                case 'delete': 
+                    const activeObjects = canvas.getActiveObjects();
+                    if (activeObjects.length) {
+                        canvas.discardActiveObject();
+                        activeObjects.forEach(obj => canvas.remove(obj));
+                    }
+                    break;
+                case 'clone':
+                    activeObj.clone(function(cloned) {
+                        cloned.set({ left: cloned.left + 20, top: cloned.top + 20 });
+                        canvas.add(cloned); canvas.setActiveObject(cloned);
+                    });
+                    break;
+                case 'group':
+                    if (activeObj.type === 'activeSelection') {
+                        activeObj.toGroup(); canvas.requestRenderAll();
+                    }
+                    break;
+                case 'ungroup':
+                    if (activeObj.type === 'group') {
+                        activeObj.toActiveSelection(); canvas.requestRenderAll();
+                    }
+                    break;
+            }
+            canvas.renderAll();
+        }
+
+        function openEditor(e, id) {
+            e.stopPropagation();
+            const item = libraryData.find(i => i.id === id);
+            if(item) {
+                editingItemId = id;
+                canvas.clear();
+                
+                if (item.fabricData) {
+                    canvas.loadFromJSON(item.fabricData, canvas.renderAll.bind(canvas));
+                } else {
+                    fabric.Image.fromURL(item.src, function(img) {
+                        img.scaleToWidth(250); img.set({ left: 125, top: 125 });
+                        canvas.add(img); canvas.setActiveObject(img);
+                    });
+                }
+                document.getElementById('vector-editor-modal').style.display = 'flex';
+                setMode('select');
+            }
+        }
+
+        function saveVectorDrawing() {
+            const item = libraryData.find(i => i.id === editingItemId);
+            if(item) {
+                item.src = canvas.toDataURL({ format: 'png', multiplier: 1 });
+                item.fabricData = JSON.stringify(canvas.toJSON());
+                
+                closeModal('vector-editor-modal');
+                renderLibrary();
+                
+                // تحديث المانيكان والإكسسوارات إذا كانت مركبة
+                const targetParts = document.querySelectorAll(`.part`);
+                targetParts.forEach(part => {
+                    const equippedImg = part.querySelector(`:scope > img[data-view="${item.view}"]`);
+                    if(equippedImg && (part.id === `part-${item.category}` || part.id.startsWith('acc-'))) { 
+                        equippedImg.src = item.src;
+                    }
+                });
+            }
+        }
+
+
+        // --- 2. إدارة المكتبة والبيانات الأساسية ---
+        let libraryData = [];
+        let idCounter = 1;
+        
+        function createProfessionalSVG(category, view, color) {
+            let svgContent = ''; const isSide = view === 'side';
+            switch(category) {
+                case 'head': svgContent = isSide ? `<path d="M50,10 Q80,10 90,40 Q100,70 80,90 Q50,100 20,80 Q0,50 50,10 Z" fill="${color}" stroke="#333" stroke-width="2"/>` : `<path d="M20,40 Q50,-10 80,40 Q90,90 50,100 Q10,90 20,40 Z" fill="${color}" stroke="#333" stroke-width="2"/>`; break;
+                case 'eyes': svgContent = isSide ? `<path d="M30,50 Q60,30 90,50 Q60,70 30,50 Z" fill="white" stroke="#333" stroke-width="3"/><circle cx="50" cy="50" r="10" fill="#2d3436"/><circle cx="53" cy="47" r="3" fill="white"/>` : `<path d="M10,50 Q30,30 50,50 Q30,70 10,50 Z M50,50 Q70,30 90,50 Q70,70 50,50 Z" fill="white" stroke="#333" stroke-width="3"/><circle cx="30" cy="50" r="8" fill="#2d3436"/><circle cx="70" cy="50" r="8" fill="#2d3436"/><circle cx="32" cy="48" r="2" fill="white"/><circle cx="72" cy="48" r="2" fill="white"/>`; break;
+                case 'mouth': svgContent = isSide ? `<path d="M30,40 Q50,60 80,40" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"/>` : `<path d="M20,40 Q50,70 80,40 Q50,80 20,40 Z" fill="${color}" stroke="#333" stroke-width="2"/><path d="M25,45 Q50,50 75,45" stroke="#fff" stroke-width="2" fill="none"/>`; break;
+                case 'nose': svgContent = isSide ? `<path d="M40,20 L80,70 L50,80 Z" fill="${color}" stroke="#333" stroke-width="2"/>` : `<path d="M50,20 Q60,60 70,70 Q50,80 30,70 Q40,60 50,20 Z" fill="${color}" stroke="#333" stroke-width="2"/>`; break;
+                case 'hair': svgContent = `<path d="M10,60 Q50,-20 90,60 Q100,20 50,0 Q0,20 10,60 Z" fill="${color}" stroke="#111" stroke-width="2"/>`; break;
+                default: svgContent = `<rect x="20" y="10" width="60" height="80" rx="20" fill="${color}" stroke="#333" stroke-width="2"/>`;
+            }
+            return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">${svgContent}</svg>`)}`;
+        }
+
+        const partsConfig = {
+            'head': { color: '#ffeaa7', name: 'رأس' }, 'hair': { color: '#2d3436', name: 'شعر' },
+            'eyes': { color: '#0984e3', name: 'عيون' }, 'nose': { color: '#e1b12c', name: 'أنف' },
+            'mouth': { color: '#d63031', name: 'فم' }, 'ear_r': { color: '#ffeaa7', name: 'أذن ي' }, 'ear_l': { color: '#ffeaa7', name: 'أذن س' },
+            'neck': { color: '#ffeaa7', name: 'رقبة' }, 'chest': { color: '#00cec9', name: 'صدر' }, 'pelvis': { color: '#6c5ce7', name: 'حوض' },
+            'arm_upper_r': { color: '#00b894', name: 'زند ي' }, 'arm_lower_r': { color: '#55efc4', name: 'ساعد ي' }, 'hand_r': { color: '#ffeaa7', name: 'كف ي' },
+            'arm_upper_l': { color: '#00b894', name: 'زند س' }, 'arm_lower_l': { color: '#55efc4', name: 'ساعد س' }, 'hand_l': { color: '#ffeaa7', name: 'كف س' },
+            'leg_upper_r': { color: '#0984e3', name: 'فخذ ي' }, 'leg_lower_r': { color: '#74b9ff', name: 'ساق ي' }, 'foot_r': { color: '#2d3436', name: 'قدم ي' },
+            'leg_upper_l': { color: '#0984e3', name: 'فخذ س' }, 'leg_lower_l': { color: '#74b9ff', name: 'ساق س' }, 'foot_l': { color: '#2d3436', name: 'قدم س' }
+        };
+
+        function initDefaultLibrary() {
+            libraryData = [];
+            for (const [key, val] of Object.entries(partsConfig)) {
+                libraryData.push({ id: idCounter++, category: key, view: 'front', name: val.name + ' أمامي', src: createProfessionalSVG(key, 'front', val.color) });
+                if(!key.endsWith('_r')) {
+                    libraryData.push({ id: idCounter++, category: key, view: 'side', name: val.name + ' جانبي', src: createProfessionalSVG(key, 'side', val.color) });
+                }
+            }
+        }
+
+        let currentActiveView = 'front';
+        let currentSelectedPartId = null;
+        let partsState = {}; 
+        let currentCanvasTool = 'move';
+
+        window.onload = function() {
+            document.getElementById('edit-category').innerHTML = document.getElementById('upload-category').innerHTML;
+            initDefaultLibrary();
+            renderLibrary();
+        };
+
+        function renderLibrary() {
+            const container = document.getElementById('library-container');
+            const filterCategory = document.getElementById('filter-category').value;
+            const filterView = document.getElementById('filter-view').value;
+
+            container.innerHTML = '';
+            const filteredData = libraryData.filter(item => (filterCategory === 'all' || item.category === filterCategory) && item.view === filterView);
+
+            filteredData.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'library-item';
+                div.onclick = () => equipItem(item);
+                div.innerHTML = `
+                    <div class="item-actions">
+                        <button class="icon-btn download" onclick="downloadItem(event, '${item.src}', '${item.name}')" title="تحميل PNG">💾</button>
+                        <button class="icon-btn edit" onclick="openEditCategory(event, ${item.id})" title="تعديل التصنيف">✏️</button>
+                        <button class="icon-btn draw" onclick="openEditor(event, ${item.id})" title="محرر الفيكتور">✒️</button>
+                        <button class="icon-btn delete" onclick="deleteItem(event, ${item.id})" title="حذف">✖</button>
+                    </div>
+                    <img src="${item.src}" alt="${item.name}">
+                    <p>${item.name}</p>
+                `;
+                container.appendChild(div);
+            });
+            updateFilterDropdown();
+        }
+
+        // --- 3. الحفظ والاستيراد والتصدير الشامل (مع حفظ حالة التركيب) ---
+        function downloadItem(e, src, name) {
+            e.stopPropagation();
+            const a = document.createElement('a'); a.href = src; a.download = name + '.png'; a.click();
+        }
+
+        // التصدير النظيف بدون مربعات المانيكان
+        function exportCharacter(view) {
+            if(currentActiveView !== view) switchView(view);
+            deselectPart({target: document.getElementById('mannequin')}); // إخفاء مؤشر التحديد
+            
+            const mannequin = document.getElementById('mannequin');
+            // إضافة كلاس التصدير لإخفاء الحدود والخلفيات الهندسية
+            mannequin.classList.add('export-mode');
+            
+            setTimeout(() => {
+                html2canvas(mannequin, { backgroundColor: null, scale: 3 }).then(canvas => {
+                    mannequin.classList.remove('export-mode'); // إعادة المانيكان لوضعه الطبيعي بعد التصوير
+                    const a = document.createElement('a');
+                    a.href = canvas.toDataURL('image/png');
+                    a.download = `Character_${view}_HD.png`;
+                    a.click();
+                });
+            }, 100);
+        }
+
+        function saveProject() {
+            switchView(currentActiveView); 
+            
+            let equippedItems = {};
+            document.querySelectorAll('.part').forEach(part => {
+                let frontImg = part.querySelector(':scope > img[data-view="front"]');
+                let sideImg = part.querySelector(':scope > img[data-view="side"]');
+                if(frontImg || sideImg || part.classList.contains('accessory-part')) {
+                    equippedItems[part.id] = {
+                        front: frontImg ? frontImg.src : null,
+                        side: sideImg ? sideImg.src : null,
+                        isAccessory: part.classList.contains('accessory-part'),
+                        accView: part.dataset.accView || null
+                    };
+                }
+            });
+
+            const projectData = {
+                version: "1.3",
+                libraryData: libraryData,
+                partsState: partsState,
+                idCounter: idCounter,
+                equippedItems: equippedItems
+            };
+            const blob = new Blob([JSON.stringify(projectData)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = "CaricatureStudio_Project.json"; a.click();
+        }
+
+        function loadProject(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if(data.libraryData) {
+                        libraryData = data.libraryData;
+                        partsState = data.partsState || {};
+                        idCounter = data.idCounter || Date.now();
+                        
+                        // تنظيف المانيكان
+                        document.querySelectorAll('.part img').forEach(img => img.remove());
+                        document.querySelectorAll('.part').forEach(p => { p.classList.remove('has-front-img', 'has-side-img'); });
+                        document.querySelectorAll('.accessory-part').forEach(acc => acc.remove());
+                        
+                        // إعادة بناء العناصر المتركبة
+                        if(data.equippedItems) {
+                            // بناء الإكسسوارات أولاً وتحديد زاوية رؤيتها
+                            for (let partId in data.equippedItems) {
+                                if (data.equippedItems[partId].isAccessory) {
+                                    const accNode = createAccessoryNode(partId);
+                                    accNode.dataset.accView = data.equippedItems[partId].accView;
+                                }
+                            }
+                            // وضع الصور
+                            for (let partId in data.equippedItems) {
+                                const part = document.getElementById(partId);
+                                if (part) {
+                                    const eq = data.equippedItems[partId];
+                                    if (eq.front) {
+                                        const img = document.createElement('img'); img.src = eq.front; img.setAttribute('data-view', 'front');
+                                        part.appendChild(img); part.classList.add('has-front-img');
+                                    }
+                                    if (eq.side) {
+                                        const img = document.createElement('img'); img.src = eq.side; img.setAttribute('data-view', 'side');
+                                        part.appendChild(img); part.classList.add('has-side-img');
+                                    }
+                                }
+                            }
+                        }
+                        
+                        alert("تم استيراد المشروع بكامل تفاصيله ووضعياته بنجاح! 🚀");
+                        switchView('front');
+                    }
+                } catch(err) { alert("ملف غير صالح!"); }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- 4. أوامر الرفع والإكسسوارات الحرة ---
+        function handleUpload() {
+            const fileInput = document.getElementById('upload-file');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    libraryData.push({ id: idCounter++, category: document.getElementById('upload-category').value, view: document.getElementById('upload-view').value, name: document.getElementById('upload-name').value || 'عنصر محمل', src: e.target.result });
+                    renderLibrary();
+                }
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        }
+
+        function createEmptyItem() {
+            const tempCanvas = document.createElement('canvas'); tempCanvas.width = 400; tempCanvas.height = 400;
+            libraryData.push({ id: idCounter++, category: document.getElementById('upload-category').value, view: document.getElementById('upload-view').value, name: (document.getElementById('upload-name').value || 'عنصر فيكتور') + ' (جديد)', src: tempCanvas.toDataURL('image/png') });
+            renderLibrary();
+        }
+
+        function deleteItem(e, id) { e.stopPropagation(); if(confirm("حذف العنصر؟")) { libraryData = libraryData.filter(i => i.id !== id); renderLibrary(); } }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openEditCategory(e, id) { e.stopPropagation(); const item = libraryData.find(i => i.id === id); if(item) { document.getElementById('edit-item-id').value = id; document.getElementById('edit-category').value = item.category; document.getElementById('edit-view').value = item.view; document.getElementById('edit-cat-modal').style.display = 'flex'; } }
+        function saveCategory() { const item = libraryData.find(i => i.id === parseInt(document.getElementById('edit-item-id').value)); if(item) { item.category = document.getElementById('edit-category').value; item.view = document.getElementById('edit-view').value; closeModal('edit-cat-modal'); renderLibrary(); } }
+
+        function setCanvasTool(tool) { currentCanvasTool = tool; document.getElementById('tool-move').classList.toggle('active', tool === 'move'); document.getElementById('tool-rotate').classList.toggle('active', tool === 'rotate'); }
+
+        function createAccessoryNode(id) {
+            if(document.getElementById(id)) return document.getElementById(id);
+            const part = document.createElement('div');
+            part.className = `part accessory-part`;
+            part.id = id;
+            part.onclick = (e) => selectPart(e, id);
+            part.innerHTML = `<span class="part-label">ملحق</span>`;
+            document.getElementById('mannequin').appendChild(part);
+            return part;
+        }
+
+        function equipItem(item) {
+            if (currentActiveView !== item.view) switchView(item.view);
+            
+            let targetPart;
+            if (item.category === 'accessory') {
+                targetPart = createAccessoryNode('acc-' + Date.now());
+                targetPart.dataset.accView = item.view; // تحديد زاوية رؤية الإكسسوار لإخفائه في الزوايا الأخرى
+            } else {
+                targetPart = document.getElementById(`part-${item.category}`);
+            }
+
+            if (targetPart) {
+                const oldImg = targetPart.querySelector(`:scope > img[data-view="${item.view}"]`);
+                if(oldImg) oldImg.remove();
+                const img = document.createElement('img'); img.src = item.src; img.setAttribute('data-view', item.view);
+                targetPart.appendChild(img); targetPart.classList.add(`has-${item.view}-img`);
+            }
+        }
+
+        function unequipCurrentPart() {
+            if (!currentSelectedPartId) return;
+            const targetPart = document.getElementById(currentSelectedPartId);
+            
+            if (targetPart.classList.contains('accessory-part')) {
+                targetPart.remove();
+                delete partsState[currentSelectedPartId];
+                currentSelectedPartId = null;
+                document.getElementById('transform-panel').style.display = 'none';
+                return;
+            }
+
+            const oldImg = targetPart.querySelector(`:scope > img[data-view="${currentActiveView}"]`);
+            if(oldImg) oldImg.remove();
+            targetPart.classList.remove(`has-${currentActiveView}-img`);
+            targetPart.style.left = ''; targetPart.style.top = ''; targetPart.style.transform = '';
+            targetPart.dataset.scaleX = 1; targetPart.dataset.scaleY = 1; targetPart.dataset.rotate = 0;
+            if (partsState[currentSelectedPartId]) partsState[currentSelectedPartId][currentActiveView] = { left: '', top: '', scaleX: 1, scaleY: 1, rotate: 0 };
+            document.getElementById('scale-x').value = 1; document.getElementById('scale-y').value = 1; document.getElementById('scale-all').value = 1; document.getElementById('rotate-deg').value = 0;
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('.part').forEach(part => {
+                if (!partsState[part.id]) partsState[part.id] = { front: {}, side: {} };
+                partsState[part.id][currentActiveView] = { left: part.style.left, top: part.style.top, scaleX: part.dataset.scaleX || 1, scaleY: part.dataset.scaleY || 1, rotate: part.dataset.rotate || 0 };
+            });
+
+            currentActiveView = view;
+            const mannequin = document.getElementById('mannequin'); mannequin.className = view + '-view';
+            document.getElementById('filter-view').value = view;
+            document.getElementById('btn-front').classList.toggle('active', view === 'front'); document.getElementById('btn-side').classList.toggle('active', view === 'side');
+            
+            document.querySelectorAll('.part').forEach(part => {
+                if (partsState[part.id] && partsState[part.id][currentActiveView]) {
+                    const state = partsState[part.id][currentActiveView];
+                    part.style.left = state.left || ''; part.style.top = state.top || '';
+                    part.dataset.scaleX = state.scaleX; part.dataset.scaleY = state.scaleY; part.dataset.rotate = state.rotate;
+                    part.style.transform = `scale(${state.scaleX}, ${state.scaleY}) rotate(${state.rotate}deg)`;
+                } else {
+                    part.style.left = ''; part.style.top = ''; part.style.transform = '';
+                    part.dataset.scaleX = 1; part.dataset.scaleY = 1; part.dataset.rotate = 0;
+                }
+            });
+            renderLibrary(); deselectPart({target: mannequin});
+        }
+
+        function selectPart(event, partId) {
+            event.stopPropagation();
+            document.querySelectorAll('.part').forEach(el => el.classList.remove('selected'));
+            const part = document.getElementById(partId); part.classList.add('selected'); currentSelectedPartId = partId;
+            
+            document.getElementById('transform-panel').style.display = 'block';
+            
+            let partName = part.querySelector('.part-label') ? part.querySelector('.part-label').innerText : 'عنصر';
+            if (part.classList.contains('accessory-part')) {
+                document.getElementById('btn-unequip').innerText = "🗑️ حذف الإكسسوار تماماً";
+                document.getElementById('btn-unequip').style.background = "#ff4757";
+            } else {
+                document.getElementById('btn-unequip').innerText = "↩️ إزالة الصورة واسترجاع المركز";
+                document.getElementById('btn-unequip').style.background = "var(--danger)";
+            }
+            
+            document.getElementById('selected-part-name').innerText = partName;
+            document.getElementById('scale-x').value = part.dataset.scaleX || 1; document.getElementById('scale-y').value = part.dataset.scaleY || 1;
+            document.getElementById('scale-all').value = Math.max(part.dataset.scaleX || 1, part.dataset.scaleY || 1);
+            document.getElementById('rotate-deg').value = part.dataset.rotate || 0;
+        }
+
+        function deselectPart(event) {
+            if (event.target.classList.contains('canvas-container') || event.target.id === 'mannequin') {
+                document.querySelectorAll('.part').forEach(el => el.classList.remove('selected'));
+                document.getElementById('transform-panel').style.display = 'none'; currentSelectedPartId = null;
+            }
+        }
+
+        function applyTransform() {
+            if (!currentSelectedPartId) return;
+            const part = document.getElementById(currentSelectedPartId);
+            const scaleX = document.getElementById('scale-x').value, scaleY = document.getElementById('scale-y').value, rotate = document.getElementById('rotate-deg').value;
+            part.dataset.scaleX = scaleX; part.dataset.scaleY = scaleY; part.dataset.rotate = rotate;
+            part.style.transform = `scale(${scaleX}, ${scaleY}) rotate(${rotate}deg)`;
+        }
+        function applyTransformAll() { const val = document.getElementById('scale-all').value; document.getElementById('scale-x').value = val; document.getElementById('scale-y').value = val; applyTransform(); }
+        function updateFilterDropdown() { const dropdown = document.getElementById('filter-category'); dropdown.innerHTML = '<option value="all">كل الأجزاء</option>'; [...new Set(libraryData.map(item => item.category))].forEach(cat => dropdown.innerHTML += `<option value="${cat}">${cat}</option>`); }
+
+        let dragItem = null; let dStartX, dStartY, initialLeft, initialTop, initialRotate;
+        document.addEventListener('mousedown', function(e) {
+            const part = e.target.closest('.part');
+            if(part && !e.target.closest('input') && !e.target.closest('button')) {
+                dragItem = part; dStartX = e.clientX; dStartY = e.clientY;
+                initialLeft = parseInt(window.getComputedStyle(part).left) || 0; initialTop = parseInt(window.getComputedStyle(part).top) || 0;
+                initialRotate = parseFloat(part.dataset.rotate) || 0;
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if(dragItem) {
+                if (currentCanvasTool === 'move') {
+                    let accScaleX = 1, accScaleY = 1, parent = dragItem.parentElement;
+                    while(parent && parent.classList.contains('part')) { accScaleX *= parseFloat(parent.dataset.scaleX) || 1; accScaleY *= parseFloat(parent.dataset.scaleY) || 1; parent = parent.parentElement; }
+                    dragItem.style.left = (initialLeft + (e.clientX - dStartX) / accScaleX) + 'px';
+                    dragItem.style.top = (initialTop + (e.clientY - dStartY) / accScaleY) + 'px';
+                } else if (currentCanvasTool === 'rotate') {
+                    let newRotate = initialRotate + (e.clientX - dStartX);
+                    if (newRotate > 180) newRotate -= 360; if (newRotate < -180) newRotate += 360;
+                    dragItem.dataset.rotate = newRotate;
+                    dragItem.style.transform = `scale(${dragItem.dataset.scaleX || 1}, ${dragItem.dataset.scaleY || 1}) rotate(${newRotate}deg)`;
+                    if (dragItem.id === currentSelectedPartId) document.getElementById('rotate-deg').value = Math.round(newRotate);
+                }
+            }
+        });
+        document.addEventListener('mouseup', () => { dragItem = null; });
+
+    </script>
+</body>
+</html>
