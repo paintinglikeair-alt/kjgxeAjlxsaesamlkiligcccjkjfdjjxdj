@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic AI Storybook Creator - Pro Version</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة PowerPoint -->
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/libs/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/gitbrent/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
+
+        :root {
+            --primary: #8e44ad; --primary-light: #9b59b6; --secondary: #f39c12;
+            --bg: #f8f9fc; --text-main: #2c3e50;
+        }
+
+        body { font-family: 'Tajawal', sans-serif; background-color: var(--bg); color: var(--text-main); overflow-x: hidden; }
+        ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 4px; }
+
+        .loader-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); z-index: 9999;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .magic-wand { font-size: 60px; animation: float 2s ease-in-out infinite, glow 1.5s alternate infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(15deg); } }
+        @keyframes glow { from { text-shadow: 0 0 10px #f39c12; } to { text-shadow: 0 0 30px #8e44ad; } }
+
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: linear-gradient(135deg, var(--primary), #6c3483); color: white; padding: 15px 25px; 
+            border-radius: 12px; font-weight: bold; opacity: 0; transform: translateX(50px); transition: all 0.4s;
+        }
+        .toast.show { opacity: 1; transform: translateX(0); }
+
+        .glass-card { background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+        .tab-content { display: none; animation: fadeIn 0.5s ease; } .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Story Book */
+        .book-container { display: flex; flex-direction: column; gap: 30px; margin-top: 20px; }
+        .story-page {
+            background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #eee; display: flex; flex-direction: column;
+            page-break-inside: avoid; /* للطباعة */
+        }
+        .story-image-container { position: relative; width: 100%; padding-top: 75%; background: #f0f3f8; }
+        .story-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+        .story-text { padding: 25px; font-size: 1.3rem; line-height: 1.8; text-align: justify; color: #34495e; }
+        .img-placeholder { position: absolute; top:0; left:0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: #7f8c8d; background-color: #f8fafc; }
+        
+        .review-box { border-right: 4px solid var(--secondary); background: #fffcf5; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #story-output-area, #story-output-area * { visibility: visible; }
+            #story-output-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .print-hidden { display: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <div class="loader-overlay" id="loader">
+        <div class="magic-wand">🪄</div>
+        <h2 id="loader-title" class="text-3xl font-bold text-purple-700 mt-4">جاري الاتصال بـ Gemini...</h2>
+        <p id="loader-desc" class="text-gray-500 mt-2 text-lg">أقوم الآن بتحليل البيانات ورسم الخيال</p>
+    </div>
+    <div class="toast-container" id="toast-container"></div>
+
+    <nav class="w-full md:w-72 bg-white shadow-xl z-10 flex flex-col p-6 border-l border-gray-100 print-hidden">
+        <div class="flex items-center gap-3 mb-10 justify-center">
+            <span class="text-4xl">🌟</span>
+            <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-orange-500">
+                صانع القصص
+            </h1>
+        </div>
+
+        <div class="flex flex-col gap-3">
+            <button onclick="switchTab('tab-setup')" id="btn-tab-setup" class="nav-btn w-full text-right p-4 rounded-xl font-bold bg-purple-100 text-purple-700 transition-all">
+                🔑 1. اتصال الذكاء الاصطناعي
+            </button>
+            <button onclick="switchTab('tab-avatar')" id="btn-tab-avatar" class="nav-btn w-full text-right p-4 rounded-xl font-bold text-gray-600 transition-all hover:bg-purple-50">
+                🦸‍♂️ 2. صناعة الأفاتار
+            </button>
+            <button onclick="switchTab('tab-story')" id="btn-tab-story" class="nav-btn w-full text-right p-4 rounded-xl font-bold text-gray-600 transition-all hover:bg-purple-50">
+                📖 3. تأليف ورسم القصة
+            </button>
+        </div>
+        
+        <div class="mt-auto pt-6 text-center text-xs text-gray-400">
+            يعمل باستخدام:<br>Gemini API + Pollinations AI
+        </div>
+    </nav>
+
+    <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+        
+        <!-- Tab 1: Setup API -->
+        <div id="tab-setup" class="tab-content active max-w-3xl mx-auto print-hidden">
+            <div class="glass-card rounded-3xl p-8">
+                <h2 class="text-3xl font-bold text-purple-800 mb-4">أهلاً بكِ في عالم الخيال 🪄</h2>
+                <p class="text-gray-600 mb-6 leading-relaxed text-lg">
+                    لكي أتمكن من تأليف قصصك بذكاء حقيقي، أحتاج إلى <b>"مفتاح"</b> للاتصال بعقلي (Gemini).
+                </p>
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-8">
+                    <ol class="list-decimal list-inside text-blue-900 space-y-2">
+                        <li>اضغطي على هذا الرابط: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-purple-600 font-bold underline">Google AI Studio</a></li>
+                        <li>سجلي دخولك واضغطي <b>"Create API Key"</b> وانسخي النص.</li>
+                        <li>ألصقيه هنا في الأسفل!</li>
+                    </ol>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-bold mb-2">ألصقي مفتاح Gemini هنا:</label>
+                    <input type="password" id="api-key-input" class="w-full p-4 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-600 text-left mb-3" dir="ltr" placeholder="AIzaSy...">
+                    <button onclick="saveAndConnect()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all text-xl">
+                        🔗 اتصال بـ Gemini والبدء
+                    </button>
+                </div>
+                <div id="api-status" class="hidden mt-4 text-center font-bold text-green-600 text-lg">
+                    ✅ تم الاتصال بنجاح! المتصفح يحفظ مفتاحك بأمان.
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-avatar" class="tab-content max-w-3xl mx-auto print-hidden">
+            <div class="glass-card rounded-3xl p-8 mb-8">
+                <h2 class="text-3xl font-bold text-purple-800 mb-6">صناعة بطل القصة 🦸‍♂️</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">صورة الطفل:</label>
+                        <div class="border-4 border-dashed border-purple-200 rounded-2xl p-4 text-center cursor-pointer hover:bg-purple-50 transition relative h-64 flex flex-col justify-center items-center" onclick="document.getElementById('child-img-input').click()">
+                            <input type="file" id="child-img-input" class="hidden" accept="image/jpeg, image/png, image/webp" onchange="previewChildImage(event)">
+                            <div id="img-placeholder" class="text-gray-400">
+                                <span class="text-4xl block mb-2">📸</span>
+                                اضغطي هنا لرفع الصورة
+                            </div>
+                            <img id="child-preview" class="hidden w-full h-full object-cover rounded-xl z-10" alt="Preview">
+                        </div>
+                    </div>
+                    <div class="flex flex-col justify-center">
+                        <label class="block text-gray-700 font-bold mb-2">كيف تريدين شكل الأفاتار؟</label>
+                        <textarea id="avatar-style" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 mb-4 h-32" placeholder="مثال: أريده أن يرتدي ملابس رائد فضاء، وبأسلوب رسم 3D ديزني..."></textarea>
+                        <button onclick="generateAvatar()" class="bg-orange-500 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:bg-orange-600 transition-all flex justify-center items-center gap-2 text-lg">
+                            ✨ حلّل الصورة واصنع الأفاتار
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="avatar-result-box" class="hidden glass-card rounded-3xl p-8 bg-green-50 border-green-200">
+                <h3 class="text-xl font-bold text-green-800 mb-2">✅ نجح Gemini في تحليل الملامح!</h3>
+                <p class="text-gray-700 mb-2">هذا هو وصف الأفاتار. <b class="text-red-600">يمكنك التعديل عليه بحرية الآن</b> قبل الانتقال لتأليف القصة:</p>
+                <textarea id="master-avatar-prompt" class="w-full p-4 bg-white border border-green-300 rounded-xl text-left text-gray-800 font-bold" dir="ltr" rows="3"></textarea>
+                <button onclick="switchTab('tab-story')" class="mt-6 w-full bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 text-lg">
+                    حفظ الوصف والانتقال لتأليف القصة ➡️
+                </button>
+            </div>
+        </div>
+
+        <div id="tab-story" class="tab-content max-w-5xl mx-auto">
+            <!-- Story Setup -->
+            <div id="story-setup-area" class="glass-card rounded-3xl p-8 mb-8 print-hidden">
+                <h2 class="text-3xl font-bold text-purple-800 mb-6">تأليف القصة 📖</h2>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-bold mb-2">اكتبي فكرة القصة:</label>
+                    <textarea id="story-idea" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 h-24 text-lg" placeholder="مثال: قصة عن طفل يكتشف باباً سرياً في غرفته..."></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">عدد الصفحات والمشاهد:</label>
+                        <select id="story-pages" class="w-full p-3 border-2 border-gray-200 rounded-xl font-bold">
+                            <option value="3">3 صفحات (قصيرة جداً)</option>
+                            <option value="5">5 صفحات (متوسطة)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">أسلوب رسم القصة:</label>
+                        <select id="art-style" class="w-full p-3 border-2 border-gray-200 rounded-xl font-bold">
+                            <option value="3D Pixar animation style, highly detailed, vibrant colors, magical lighting">ديزني / بيكسار 3D</option>
+                            <option value="watercolor children's book illustration, soft pastel colors, dreamy atmosphere">رسم مائي كلاسيكي</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="generateFullStory()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black py-4 px-8 rounded-xl shadow-lg hover:shadow-xl text-xl flex justify-center items-center gap-3">
+                    🪄 ألف القصة (خطوة المراجعة)
+                </button>
+            </div>
+
+            <div id="story-review-area" class="hidden glass-card rounded-3xl p-8 mb-8 border-4 border-orange-300 print-hidden">
+                <h2 class="text-2xl font-black text-orange-600 mb-2">✍️ خطوة المراجعة والتعديل</h2>
+                <p class="text-gray-600 mb-6">قام الذكاء الاصطناعي بتأليف القصة. يمكنك تعديل النصوص أو وصف الصور قبل البدء في الرسم النهائي.</p>
+                
+                <div class="mb-6">
+                    <label class="font-bold text-gray-700">عنوان القصة:</label>
+                    <input type="text" id="review-title" class="w-full p-3 border-2 border-gray-300 rounded-lg mt-1 font-bold text-xl text-purple-700">
+                </div>
+
+                <div id="review-pages-container" class="space-y-6 mb-8">
+                    <!-- Pages will be injected here for review -->
+                </div>
+
+                <button onclick="confirmAndDrawStory()" class="w-full bg-green-600 text-white font-black py-4 px-8 rounded-xl shadow-lg hover:bg-green-700 text-xl flex justify-center items-center gap-3">
+                    ✅ اعتماد القصة والبدء في رسم المشاهد
+                </button>
+            </div>
+
+            <div id="story-output-area" class="hidden">
+                <div class="text-center mb-8">
+                    <h2 id="final-story-title" class="text-4xl font-black text-purple-900 bg-white inline-block px-10 py-5 rounded-full shadow-lg border-4 border-purple-200"></h2>
+                </div>
+                
+                <div id="story-pages-container" class="book-container"></div>
+                
+                <!-- Export Buttons -->
+                <div class="flex justify-center gap-4 mt-12 mb-8 print-hidden">
+                    <button onclick="exportWord()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-blue-700 flex items-center gap-2">
+                        📄 تصدير Word
+                    </button>
+                    <button onclick="exportPPTX()" class="bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-orange-700 flex items-center gap-2">
+                        📊 تصدير PowerPoint
+                    </button>
+                    <button onclick="window.print()" class="bg-gray-800 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-gray-900 flex items-center gap-2">
+                        🖨️ طباعة / PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let childImageBase64 = null;
+        let childImageMimeType = null;
+        let finalStoryData = null; // سيحتوي على البيانات النهائية بعد المراجعة
+
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'bg-red-600' : ''}`;
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 4000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-purple-100', 'text-purple-700');
+                btn.classList.add('text-gray-600');
+            });
+            document.getElementById(tabId).classList.add('active');
+            const btnId = 'btn-' + tabId;
+            document.getElementById(btnId).classList.remove('text-gray-600');
+            document.getElementById(btnId).classList.add('bg-purple-100', 'text-purple-700');
+        }
+
+        function showLoader(title, desc) {
+            document.getElementById('loader-title').innerText = title;
+            document.getElementById('loader-desc').innerText = desc;
+            document.getElementById('loader').style.display = 'flex';
+        }
+        function hideLoader() { document.getElementById('loader').style.display = 'none'; }
+
+        function saveAndConnect() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if(!key) return showToast('يرجى إدخال المفتاح أولاً!', true);
+            localStorage.setItem('real_gemini_key', key);
+            document.getElementById('api-status').classList.remove('hidden');
+            showToast('تم الاتصال وحفظ المفتاح بنجاح! انتقلي للخطوة التالية.');
+            setTimeout(() => switchTab('tab-avatar'), 1500);
+        }
+
+        window.onload = () => {
+            const key = localStorage.getItem('real_gemini_key');
+            if(key) {
+                document.getElementById('api-key-input').value = key;
+                document.getElementById('api-status').classList.remove('hidden');
+            }
+        };
+
+        function previewChildImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 4 * 1024 * 1024) return showToast('حجم الصورة كبير جداً. يرجى اختيار صورة أقل من 4 ميجابايت.', true);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('child-preview');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden');
+                    document.getElementById('img-placeholder').classList.add('hidden');
+                    childImageBase64 = e.target.result.split(',')[1];
+                    childImageMimeType = file.type;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function callRealGemini(contents, requireJson = false) {
+            const apiKey = localStorage.getItem('real_gemini_key');
+            if(!apiKey) { switchTab('tab-setup'); throw new Error("لا يوجد مفتاح API."); }
+            
+            // استخدام النسخة الأحدث
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const payload = { contents: contents };
+            if (requireJson) payload.generationConfig = { responseMimeType: "application/json" };
+
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.error?.message || "خطأ في الاتصال بـ Gemini.");
+            }
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        async function generateAvatar() {
+            if(!childImageBase64) return showToast('يرجى رفع صورة الطفل!', true);
+            showLoader("جاري تحليل الصورة...", "استخراج الملامح لبناء الأفاتار...");
+            const stylePref = document.getElementById('avatar-style').value;
+            const promptInstruction = `Analyze this uploaded image. Create a detailed visual description of their face. Formulate a master "Image Generation Prompt" in ENGLISH to generate a consistent cartoon character. Style: [${stylePref || 'Cute 3D Pixar'}]. Return ONLY the English prompt.`;
+
+            try {
+                const masterPrompt = await callRealGemini([{ parts: [{ text: promptInstruction }, { inlineData: { mimeType: childImageMimeType, data: childImageBase64 } }] }], false);
+                document.getElementById('master-avatar-prompt').value = masterPrompt.trim();
+                document.getElementById('avatar-result-box').classList.remove('hidden');
+                showToast('نجح التحليل! يمكنك تعديل الوصف قبل المتابعة.');
+            } catch (error) { showToast(error.message, true); } finally { hideLoader(); }
+        }
+
+        async function generateFullStory() {
+            const idea = document.getElementById('story-idea').value;
+            const pages = document.getElementById('story-pages').value;
+            const masterPrompt = document.getElementById('master-avatar-prompt').value;
+            const artStyle = document.getElementById('art-style').value;
+
+            if(!idea || !masterPrompt) return showToast('اكتبي الفكرة وتأكدي من وجود الأفاتار!', true);
+            showLoader("جاري تأليف القصة...", "Gemini يكتب السيناريو الآن...");
+
+            const aiPrompt = `You are an Arabic children's book author. Write a story about: "${idea}". 
+            It MUST have EXACTLY ${pages} pages.
+            For EACH page provide:
+            1. 'text': Arabic story text (2-3 sentences).
+            2. 'image_prompt': English prompt describing the scene. 
+            RULES FOR IMAGE PROMPTS: Every prompt MUST start with: [${masterPrompt}]. Every prompt MUST end with: [${artStyle}]. Describe the background/action clearly.
+            Structure JSON EXACTLY like this: { "title": "Arabic Title", "pages": [ { "text": "...", "image_prompt": "..." } ] }`;
+
+            try {
+                const rawResponse = await callRealGemini([{ parts: [{ text: aiPrompt }] }], true);
+                const storyData = JSON.parse(rawResponse);
+                hideLoader();
+                
+                // بدلاً من الرسم فوراً، نذهب لشاشة المراجعة
+                showStoryReview(storyData);
+            } catch (error) { hideLoader(); showToast(`خطأ: ${error.message}`, true); }
+        }
+
+        function showStoryReview(storyData) {
+            document.getElementById('story-setup-area').classList.add('hidden');
+            document.getElementById('story-review-area').classList.remove('hidden');
+            
+            document.getElementById('review-title').value = storyData.title;
+            const container = document.getElementById('review-pages-container');
+            container.innerHTML = '';
+
+            storyData.pages.forEach((page, index) => {
+                container.innerHTML += `
+                    <div class="review-box p-5 rounded-xl border border-gray-200 shadow-sm">
+                        <div class="font-bold text-gray-700 mb-2">مشهد ${index + 1}:</div>
+                        <label class="text-sm text-gray-500">نص القصة (عربي):</label>
+                        <textarea id="rev-text-${index}" class="w-full p-3 border rounded-lg mb-3 font-bold" rows="2">${page.text}</textarea>
+                        
+                        <label class="text-sm text-gray-500">وصف الصورة (إنجليزي):</label>
+                        <textarea id="rev-prompt-${index}" class="w-full p-3 border rounded-lg text-left text-sm bg-gray-50" dir="ltr" rows="3">${page.image_prompt}</textarea>
+                    </div>
+                `;
+            });
+        }
+
+        function confirmAndDrawStory() {
+            // تجميع البيانات بعد التعديل
+            const pagesCount = document.querySelectorAll('.review-box').length;
+            finalStoryData = {
+                title: document.getElementById('review-title').value,
+                pages: []
+            };
+
+            for(let i=0; i<pagesCount; i++) {
+                finalStoryData.pages.push({
+                    text: document.getElementById(`rev-text-${i}`).value,
+                    image_prompt: document.getElementById(`rev-prompt-${i}`).value,
+                    imageUrl: '' // سنخزن الرابط هنا لاحقاً للتصدير
+                });
+            }
+
+            document.getElementById('story-review-area').classList.add('hidden');
+            renderStoryboard(finalStoryData);
+        }
+
+        function renderStoryboard(storyData) {
+            document.getElementById('story-output-area').classList.remove('hidden');
+            document.getElementById('final-story-title').innerText = storyData.title;
+            const container = document.getElementById('story-pages-container');
+            container.innerHTML = ''; 
+
+            showToast('بدأ الرسم! يتم رسم المشاهد بالتتابع...', false);
+
+            storyData.pages.forEach((page, index) => {
+                const pageHtml = `
+                    <div class="story-page" id="page-dom-${index}">
+                        <div class="story-image-container">
+                            <div class="img-placeholder" id="placeholder-${index}">
+                                <span class="animate-pulse font-bold text-gray-500">⏳ في انتظار الرسم...</span>
+                            </div>
+                            <!-- أضفنا crossorigin للسماح بتحميل الصورة في الـ exports -->
+                            <img id="story-img-${index}" crossorigin="anonymous" class="story-image hidden" alt="Scene ${index + 1}">
+                        </div>
+                        <div class="story-text">
+                            <span class="inline-flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full font-bold ml-3 shadow-md">${index + 1}</span>
+                            <span id="story-text-val-${index}">${page.text}</span>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += pageHtml;
+            });
+            
+            document.getElementById('story-output-area').scrollIntoView({ behavior: 'smooth' });
+            loadImagesSequentially(storyData.pages, 0);
+        }
+
+        function loadImagesSequentially(pages, currentIndex) {
+            if (currentIndex >= pages.length) return showToast('🎉 اكتمل رسم جميع المشاهد!');
+
+            const page = pages[currentIndex];
+            const encodedPrompt = encodeURIComponent(page.image_prompt);
+            const randomSeed = Math.floor(Math.random() * 1000000);
+            const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=768&nologo=true&seed=${randomSeed}`;
+
+            // تخزين الرابط في الـ finalStoryData لاستخدامه في التصدير
+            finalStoryData.pages[currentIndex].imageUrl = imgUrl;
+
+            const imgEl = document.getElementById(`story-img-${currentIndex}`);
+            const placeholderEl = document.getElementById(`placeholder-${currentIndex}`);
+            placeholderEl.innerHTML = '<span class="animate-pulse font-bold text-orange-500 text-2xl">🎨 جاري رسم المشهد...</span>';
+
+            imgEl.onload = () => {
+                placeholderEl.style.display = 'none';
+                imgEl.classList.remove('hidden');
+                loadImagesSequentially(pages, currentIndex + 1);
+            };
+
+            imgEl.onerror = () => {
+                placeholderEl.innerHTML = '<span class="text-red-600 font-bold">❌ فشل تحميل المشهد، جاري تخطيه...</span>';
+                loadImagesSequentially(pages, currentIndex + 1);
+            };
+
+            imgEl.src = imgUrl;
+        }
+
+        function exportWord() {
+            showToast('جاري تجهيز ملف Word...');
+            let content = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>${finalStoryData.title}</title>
+                <style>
+                    body { font-family: Tahoma, sans-serif; direction: rtl; text-align: right; }
+                    h1 { color: #8e44ad; text-align: center; }
+                    .page { margin-bottom: 40px; page-break-after: always; text-align: center; }
+                    img { max-width: 100%; height: auto; border: 2px solid #ccc; }
+                    p { font-size: 18px; margin-top: 15px; color: #333; }
+                </style>
+                </head><body>
+                <h1>${finalStoryData.title}</h1>
+            `;
+
+            finalStoryData.pages.forEach(page => {
+                content += `
+                    <div class="page">
+                        <img src="${page.imageUrl}" />
+                        <p>${page.text}</p>
+                    </div>
+                `;
+            });
+
+            content += "</body></html>";
+            
+            const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${finalStoryData.title}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportPPTX() {
+            showToast('جاري بناء عرض PowerPoint، يرجى الانتظار...');
+            
+            // إنشاء كائن العرض باستخدام المكتبة المدمجة
+            let pres = new pptxgen();
+            pres.layout = 'LAYOUT_WIDE'; // 16:9
+
+            // شريحة العنوان
+            let slideTitle = pres.addSlide();
+            slideTitle.addText(finalStoryData.title, { 
+                x: 0, y: "40%", w: "100%", h: 2, 
+                fontSize: 48, bold: true, color: "8e44ad", align: "center", isTextBox: true 
+            });
+
+            // شرائح القصة
+            finalStoryData.pages.forEach((page) => {
+                let slide = pres.addSlide();
+                
+                // إضافة الصورة (تأخذ مساحة الشريحة تقريباً)
+                if(page.imageUrl) {
+                    slide.addImage({ 
+                        path: page.imageUrl, 
+                        x: "10%", y: "5%", w: "80%", h: "70%", sizing: {type: 'contain'} 
+                    });
+                }
+                
+                // إضافة النص تحت الصورة
+                slide.addText(page.text, { 
+                    x: "5%", y: "80%", w: "90%", h: "15%", 
+                    fontSize: 24, color: "333333", align: "center", rtlMode: true
+                });
+            });
+
+            // تحميل الملف
+            pres.writeFile({ fileName: `${finalStoryData.title}.pptx` })
+                .then(() => showToast('تم تحميل ملف PowerPoint بنجاح!'))
+                .catch(err => showToast('حدث خطأ أثناء تصدير الباوربوينت', true));
+        }
+    </script>
+</body>
+</html>
