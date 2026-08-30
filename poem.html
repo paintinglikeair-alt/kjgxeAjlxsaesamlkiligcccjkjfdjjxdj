@@ -1,0 +1,966 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر الشعر التفاعلي</title>
+    <!-- مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة FontAwesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- مكتبة html2canvas لالتقاط الصور -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- خطوط عربية -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f3f4f6;
+            overflow: hidden; /* نمنع التمرير للصفحة بأكملها */
+        }
+
+        .poetry-font { font-family: 'Amiri', serif; }
+
+        /* تخصيص شريط التمرير */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* مساحة العمل (اللوحة) */
+        #canvas-area {
+            background-image: 
+                linear-gradient(#e5e7eb 1px, transparent 1px),
+                linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* قطع البازل (الأبيات) */
+        .puzzle-piece {
+            position: absolute;
+            background-color: #ffffff;
+            border: 2px solid #8b5cf6;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            min-width: 200px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            border-right-width: 6px; 
+            border-left-width: 6px;
+        }
+
+        .puzzle-piece.dragging {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            z-index: 1000 !important;
+            border-color: #6d28d9;
+        }
+        
+        .puzzle-piece.snapped { border-color: #10b981; }
+
+        /* مقبض السحب (Drag Handle) لعدم تداخل السحب مع الكتابة */
+        .drag-handle {
+            background-color: #f3f4f6;
+            height: 20px;
+            border-radius: 6px 6px 0 0;
+            cursor: grab;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .drag-handle:active { cursor: grabbing; }
+
+        .puzzle-input {
+            width: 100%;
+            height: 100%;
+            min-height: 40px;
+            border: none;
+            outline: none;
+            resize: both;
+            padding: 8px;
+            font-size: 1.125rem;
+            text-align: center;
+            background: transparent;
+            color: #1f2937;
+            font-family: 'Amiri', serif;
+            font-weight: bold;
+        }
+
+        /* قطعة العنوان (الأم) */
+        .title-piece {
+            border-color: #f59e0b;
+            background-color: #fffbeb;
+            border-width: 3px;
+        }
+        .title-piece.dragging {
+            border-color: #d97706;
+            box-shadow: 0 25px 30px -5px rgba(245, 158, 11, 0.3);
+        }
+        .title-piece .drag-handle { background-color: #fde68a; border-bottom-color: #fcd34d; }
+        .title-piece .puzzle-input { color: #b45309; font-size: 1.3rem; }
+
+        /* ملاحظات الأفكار */
+        .idea-note {
+            position: absolute;
+            background-color: #fef08a;
+            border: 1px solid #fde047;
+            border-radius: 2px 12px 12px 12px;
+            box-shadow: 2px 4px 6px rgba(0,0,0,0.1);
+            min-width: 150px;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            transform: rotate(-2deg);
+        }
+
+        .idea-note .drag-handle { background-color: transparent; border: none; height: 30px; justify-content: flex-start; padding-right: 10px; }
+        .idea-note.dragging {
+            transform: rotate(0deg) scale(1.05);
+            box-shadow: 5px 10px 15px rgba(0,0,0,0.2);
+            z-index: 1000 !important;
+        }
+
+        .note-input {
+            width: 100%;
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            resize: none;
+            background: transparent;
+            font-size: 0.9rem;
+            color: #4b5563;
+            padding: 0 10px 10px 10px;
+        }
+
+        /* أزرار التحكم في القطع */
+        .item-controls {
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            display: none;
+            gap: 4px;
+        }
+
+        .puzzle-piece:hover .item-controls,
+        .idea-note:hover .item-controls { display: flex; z-index: 10; }
+
+        .control-btn {
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            border: none;
+        }
+        .btn-duplicate { background: #3b82f6; }
+
+        /* النوافذ المنبثقة */
+        .modal-bg {
+            display: none; /* مخفية افتراضياً */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #8b5cf6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="flex flex-col h-screen text-gray-800">
+
+    <header class="bg-white shadow-md z-10 p-3 flex justify-between items-center border-b-4 border-purple-500">
+        <div class="flex items-center gap-3">
+            <div class="bg-purple-100 p-2 rounded-lg text-purple-600">
+                <i class="fa-solid fa-feather-pointed text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black text-gray-800">محرر الشعر</h1>
+                <input type="text" id="project-title" value="قصيدة جديدة" class="text-sm text-gray-500 border-b border-transparent hover:border-gray-300 focus:border-purple-500 outline-none bg-transparent transition-colors font-bold w-48">
+            </div>
+        </div>
+
+        <div class="flex gap-2 flex-wrap justify-end">
+            <!-- أدوات الذكاء الاصطناعي -->
+            <button onclick="openAIReviewer()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-bold flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> المراجع البلاغي
+            </button>
+            
+            <div class="h-8 w-px bg-gray-300 mx-1 self-center"></div>
+
+            <!-- أدوات التصدير -->
+            <button onclick="exportToWord()" class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors tooltip" title="تصدير إلى Word">
+                <i class="fa-regular fa-file-word"></i>
+            </button>
+            <button onclick="exportToImage('canvas-area')" class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors tooltip" title="صورة للقصيدة فقط">
+                <i class="fa-regular fa-image"></i>
+            </button>
+            <button onclick="exportToImage('workspace')" class="bg-teal-600 text-white px-3 py-2 rounded-lg hover:bg-teal-700 transition-colors tooltip" title="صورة للمشروع كاملاً">
+                <i class="fa-solid fa-desktop"></i>
+            </button>
+
+            <div class="h-8 w-px bg-gray-300 mx-1 self-center"></div>
+
+            <!-- أدوات الحفظ والاسترجاع -->
+            <button onclick="openLibrary()" class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-book"></i> المكتبة
+            </button>
+            <button onclick="saveProjectToLibrary()" class="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2">
+                <i class="fa-regular fa-floppy-disk"></i> حفظ
+            </button>
+            
+            <!-- استيراد وتصدير ملفات JSON -->
+            <button onclick="downloadProjectFile()" class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors" title="حفظ لملف بالكمبيوتر">
+                <i class="fa-solid fa-download"></i>
+            </button>
+            <label class="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 border border-gray-300 transition-colors cursor-pointer" title="استيراد من الكمبيوتر">
+                <i class="fa-solid fa-upload"></i>
+                <input type="file" id="import-file" class="hidden" accept=".json" onchange="importProjectFile(event)">
+            </label>
+        </div>
+    </header>
+
+    <div id="workspace" class="flex flex-1 overflow-hidden relative">
+        
+        <!-- الشريط الأيمن: توليد قطع الأبيات -->
+        <aside class="w-64 bg-white border-l border-gray-200 flex flex-col shadow-lg z-10">
+            <div class="p-4 bg-purple-50 border-b border-purple-100">
+                <h2 class="font-bold text-purple-800 flex items-center gap-2">
+                    <i class="fa-solid fa-puzzle-piece"></i> قطع القصيدة
+                </h2>
+                <p class="text-xs text-gray-500 mt-1">اسحب القطع للمنتصف. قطعة العنوان تحرك الأبيات الملتصقة بها.</p>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto" id="pieces-tray">
+                <button onclick="createPuzzlePiece('عنوان القصيدة', null, null, null, null, true)" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-700 border border-amber-300 border-dashed rounded-lg py-2 flex items-center justify-center gap-2 transition-colors font-bold mb-3 shadow-sm">
+                    <i class="fa-solid fa-crown"></i> إضافة عنوان (قطعة أم)
+                </button>
+                <button onclick="createPuzzlePiece('شطر جديد')" class="w-full bg-purple-100 hover:bg-purple-200 text-purple-700 border border-purple-300 border-dashed rounded-lg py-3 flex items-center justify-center gap-2 transition-colors font-bold mb-4">
+                    <i class="fa-solid fa-plus"></i> إضافة قطعة (بازل)
+                </button>
+                <div id="sidebar-pieces-container" class="space-y-3 relative min-h-[100px]">
+                    <!-- القطع المتولدة في الشريط الجانبي -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- مساحة العمل الرئيسية -->
+        <main id="canvas-area" class="flex-1 relative">
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                <i class="fa-solid fa-feather text-9xl text-gray-400"></i>
+            </div>
+        </main>
+
+        <!-- الشريط الأيسر: ملاحظات العصف الذهني -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shadow-lg z-10">
+            <div class="p-4 bg-yellow-50 border-b border-yellow-100">
+                <h2 class="font-bold text-yellow-800 flex items-center gap-2">
+                    <i class="fa-regular fa-lightbulb"></i> بنك الأفكار
+                </h2>
+                <p class="text-xs text-gray-500 mt-1">سجل هنا المعاني والقوافي.</p>
+            </div>
+            <div class="p-4 flex-1 overflow-y-auto bg-gray-50">
+                <button onclick="createIdeaNote('')" class="w-full bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 border-dashed rounded-lg py-3 flex items-center justify-center gap-2 transition-colors font-bold mb-4">
+                    <i class="fa-solid fa-plus"></i> إضافة ملاحظة
+                </button>
+                <div id="sidebar-notes-container" class="space-y-4 relative min-h-[100px]">
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- نافذة المكتبة -->
+    <div id="library-modal" class="modal-bg">
+        <div class="modal-content flex flex-col h-[80vh]">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                <h2 class="text-2xl font-bold text-gray-800">مكتبة القصائد</h2>
+                <button onclick="closeModal('library-modal')" class="text-gray-500 hover:text-red-500 text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto" id="library-list">
+                <!-- المشاريع -->
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة المراجع البلاغي (الذكاء الاصطناعي) -->
+    <div id="ai-modal" class="modal-bg">
+        <div class="modal-content w-[95%] max-w-[800px]">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b">
+                <h2 class="text-2xl font-bold text-purple-700 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> المراجع البلاغي الذكي
+                </h2>
+                <div class="flex items-center gap-4">
+                    <button onclick="clearApiKey()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded border"><i class="fa-solid fa-key"></i> تغيير المفتاح</button>
+                    <button onclick="closeModal('ai-modal')" class="text-gray-500 hover:text-red-500 text-xl"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div id="ai-content" class="min-h-[300px] max-h-[70vh] overflow-y-auto poetry-font text-lg leading-relaxed text-gray-700 p-2">
+                <!-- سيتم وضع المحتوى هنا بواسطة JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- إشعار عائم -->
+    <div id="toast" class="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-xl transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-info"></i> <span id="toast-msg">رسالة</span>
+    </div>
+
+    <script>
+        const canvasArea = document.getElementById('canvas-area');
+        const sidebarPieces = document.getElementById('sidebar-pieces-container');
+        const sidebarNotes = document.getElementById('sidebar-notes-container');
+        let zIndexCounter = 100;
+        let elementsData = []; 
+        const SNAP_THRESHOLD = 25; 
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = message;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -10px)';
+            toast.style.backgroundColor = type === 'error' ? '#ef4444' : (type === 'success' ? '#10b981' : '#1f2937');
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
+
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function generateId() { return 'el_' + Math.random().toString(36).substr(2, 9); }
+
+        function makeDraggable(element, type) {
+            const handle = element.querySelector('.drag-handle');
+            if(!handle) return; // الحماية
+
+            handle.addEventListener('pointerdown', (e) => {
+                // منع السحب بالزر الأيمن للماوس
+                if (e.button !== 0 && e.pointerType === 'mouse') return; 
+
+                const startX = e.clientX;
+                const startY = e.clientY;
+
+                let groupElements = [element];
+                if (element.classList.contains('title-piece')) {
+                    groupElements = getConnectedPieces(element);
+                }
+
+                const dragGroup = groupElements.map(el => {
+                    // إذا تم السحب من القائمة الجانبية للوحة العمل
+                    if (el.parentElement !== canvasArea) {
+                        const rect = el.getBoundingClientRect();
+                        const canvasRect = canvasArea.getBoundingClientRect();
+                        const newLeft = rect.left - canvasRect.left + canvasArea.scrollLeft;
+                        const newTop = rect.top - canvasRect.top + canvasArea.scrollTop;
+                        el.style.left = `${newLeft}px`;
+                        el.style.top = `${newTop}px`;
+                        el.style.position = 'absolute';
+                        if (type === 'note') el.style.transform = 'rotate(0deg)';
+                        canvasArea.appendChild(el);
+                    }
+                    el.classList.add('dragging');
+                    el.style.zIndex = ++zIndexCounter;
+                    
+                    return {
+                        el: el,
+                        initialLeft: parseFloat(el.style.left) || 0,
+                        initialTop: parseFloat(el.style.top) || 0
+                    };
+                });
+                
+                e.preventDefault(); // منع التحديد أو التصرفات الافتراضية
+
+                // تم نقل أحداث الحركة للـ document لضمان عدم ضياع المؤشر
+                const onPointerMove = (moveEvent) => {
+                    const dx = moveEvent.clientX - startX;
+                    const dy = moveEvent.clientY - startY;
+
+                    for (const item of dragGroup) {
+                        item.el.style.left = `${item.initialLeft + dx}px`;
+                        item.el.style.top = `${item.initialTop + dy}px`;
+                        if (type === 'puzzle') item.el.classList.remove('snapped');
+                    }
+                };
+
+                const onPointerUp = (upEvent) => {
+                    // تنظيف الأحداث بمجرد إفلات الماوس
+                    document.removeEventListener('pointermove', onPointerMove);
+                    document.removeEventListener('pointerup', onPointerUp);
+                    
+                    for (const item of dragGroup) {
+                        item.el.classList.remove('dragging');
+                    }
+
+                    if (type === 'puzzle') {
+                        const prevLeft = parseFloat(element.style.left) || 0;
+                        const prevTop = parseFloat(element.style.top) || 0;
+                        
+                        const groupEls = dragGroup.map(item => item.el);
+                        handlePuzzleSnapping(element, groupEls);
+                        
+                        const newLeft = parseFloat(element.style.left) || 0;
+                        const newTop = parseFloat(element.style.top) || 0;
+                        const snapDx = newLeft - prevLeft;
+                        const snapDy = newTop - prevTop;
+                        
+                        if (snapDx !== 0 || snapDy !== 0) {
+                            for (const item of dragGroup) {
+                                if (item.el !== element) {
+                                    item.el.style.left = `${(parseFloat(item.el.style.left) || 0) + snapDx}px`;
+                                    item.el.style.top = `${(parseFloat(item.el.style.top) || 0) + snapDy}px`;
+                                }
+                            }
+                        }
+                    } else if (type === 'note') {
+                        const angle = (Math.random() * 4) - 2;
+                        element.style.transform = `rotate(${angle}deg)`;
+                    }
+                };
+
+                // ربط الأحداث بـ document
+                document.addEventListener('pointermove', onPointerMove);
+                document.addEventListener('pointerup', onPointerUp);
+            });
+        }
+
+        // إيجاد القطع الملتصقة لعملية السحب الجماعي
+        function getConnectedPieces(startEl) {
+            const visited = new Set();
+            const queue = [startEl];
+            const allPieces = Array.from(canvasArea.querySelectorAll('.puzzle-piece'));
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (!visited.has(current)) {
+                    visited.add(current);
+                    const rect1 = current.getBoundingClientRect();
+
+                    for (const other of allPieces) {
+                        if (!visited.has(other)) {
+                            const rect2 = other.getBoundingClientRect();
+                            const isHorizontallyAligned = !(rect1.right < rect2.left + 20 || rect1.left > rect2.right - 20);
+                            const isVerticallyAligned = !(rect1.bottom < rect2.top + 20 || rect1.top > rect2.bottom - 20);
+
+                            const distTopToBottom = Math.abs(rect1.bottom - rect2.top);
+                            const distBottomToTop = Math.abs(rect1.top - rect2.bottom);
+                            const distRightToLeft = Math.abs(rect1.right - rect2.left);
+                            const distLeftToRight = Math.abs(rect1.left - rect2.right);
+
+                            if ((distTopToBottom < 15 && isHorizontallyAligned) ||
+                                (distBottomToTop < 15 && isHorizontallyAligned) ||
+                                (distRightToLeft < 15 && isVerticallyAligned) ||
+                                (distLeftToRight < 15 && isVerticallyAligned)) {
+                                queue.push(other);
+                            }
+                        }
+                    }
+                }
+            }
+            return Array.from(visited);
+        }
+
+        function handlePuzzleSnapping(draggedElement, groupToIgnore = []) {
+            const rect1 = draggedElement.getBoundingClientRect();
+            const otherPieces = Array.from(canvasArea.querySelectorAll('.puzzle-piece'))
+                                     .filter(el => el !== draggedElement && !groupToIgnore.includes(el));
+            
+            let snapped = false;
+            for (let other of otherPieces) {
+                const rect2 = other.getBoundingClientRect();
+                
+                // حساب المسافات للالتصاق
+                if (Math.abs(rect1.bottom - rect2.top) < SNAP_THRESHOLD && !(rect1.right < rect2.left + 10 || rect1.left > rect2.right - 10)) {
+                    draggedElement.style.top = `${parseFloat(other.style.top) - draggedElement.offsetHeight}px`;
+                    snapped = true; break;
+                } else if (Math.abs(rect1.top - rect2.bottom) < SNAP_THRESHOLD && !(rect1.right < rect2.left + 10 || rect1.left > rect2.right - 10)) {
+                    draggedElement.style.top = `${parseFloat(other.style.top) + other.offsetHeight}px`;
+                    snapped = true; break;
+                } else if (Math.abs(rect1.right - rect2.left) < SNAP_THRESHOLD && !(rect1.bottom < rect2.top + 10 || rect1.top > rect2.bottom - 10)) {
+                    draggedElement.style.left = `${parseFloat(other.style.left) - draggedElement.offsetWidth}px`;
+                    snapped = true; break;
+                } else if (Math.abs(rect1.left - rect2.right) < SNAP_THRESHOLD && !(rect1.bottom < rect2.top + 10 || rect1.top > rect2.bottom - 10)) {
+                    draggedElement.style.left = `${parseFloat(other.style.left) + other.offsetWidth}px`;
+                    snapped = true; break;
+                }
+            }
+
+            if (snapped) {
+                draggedElement.classList.add('snapped');
+                setTimeout(() => draggedElement.classList.remove('snapped'), 300);
+            }
+        }
+
+        function duplicateElement(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const textarea = el.querySelector('textarea');
+            const text = textarea ? textarea.value : '';
+            if (el.classList.contains('puzzle-piece')) {
+                const isTitle = el.classList.contains('title-piece');
+                createPuzzlePiece(text, null, null, null, null, isTitle);
+                showToast('تم نسخ القطعة للوحة الجانبية', 'success');
+            } else if (el.classList.contains('idea-note')) {
+                createIdeaNote(text);
+                showToast('تم نسخ الملاحظة للوحة الجانبية', 'success');
+            }
+        }
+
+        function createPuzzlePiece(text = '', left = null, top = null, width = null, height = null, isTitle = false) {
+            const id = generateId();
+            const piece = document.createElement('div');
+            piece.className = 'puzzle-piece' + (isTitle ? ' title-piece' : '');
+            piece.id = id;
+            if (width) piece.style.width = width;
+            if (height) piece.style.height = height;
+
+            piece.innerHTML = `
+                <div class="drag-handle" title="اسحب من هنا">
+                    <i class="fa-solid fa-grip-lines text-gray-400 pointer-events-none"></i>
+                </div>
+                <div class="item-controls">
+                    <button class="control-btn btn-duplicate" onclick="duplicateElement('${id}')" title="نسخ"><i class="fa-solid fa-copy"></i></button>
+                    <button class="control-btn" onclick="deleteElement('${id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <textarea class="puzzle-input" placeholder="${isTitle ? 'اكتب العنوان هنا...' : 'اكتب الشطر هنا...'}">${text}</textarea>
+            `;
+
+            if (left !== null && top !== null) {
+                piece.style.left = left;
+                piece.style.top = top;
+                piece.style.position = 'absolute';
+                canvasArea.appendChild(piece);
+            } else {
+                piece.style.position = 'relative';
+                piece.style.marginBottom = '10px';
+                sidebarPieces.appendChild(piece);
+            }
+
+            makeDraggable(piece, 'puzzle');
+            elementsData.push({ id, type: 'puzzle', element: piece });
+        }
+
+        function createIdeaNote(text = '', left = null, top = null, transform = null) {
+            const id = generateId();
+            const note = document.createElement('div');
+            note.className = 'idea-note';
+            note.id = id;
+
+            note.innerHTML = `
+                <div class="drag-handle" title="اسحب من هنا">
+                    <i class="fa-solid fa-thumbtack text-yellow-600 text-sm pointer-events-none mt-2"></i>
+                </div>
+                <div class="item-controls !top-[-5px] !left-[-5px]">
+                    <button class="control-btn btn-duplicate !w-5 !h-5 !text-[10px]" onclick="duplicateElement('${id}')" title="نسخ"><i class="fa-solid fa-copy"></i></button>
+                    <button class="control-btn !w-5 !h-5 !text-[10px]" onclick="deleteElement('${id}')" title="حذف"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <textarea class="note-input" placeholder="فكرة، قافية...">${text}</textarea>
+            `;
+
+            if (left !== null && top !== null) {
+                note.style.left = left;
+                note.style.top = top;
+                note.style.position = 'absolute';
+                note.style.transform = transform || 'rotate(0deg)';
+                canvasArea.appendChild(note);
+            } else {
+                note.style.position = 'relative';
+                note.style.marginBottom = '15px';
+                const angle = (Math.random() * 4) - 2;
+                note.style.transform = `rotate(${angle}deg)`;
+                sidebarNotes.appendChild(note);
+            }
+
+            makeDraggable(note, 'note');
+            elementsData.push({ id, type: 'note', element: note });
+        }
+
+        function deleteElement(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.remove();
+                elementsData = elementsData.filter(item => item.id !== id);
+            }
+        }
+
+        // إنشاء عناصر مبدئية
+        window.addEventListener('DOMContentLoaded', () => {
+            createPuzzlePiece('عنوان قصيدتي', null, null, null, null, true);
+            createPuzzlePiece('الشطر الأول هنا');
+            createIdeaNote('فكرة: وصف الطبيعة');
+        });
+
+        function extractPoemText() {
+            const pieces = Array.from(canvasArea.querySelectorAll('.puzzle-piece'));
+            pieces.sort((a, b) => {
+                const rectA = a.getBoundingClientRect();
+                const rectB = b.getBoundingClientRect();
+                if (Math.abs(rectA.top - rectB.top) < 20) {
+                    return rectB.right - rectA.right; // RTL
+                }
+                return rectA.top - rectB.top;
+            });
+
+            let poemText = '';
+            let currentRowTop = -1;
+
+            pieces.forEach(piece => {
+                const text = piece.querySelector('textarea').value.trim();
+                if (!text) return;
+
+                const isTitle = piece.classList.contains('title-piece');
+                const rect = piece.getBoundingClientRect();
+                
+                if (isTitle) {
+                    poemText += `\n[ ${text} ]\n`;
+                    currentRowTop = -1; // Reset line tracking after title
+                    return;
+                }
+
+                if (currentRowTop === -1) currentRowTop = rect.top;
+
+                if (Math.abs(rect.top - currentRowTop) > 20) {
+                    poemText += '\n' + text;
+                    currentRowTop = rect.top;
+                } else {
+                    poemText += ' \t\t ' + text;
+                }
+            });
+
+            return poemText.trim();
+        }
+
+        function exportToWord() {
+            const poemText = extractPoemText();
+            if (!poemText) {
+                showToast('لا توجد أبيات لتصديرها على مساحة العمل!', 'error');
+                return;
+            }
+
+            const title = document.getElementById('project-title').value || 'القصيدة';
+            const content = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: 'Amiri', 'Traditional Arabic', serif; direction: rtl; text-align: center; }
+                        h1 { color: #4b5563; font-size: 24pt; margin-bottom: 20pt;}
+                        .poem-line { font-size: 18pt; margin-bottom: 10pt; white-space: pre-wrap;}
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <div class="poem-line">${poemText.replace(/\n/g, '<br>')}</div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${title}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('تم تصدير ملف Word بنجاح!', 'success');
+        }
+
+        function exportToImage(targetId) {
+            const target = document.getElementById(targetId);
+            document.querySelectorAll('.item-controls').forEach(el => el.style.display = 'none');
+            showToast('جاري التقاط الصورة...', 'info');
+
+            html2canvas(target, { backgroundColor: targetId === 'canvas-area' ? '#f3f4f6' : null, scale: 2 }).then(canvas => {
+                document.querySelectorAll('.item-controls').forEach(el => el.style.display = '');
+                const link = document.createElement('a');
+                link.download = `قصيدة_${document.getElementById('project-title').value || 'صورة'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast('تم حفظ الصورة بنجاح!', 'success');
+            }).catch(err => {
+                document.querySelectorAll('.item-controls').forEach(el => el.style.display = '');
+                showToast('حدث خطأ أثناء حفظ الصورة.', 'error');
+            });
+        }
+
+        // حفظ المشروع
+        function getProjectState() {
+            const title = document.getElementById('project-title').value;
+            const elements = elementsData.map(item => {
+                const el = document.getElementById(item.id);
+                if (!el) return null;
+                const textarea = el.querySelector('textarea');
+                const inCanvas = el.parentElement === canvasArea;
+                return {
+                    id: item.id, type: item.type, text: textarea.value,
+                    left: inCanvas ? el.style.left : null, top: inCanvas ? el.style.top : null,
+                    width: el.style.width || null, height: el.style.height || null,
+                    inCanvas: inCanvas, isTitle: el.classList.contains('title-piece'), transform: el.style.transform || null
+                };
+            }).filter(Boolean);
+            return { title, elements, timestamp: Date.now() };
+        }
+
+        function loadProjectState(state) {
+            canvasArea.innerHTML = '<div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20"><i class="fa-solid fa-feather text-9xl text-gray-400"></i></div>';
+            
+            const addPieceBtns = Array.from(sidebarPieces.querySelectorAll('button'));
+            sidebarPieces.innerHTML = '';
+            addPieceBtns.forEach(btn => sidebarPieces.appendChild(btn));
+
+            const addNoteBtn = sidebarNotes.querySelector('button');
+            sidebarNotes.innerHTML = '';
+            if(addNoteBtn) sidebarNotes.appendChild(addNoteBtn);
+
+            elementsData = [];
+            document.getElementById('project-title').value = state.title || 'قصيدة جديدة';
+
+            state.elements.forEach(elData => {
+                if (elData.type === 'puzzle') {
+                    createPuzzlePiece(elData.text, elData.left, elData.top, elData.width, elData.height, elData.isTitle);
+                } else if (elData.type === 'note') {
+                    createIdeaNote(elData.text, elData.left, elData.top, elData.transform);
+                }
+            });
+        }
+
+        function saveProjectToLibrary() {
+            const state = getProjectState();
+            let library = JSON.parse(localStorage.getItem('poetry_library')) || [];
+            const existingIndex = library.findIndex(p => p.title === state.title);
+            if (existingIndex >= 0) library[existingIndex] = state; else library.push(state);
+            localStorage.setItem('poetry_library', JSON.stringify(library));
+            showToast('تم حفظ المشروع في المكتبة بنجاح!', 'success');
+        }
+
+        function openLibrary() {
+            const list = document.getElementById('library-list');
+            let library = JSON.parse(localStorage.getItem('poetry_library')) || [];
+            list.innerHTML = '';
+            
+            if (library.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 my-10">المكتبة فارغة. قم بحفظ مشروعك الأول!</div>';
+            } else {
+                library.sort((a, b) => b.timestamp - a.timestamp);
+                library.forEach(proj => {
+                    const date = new Date(proj.timestamp).toLocaleString('ar-EG');
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-4 border-b hover:bg-gray-50';
+                    div.innerHTML = `
+                        <div>
+                            <h3 class="font-bold text-lg text-purple-800">${proj.title}</h3>
+                            <p class="text-sm text-gray-500">${date} - ${proj.elements.length} عناصر</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="loadFromLibrary('${proj.timestamp}')" class="bg-purple-100 text-purple-700 px-3 py-1 rounded hover:bg-purple-200 font-bold">استرجاع</button>
+                            <button onclick="deleteFromLibrary('${proj.timestamp}')" class="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+            openModal('library-modal');
+        }
+
+        function loadFromLibrary(timestamp) {
+            let library = JSON.parse(localStorage.getItem('poetry_library')) || [];
+            const proj = library.find(p => p.timestamp.toString() === timestamp.toString());
+            if (proj) {
+                loadProjectState(proj);
+                closeModal('library-modal');
+                showToast('تم استرجاع المشروع بجميع تفاصيله!', 'success');
+            }
+        }
+
+        function deleteFromLibrary(timestamp) {
+            if(confirm('هل أنت متأكد من حذف هذا المشروع نهائياً؟')) {
+                let library = JSON.parse(localStorage.getItem('poetry_library')) || [];
+                library = library.filter(p => p.timestamp.toString() !== timestamp.toString());
+                localStorage.setItem('poetry_library', JSON.stringify(library));
+                openLibrary(); 
+            }
+        }
+
+        function downloadProjectFile() {
+            const state = getProjectState();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `${state.title}.json`);
+            dlAnchorElem.click();
+            showToast('تم تصدير ملف المشروع على جهازك.', 'success');
+        }
+
+        function importProjectFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    loadProjectState(state);
+                    showToast('تم استيراد المشروع بنجاح!', 'success');
+                } catch(err) {
+                    showToast('ملف المشروع غير صالح', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset
+        }
+
+        function openAIReviewer() {
+            openModal('ai-modal');
+            const aiContent = document.getElementById('ai-content');
+            
+            let apiKey = localStorage.getItem('gemini_api_key');
+            if (!apiKey) {
+                showApiKeyPrompt();
+                return;
+            }
+            
+            const poemText = extractPoemText();
+            if (!poemText.trim()) {
+                aiContent.innerHTML = '<div class="text-center text-red-500 my-10 font-bold text-xl"><i class="fa-solid fa-triangle-exclamation text-3xl mb-3 block"></i>عذراً، اللوحة فارغة. اسحب الأبيات للوحة واكتب قصيدتك أولاً!</div>';
+                return;
+            }
+
+            analyzeWithAI(apiKey, poemText);
+        }
+
+        function showApiKeyPrompt() {
+            const aiContent = document.getElementById('ai-content');
+            aiContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full gap-4 my-10 p-4">
+                    <i class="fa-solid fa-key text-5xl text-purple-500 bg-purple-100 p-4 rounded-full"></i>
+                    <h3 class="font-bold text-2xl text-gray-800">مفتاح API مطلوب</h3>
+                    <p class="text-center text-gray-600">للاتصال بالذكاء الاصطناعي (Gemini)، يرجى توفير المفتاح. يمكنك الحصول عليه مجاناً عبر: <br><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 underline font-bold mt-2 inline-block">Google AI Studio</a></p>
+                    <div class="w-full max-w-md flex flex-col gap-3 mt-4">
+                        <input type="password" id="api-key-input" placeholder="أدخل مفتاح Gemini هنا (مثال: AIzaSy...)" class="w-full p-3 border-2 border-purple-200 rounded-lg outline-none focus:border-purple-500 text-left font-mono" dir="ltr">
+                        <button onclick="saveApiKeyAndReview()" class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg font-bold text-lg transition-all">حفظ ومتابعة</button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-2">يتم حفظ المفتاح محلياً في متصفحك فقط لأمانك.</p>
+                </div>
+            `;
+        }
+
+        function saveApiKeyAndReview() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                openAIReviewer(); // إعادة المحاولة
+            } else {
+                showToast('يرجى إدخال المفتاح أولاً', 'error');
+            }
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('gemini_api_key');
+            showToast('تم مسح المفتاح بنجاح', 'success');
+            openAIReviewer();
+        }
+
+        async function analyzeWithAI(apiKey, poemText) {
+            const aiContent = document.getElementById('ai-content');
+            aiContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-purple-600 gap-4 my-16">
+                    <div class="loading-spinner"></div>
+                    <p class="font-bold text-xl animate-pulse">جاري قراءة القصيدة وتحليلها بلاغياً وإملائياً...</p>
+                </div>
+            `;
+
+            try {
+                const prompt = `أنت ناقد أدبي وخبير باللغة العربية. قم بتحليل هذه القصيدة بلاغياً وإملائياً. 
+                القصيدة:
+                ${poemText}
+                
+                الرجاء تقديم:
+                1. تقييم عام مبسط للقصيدة.
+                2. الأخطاء الإملائية والنحوية وتصحيحها (إن وجدت).
+                3. ملاحظات بلاغية (عن الصور الجمالية، القافية، أو الأفكار).
+                
+                توجيهات هامة للتنسيق:
+                الرد يجب أن يكون بصيغة HTML نظيفة وجاهزة للعرض داخل متصفح (مثلاً استخدم <h3> و <ul> و <p> و <strong> وألوان للنصوص المهمة). لا تستخدم markdown block ابداً ولا تكتب \`\`\`html. ابدأ مباشرة بالـ HTML.`;
+
+                // استخدام الإصدار الصحيح والأحدث gemini-3-flash-preview
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: prompt }] }]
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.candidates && result.candidates.length > 0) {
+                    let aiHtml = result.candidates[0].content.parts[0].text;
+                    aiHtml = aiHtml.replace(/```html/g, '').replace(/```/g, ''); // تنظيف أمان احتياطي
+                    
+                    aiContent.innerHTML = `
+                        <div class="bg-purple-50 p-6 rounded-xl border border-purple-100 shadow-inner leading-loose">
+                            ${aiHtml}
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error?.message || "لم يتم تلقي رد صحيح من النموذج.");
+                }
+
+            } catch (error) {
+                console.error("AI Error:", error);
+                if (error.message && (error.message.toLowerCase().includes("api key not valid") || error.message.toLowerCase().includes("api_key"))) {
+                    clearApiKey();
+                    showToast('مفتاح API غير صالح، يرجى التحقق منه', 'error');
+                } else {
+                    aiContent.innerHTML = `
+                        <div class="text-center text-red-600 my-10 p-6 bg-red-50 rounded-xl border border-red-200 shadow-sm">
+                            <i class="fa-solid fa-circle-exclamation text-5xl mb-4 text-red-400"></i>
+                            <p class="font-bold text-xl mb-2">عذراً، حدث خطأ أثناء الاتصال بالمراجع الذكي.</p>
+                            <p class="text-sm bg-white p-3 rounded text-red-800" dir="ltr">${error.message}</p>
+                            <button onclick="openAIReviewer()" class="mt-4 bg-red-100 text-red-700 px-4 py-2 rounded hover:bg-red-200 font-bold">إعادة المحاولة</button>
+                        </div>
+                    `;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
