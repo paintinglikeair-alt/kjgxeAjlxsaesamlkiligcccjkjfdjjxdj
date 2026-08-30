@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أكاديمية قلم الإبداع - رحلة العصور الأدبية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@400;700&family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: { 850: '#633112', 950: '#2e1305' },
+                        gothic: { 800: '#1e1b2e', 900: '#120f1d', accent: '#8b0000' }
+                    },
+                    fontFamily: {
+                        amiri: ['Amiri', 'serif'],
+                        ruqaa: ['Aref Ruqaa', 'serif'],
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .font-literary { font-family: 'Amiri', serif; }
+        .font-title { font-family: 'Aref Ruqaa', serif; }
+        .parchment { background-color: #fbf0d9; color: #2c1810; background-image: radial-gradient(#e5d3b3 1px, transparent 0); background-size: 20px 20px; }
+        .dark-parchment { background-color: #121118; color: #e2e8f0; border: 1px solid #332d42; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #d97706; border-radius: 4px; }
+        
+        /* تأثيرات للذكاء الاصطناعي */
+        .ai-pulse { animation: aiPulse 2s infinite; }
+        @keyframes aiPulse { 0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(168, 85, 247, 0); } 100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); } }
+    </style>
+</head>
+<body class="bg-slate-950 min-h-screen flex flex-col justify-between">
+
+    <header class="border-b border-amber-900/40 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="bg-amber-600 text-slate-950 p-2.5 rounded-xl font-bold shadow-lg shadow-amber-600/20">
+                    <i class="fa-solid me-1 fa-feather-pointed text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-title text-xl md:text-2xl text-amber-500 font-bold leading-none">أكاديمية قلم الإبداع</h1>
+                    <p class="text-xs text-slate-400 mt-1">لرحلة عبر أدب العصور وتطوير ملكة الكتابة</p>
+                </div>
+            </div>
+
+            <!-- Global Actions & Player Status -->
+            <div class="flex items-center flex-wrap gap-2 md:gap-4">
+                <!-- أزرار الحفظ والاستيراد الشامل -->
+                <div class="flex items-center gap-2 border-l border-slate-700 pl-4">
+                    <button onclick="saveProjectToPC()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2" title="حفظ المشروع على الكمبيوتر">
+                        <i class="fa-solid fa-download"></i> حفظ
+                    </button>
+                    <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2 cursor-pointer" title="استيراد مشروع من الكمبيوتر">
+                        <i class="fa-solid fa-upload"></i> استيراد
+                        <input type="file" class="hidden" accept=".json" onchange="loadProjectFromPC(event)">
+                    </label>
+                    <button onclick="exportFullProjectToWord()" class="bg-blue-900 hover:bg-blue-800 text-blue-200 text-xs px-3 py-2 rounded-lg border border-blue-800 transition flex items-center gap-2 shadow-lg shadow-blue-900/20" title="تصدير كل الكتابات لملف Word واحد">
+                        <i class="fa-solid fa-file-word"></i> Word شامل
+                    </button>
+                </div>
+
+                <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-lg flex items-center gap-3">
+                    <div class="text-left">
+                        <div class="text-xs text-amber-400 font-semibold" id="player-rank">حابر القلم (مبتدئ)</div>
+                        <div class="text-xs text-slate-400"><span id="player-xp">0</span> / <span id="next-level-xp">100</span> XP</div>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 text-lg">
+                        <i class="fa-solid fa-scroll"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <aside class="lg:col-span-3 space-y-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-2">أقسام الأكاديمية</h2>
+                <nav class="space-y-1.5">
+                    <button onclick="switchTab('pathways')" id="tab-btn-pathways" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition bg-amber-600 text-slate-950">
+                        <i class="fa-solid fa-route text-base w-5 text-center"></i>
+                        <span>مسارات العصور الأدبية</span>
+                    </button>
+                    <button onclick="switchTab('horror')" id="tab-btn-horror" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-800">
+                        <i class="fa-solid fa-ghost text-base w-5 text-center text-red-400"></i>
+                        <span>مدرسة أدب الرعب</span>
+                    </button>
+                    <button onclick="switchTab('expression')" id="tab-btn-expression" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-800">
+                        <i class="fa-solid fa-heart-pulse text-base w-5 text-center text-pink-400"></i>
+                        <span>التعبير عن الذات والمشاعر</span>
+                    </button>
+                    <button onclick="switchTab('studio')" id="tab-btn-studio" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition text-slate-300 hover:bg-slate-800">
+                        <i class="fa-solid fa-pen-nib text-base w-5 text-center text-amber-400"></i>
+                        <span>مختبر التقييم الإبداعي الحر</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Quotes Widget -->
+            <div class="bg-slate-900 border border-amber-900/30 rounded-2xl p-4 shadow-xl relative overflow-hidden">
+                <div class="absolute -left-4 -bottom-4 text-amber-500/5 text-7xl font-literary">
+                    <i class="fa-solid fa-quote-left"></i>
+                </div>
+                <h3 class="text-xs font-bold text-amber-500 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>حكمة العظماء</span>
+                </h3>
+                <p id="quote-text" class="font-literary text-sm text-slate-300 leading-relaxed italic">
+                    "الوصف ليس مجرد ذكر أشكال الأشياء، بل هو حشوة من مشاعر الكاتب تسري في أركان المشهد."
+                </p>
+                <div id="quote-author" class="text-xs text-amber-400 text-left mt-2 font-bold">— نجيب محفوظ</div>
+                <button onclick="nextQuote()" class="mt-3 text-xs text-slate-400 hover:text-amber-400 transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right text-[10px]"></i> اقتباس آخر
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                <h3 class="text-xs font-bold text-slate-400 mb-3">إحصائيات الإبداع</h3>
+                <div class="grid grid-cols-2 gap-2 text-center">
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-lg font-bold text-amber-400" id="stat-words">0</div>
+                        <div class="text-[10px] text-slate-400">كلمة مكتوبة</div>
+                    </div>
+                    <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-lg font-bold text-emerald-400" id="stat-challenges">0</div>
+                        <div class="text-[10px] text-slate-400">تحدي مكتمل</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="lg:col-span-9 space-y-6">
+
+            <!-- TAB 1: Eras & Pathways -->
+            <div id="section-pathways" class="tab-content block space-y-6">
+                <div class="bg-gradient-to-r from-amber-950/40 to-slate-900 border border-amber-900/40 rounded-2xl p-6">
+                    <h2 class="font-title text-2xl text-amber-400 mb-2">رحلة عبر العصور الأدبية</h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        اختر العصر الأدبي لتبدأ بالتعلم من رواده وتخوض تحديات كتابية تتصاعد في الصعوبة والإبداع. كل عصر يفتح لك آفاقاً جديدة في البلاغة والحبكة والسرد.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="eras-grid"></div>
+            </div>
+
+            <!-- TAB 2: Horror -->
+            <div id="section-horror" class="tab-content hidden space-y-6">
+                <div class="bg-gradient-to-r from-red-950/60 to-slate-900 border border-red-900/50 rounded-2xl p-6 relative overflow-hidden">
+                    <div class="absolute -left-6 -top-6 text-red-500/10 text-9xl">
+                        <i class="fa-solid fa-ghost"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <span class="bg-red-900/80 text-red-200 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">مدرسة د. أحمد خالد توفيق</span>
+                        <h2 class="font-title text-2xl text-red-400 mt-2 mb-2">كتابة الرعب والتشويق النفسي</h2>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            الرعب الحقيقي لا يعتمد على الوحوش الصارخة، بل على الخوف التكتيكي، الصمت المخيف، والغموض الذي يتسلل لنفس القارئ.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div onclick="loadHorrorLesson(1)" class="cursor-pointer bg-slate-900 hover:border-red-600 border border-slate-800 p-4 rounded-xl transition">
+                        <div class="text-red-500 text-2xl mb-2"><i class="fa-solid fa-eye-slash"></i></div>
+                        <h3 class="font-bold text-slate-100 text-sm">١. بناء الترقب والصمت</h3>
+                    </div>
+                    <div onclick="loadHorrorLesson(2)" class="cursor-pointer bg-slate-900 hover:border-red-600 border border-slate-800 p-4 rounded-xl transition">
+                        <div class="text-red-500 text-2xl mb-2"><i class="fa-solid fa-cloud-moon"></i></div>
+                        <h3 class="font-bold text-slate-100 text-sm">٢. الأجواء والوصف الظلي</h3>
+                    </div>
+                    <div onclick="loadHorrorLesson(3)" class="cursor-pointer bg-slate-900 hover:border-red-600 border border-slate-800 p-4 rounded-xl transition">
+                        <div class="text-red-500 text-2xl mb-2"><i class="fa-solid fa-brain"></i></div>
+                        <h3 class="font-bold text-slate-100 text-sm">٣. الرعب النفسي الداخلي</h3>
+                    </div>
+                </div>
+
+                <div id="horror-workspace" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <!-- Dynamic Lesson -->
+                </div>
+            </div>
+
+            <!-- TAB 3: Expression -->
+            <div id="section-expression" class="tab-content hidden space-y-6">
+                <div class="bg-gradient-to-r from-pink-950/40 to-slate-900 border border-pink-900/30 rounded-2xl p-6">
+                    <h2 class="font-title text-2xl text-pink-400 mb-2">التعبير عن ما بداخل الإنسان</h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        الكتابة هي المرآة الأكثر صدقاً لروح الكاتب وشخصياته. تتمرن هنا على تحويل المشاعر المبهمة إلى صور بلاغية حية وفق قاعدة <b>"أظهر ولا تقل" (Show, Don't Tell)</b>.
+                    </p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <h3 class="font-bold text-pink-300 text-base" id="expr-title">تحدي: التعبير عن الحزن العميق بدون ذكر كلمة "حزين"</h3>
+                        <span class="text-xs bg-pink-950 text-pink-300 border border-pink-800 px-2.5 py-1 rounded-full">+40 XP</span>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-bold text-slate-300">مساحة التعبير الأدبي:</label>
+                        <textarea id="expr-input" rows="5" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-slate-200 text-sm font-literary focus:outline-none focus:border-pink-500/60 leading-relaxed resize-none" placeholder="بدأت يداه ترتجفان وهو يمسك الرسالة القديمة..."></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="analyzeExpressionText()" class="bg-pink-600 hover:bg-pink-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> <span>التقييم</span>
+                            </button>
+                            <!-- AI Review Button -->
+                            <button onclick="triggerAIReview('expr-input', 'التعبير عن الذات والمشاعر')" class="bg-purple-700 hover:bg-purple-600 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-purple-900/20 ai-pulse">
+                                <i class="fa-solid fa-brain"></i> المراجع الذكي
+                            </button>
+                            <!-- Word Export Button -->
+                            <button onclick="exportTextAreaToWord('expr-input', 'تحدي التعبير عن الذات')" class="bg-blue-800 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-file-word"></i> Word
+                            </button>
+                        </div>
+                        <span id="expr-word-count" class="text-xs text-slate-500">0 كلمة</span>
+                    </div>
+                    <div id="expr-feedback" class="hidden rounded-xl p-4 bg-slate-950 border border-slate-800 space-y-2 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Studio -->
+            <div id="section-studio" class="tab-content hidden space-y-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-4">
+                        <div>
+                            <h2 class="font-title text-xl text-amber-400">مختبر التقييم الأدبي الحر</h2>
+                            <p class="text-xs text-slate-400">اكتب فقرة من روايتك واحصل على تحليل فوري للأسلوب والمفردات والجو النفسي.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="genre-select" class="bg-slate-950 border border-slate-800 text-xs text-amber-300 px-3 py-2 rounded-lg font-bold outline-none">
+                                <option value="general">أدب عام / كلاسيكي</option>
+                                <option value="horror">رعب وإثارة</option>
+                                <option value="psychological">دراما ونفسي</option>
+                                <option value="fantasy">فنتازيا وخيال</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl overflow-hidden shadow-2xl transition border border-slate-800" id="studio-board-container">
+                        <div class="bg-slate-800 px-4 py-2 border-b border-slate-700/60 flex items-center justify-between text-xs text-slate-300">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-feather text-amber-400"></i> مسودة النص</span>
+                            <div class="flex gap-2">
+                                <button onclick="togglePaperTheme()" class="hover:text-amber-400 transition" title="تغيير الثيم"><i class="fa-solid fa-circle-half-stroke"></i></button>
+                                <button onclick="clearStudio()" class="hover:text-red-400 transition" title="مسح النص"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <textarea id="studio-input" rows="8" class="w-full parchment p-5 text-base font-literary leading-relaxed focus:outline-none resize-none" placeholder="اكتب هنا فصلك الأدبي أو فقرتك السردية لنحللها ونقيس جودة إبداعك..."></textarea>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="analyzeStudioText()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line"></i> <span>تحليل مبدئي</span>
+                            </button>
+                            <!-- AI Review Button -->
+                            <button onclick="triggerAIReview('studio-input', 'المسودة الأدبية (المختبر الحر)')" class="bg-purple-700 hover:bg-purple-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-purple-900/20 ai-pulse">
+                                <i class="fa-solid fa-brain"></i> المراجع الذكي
+                            </button>
+                            <!-- Word Export Button -->
+                            <button onclick="exportTextAreaToWord('studio-input', 'المسودة الأدبية (المختبر الحر)')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-file-word"></i> Word
+                            </button>
+                        </div>
+                        <div class="text-xs text-slate-400 flex items-center gap-4">
+                            <span>الكلمات: <strong id="studio-word-count" class="text-amber-400">0</strong></span>
+                            <span>الحروف: <strong id="studio-char-count" class="text-amber-400">0</strong></span>
+                        </div>
+                    </div>
+
+                    <div id="analysis-result" class="hidden bg-slate-950 border border-slate-800 rounded-xl p-5 space-y-4">
+                        <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                            <i class="fa-solid fa-square-poll-vertical"></i> تقرير التحليل المبدئي
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">ثراء المفردات والحصيلة</div>
+                                <div class="w-full bg-slate-800 rounded-full h-2 mt-1">
+                                    <div id="meter-vocab" class="bg-amber-500 h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <div class="text-left text-[10px] text-amber-400 mt-1 font-bold" id="score-vocab">0%</div>
+                            </div>
+                            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">بناء الجو النفسي والعاطفي</div>
+                                <div class="w-full bg-slate-800 rounded-full h-2 mt-1">
+                                    <div id="meter-emotion" class="bg-pink-500 h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <div class="text-left text-[10px] text-pink-400 mt-1 font-bold" id="score-emotion">0%</div>
+                            </div>
+                            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800">
+                                <div class="text-xs text-slate-400 mb-1">انسيابية السرد والبلاغة</div>
+                                <div class="w-full bg-slate-800 rounded-full h-2 mt-1">
+                                    <div id="meter-flow" class="bg-emerald-500 h-2 rounded-full" style="width: 0%"></div>
+                                </div>
+                                <div class="text-left text-[10px] text-emerald-400 mt-1 font-bold" id="score-flow">0%</div>
+                            </div>
+                        </div>
+                        <ul id="analysis-tips" class="text-xs text-slate-300 space-y-1.5 list-disc list-inside bg-slate-900/60 p-3 rounded-lg border border-slate-800"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal for Era Challenges -->
+            <div id="challenge-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-amber-900/50 rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl shadow-amber-900/20">
+                    <div class="flex justify-between items-start border-b border-slate-800 pb-3">
+                        <div>
+                            <span id="modal-era-tag" class="text-[10px] bg-amber-950 text-amber-400 border border-amber-800/60 px-2 py-0.5 rounded-full font-bold">العصر الأدبي</span>
+                            <h3 id="modal-title" class="font-title text-xl text-amber-400 mt-1">عنوان التحدي الأدبي</h3>
+                        </div>
+                        <button onclick="closeModalById('challenge-modal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <h4 class="text-xs font-bold text-amber-500 flex items-center gap-1.5">
+                                <i class="fa-solid fa-book-open"></i> الدرس والأسلوب المطلوب:
+                            </h4>
+                            <p id="modal-lesson" class="text-xs text-slate-300 leading-relaxed font-literary"></p>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-bold text-slate-300">نصك الإبداعي (المطلوب تطبيق الدرس):</label>
+                            <textarea id="modal-input" rows="6" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 text-sm font-literary focus:outline-none focus:border-amber-500 leading-relaxed resize-none" placeholder="اكتب هنا تطبيقك للتحدي..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 flex-wrap gap-3">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="submitModalChallenge()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-sm px-4 py-2.5 rounded-xl transition">
+                                إرسال واعتماد
+                            </button>
+                            <!-- AI Review Button -->
+                            <button onclick="triggerAIReview('modal-input', document.getElementById('modal-title').innerText)" class="bg-purple-700 hover:bg-purple-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2 ai-pulse">
+                                <i class="fa-solid fa-brain"></i> المراجع الذكي
+                            </button>
+                            <!-- Word Export Button -->
+                            <button onclick="exportTextAreaToWord('modal-input', document.getElementById('modal-title').innerText)" class="bg-blue-800 hover:bg-blue-700 text-white font-bold text-sm px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                                <i class="fa-solid fa-file-word"></i> Word
+                            </button>
+                        </div>
+                        <span id="modal-reward" class="text-xs text-emerald-400 font-bold">+50 XP</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Literary Coach Modal (Gemini) -->
+            <div id="ai-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-slate-900 border border-purple-900/50 rounded-2xl max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col shadow-2xl shadow-purple-900/20">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h2 class="text-xl font-bold text-purple-400 flex items-center gap-2 font-title">
+                            <i class="fa-solid fa-brain"></i> المراجع الأدبي الذكي (Gemini)
+                        </h2>
+                        <div class="flex items-center gap-3">
+                            <button onclick="clearApiKey()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1 rounded border border-slate-700 transition" title="تغيير مفتاح API"><i class="fa-solid fa-key"></i> تغيير المفتاح</button>
+                            <button onclick="closeModalById('ai-modal')" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+                        </div>
+                    </div>
+                    
+                    <div id="ai-content" class="flex-grow overflow-y-auto custom-scrollbar font-literary text-lg leading-relaxed text-slate-200 p-2 min-h-[300px]">
+                        <!-- AI content injected here -->
+                    </div>
+                    
+                    <div id="ai-actions" class="hidden border-t border-slate-800 pt-4 flex justify-end">
+                        <button onclick="copyAIResult()" class="bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-amber-400 border border-amber-600/30 px-5 py-2.5 rounded-xl text-sm font-bold transition flex items-center gap-2">
+                            <i class="fa-solid fa-copy"></i> نسخ التقرير والملاحظات
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 bg-slate-900/60 py-4 text-center text-xs text-slate-500">
+        <p>أكاديمية قلم الإبداع © 2026 - صُممت لتمكين الكتاب والروائيين من إتقان فنون الأدب والرعب والتعبير.</p>
+    </footer>
+
+    <script>
+        // State Management
+        let gameState = {
+            xp: 0,
+            wordsWritten: 0,
+            challengesCompleted: 0,
+            completedEras: [],
+            paperDarkTheme: false,
+            savedTexts: {} // For Saving Inputs
+        };
+
+        const ranks = [
+            { minXp: 0, title: 'حابر القلم (مبتدئ)' },
+            { minXp: 100, title: 'راوي السطور' },
+            { minXp: 250, title: 'صانع الحبكة' },
+            { minXp: 500, title: 'أستاذ البيان' },
+            { minXp: 1000, title: 'حكيم الكلمة (أديب متمرس)' }
+        ];
+
+        const quotes = [
+            { text: "الوصف ليس مجرد ذكر أشكال الأشياء، بل هو حشوة من مشاعر الكاتب تسري في أركان المشهد.", author: "نجيب محفوظ" },
+            { text: "الرعب الحقيقي ليس في الظلام، بل فيما تتخيله عقولنا داخل ذلك الظلام.", author: "د. أحمد خالد توفيق" },
+            { text: "الكتابة تداوٍ للروح، حين تستطيع نقل الألم الحبيس إلى نص يقرأه الآخرون فيبتسمون شكراً.", author: "طه حسين" },
+            { text: "البلاغة هي الإيجاز في غير إخلال، والإطناب في غير ملل.", author: "الجاحظ" },
+            { text: "لا تكتب الرواية لتقول شيئاً للناس، بل لتكتشف ماذا يمكنك أن تقول لرقيع نفسك.", author: "رضوى عاشور" }
+        ];
+
+        const erasData = [
+            { id: 'ancient', title: 'عصر الرواد والبلاغة الكلاسيكية', subtitle: 'الجاحظ، المتنبي، وأدب المقامات والبيان', icon: 'fa-landmark', xp: 50,
+              description: 'تعلم أصول الفصاحة، قوة اللفظ، وجزالة المترادفات. ابدأ بتكوين قاعدة لغوية رصينة تعطي نصوصك هيبة وقوة.',
+              lesson: 'استخدام التشبيهات القوية المأخوذة من الطبيعة والتأمل البشري العميق دون تكرار الكلمات.',
+              task: 'اكتب مشهداً تصف فيه عاصفة رملية أو ليلة مظلمة باستخدام مفردات جليلة وبليغة وبدون استخدام كلمات حديثة.' },
+            { id: 'realism', title: 'العصر الحديث: الواقعية وبناء المجتمع', subtitle: 'مدرسة نجيب محفوظ وطه حسين', icon: 'fa-city', xp: 70,
+              description: 'تعلم كيف تحول حارة أو شارعاً صغيراً إلى مسرح إنساني عميق. ركز على التفاصيل الدقيقة للأماكن والشخصيات.',
+              lesson: 'ربط المكان بالنفسية: الحارة الضيقة تعكس ضيق أفق الشخصية، والشباك المفتوح يعكس الأمل.',
+              task: 'اكتب مشهداً يصف شخصاً يجلس في مقهى قديم يراقب العابرين، مع التركيز على تفاصيل حركة يديه وعينيه.' },
+            { id: 'horror_mystery', title: 'عصر أدب الجيب والرعب النفسي', subtitle: 'مدرسة د. أحمد خالد توفيق ونبيل فاروق', icon: 'fa-skull', xp: 90,
+              description: 'طريقة كتابة أدب الرعب والإثارة، التلاعب بالصمت، السرد العليم المتقطع، ونهايات الت twist الأسطورية.',
+              lesson: 'قاعدة الرعب: تجنب كشف الكيان المخيف فوراً، دَع الحس والسمع والأثر يسبق الرؤية.',
+              task: 'اكتب مقطعاً من 4 أسطر لشخص يسمع خطى منتظمة في ممر بيته المظلم دون أن يرى أحداً.' },
+            { id: 'magic_realism', title: 'الأدب المعاصر والواقعية السحرية', subtitle: 'المزج بين الخيال والواقع الاجتماعي', icon: 'fa-wand-magic-sparkles', xp: 100,
+              description: 'كيف تدخل عناصر فانتازية وخرافية داخل حياة عادية جداً لجعل النص ساحراً وجذاباً للجمهور الحديث.',
+              lesson: 'التعامل مع الغريب كأنه حدث عادي يومي لزيادة إقناع القارئ.',
+              task: 'اكتب عن شخص استيقظ يوماً فوجد نبتة صغيرة تنمو على راحة يده، وكيف تعامل معها ببساطة في يومه.' }
+        ];
+
+        window.onload = function() {
+            renderEras();
+            updateUIStats();
+            setupTextareaListeners();
+            loadHorrorLesson(1);
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-amber-600', 'text-slate-950');
+                btn.classList.add('text-slate-300', 'hover:bg-slate-800');
+            });
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.add('bg-amber-600', 'text-slate-950');
+            activeBtn.classList.remove('text-slate-300', 'hover:bg-slate-800');
+        }
+
+        function renderEras() {
+            const container = document.getElementById('eras-grid');
+            container.innerHTML = erasData.map(era => {
+                const isCompleted = gameState.completedEras.includes(era.id);
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between hover:border-amber-500/50 transition">
+                        <div>
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-amber-400 text-2xl"><i class="fa-solid ${era.icon}"></i></span>
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isCompleted ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-amber-400'}">
+                                    ${isCompleted ? 'مكتمل ✓' : `+${era.xp} XP`}
+                                </span>
+                            </div>
+                            <h3 class="font-title text-lg text-slate-100 font-bold">${era.title}</h3>
+                            <p class="text-xs text-amber-500 font-semibold mb-2">${era.subtitle}</p>
+                            <p class="text-xs text-slate-400 leading-relaxed mb-4">${era.description}</p>
+                        </div>
+                        <button onclick="openChallengeModal('${era.id}')" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-slate-200 text-xs font-bold transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-feather"></i> <span>${isCompleted ? 'تعديل التحدي' : 'بدء تحدي العصر'}</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let currentQuoteIndex = 0;
+        function nextQuote() {
+            currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+            document.getElementById('quote-text').innerText = `"${quotes[currentQuoteIndex].text}"`;
+            document.getElementById('quote-author').innerText = `— ${quotes[currentQuoteIndex].author}`;
+        }
+
+        let currentActiveEra = null;
+        function openChallengeModal(eraId) {
+            const era = erasData.find(e => e.id === eraId);
+            if (!era) return;
+            currentActiveEra = era;
+
+            document.getElementById('modal-era-tag').innerText = era.title;
+            document.getElementById('modal-title').innerText = `تحدي: ${era.subtitle}`;
+            document.getElementById('modal-lesson').innerHTML = `<b>الدرس:</b> ${era.lesson}<br><br><b>المطلوب:</b> ${era.task}`;
+            document.getElementById('modal-reward').innerText = `+${era.xp} XP`;
+            
+            // استرجاع النص المحفوظ إذا وجد
+            let savedText = "";
+            if (gameState.savedTexts && gameState.savedTexts[era.title]) {
+                savedText = gameState.savedTexts[era.title];
+            }
+            document.getElementById('modal-input').value = savedText;
+
+            document.getElementById('challenge-modal').classList.remove('hidden');
+        }
+
+        function closeModalById(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function submitModalChallenge() {
+            const text = document.getElementById('modal-input').value.trim();
+            if (text.length < 20) { alert('يرجى كتابة نص أكثر إثراءً (20 كلمة على الأقل) لإكمال التحدي الأدبي.'); return; }
+
+            // حفظ النص في State
+            if(!gameState.savedTexts) gameState.savedTexts = {};
+            gameState.savedTexts[currentActiveEra.title] = text;
+
+            if (!gameState.completedEras.includes(currentActiveEra.id)) {
+                gameState.completedEras.push(currentActiveEra.id);
+            }
+
+            const wordCount = text.split(/\s+/).filter(Boolean).length;
+            addXP(currentActiveEra.xp);
+            gameState.wordsWritten += wordCount;
+            gameState.challengesCompleted += 1;
+
+            updateUIStats(); renderEras(); closeModalById('challenge-modal');
+            showToast(`أحسنت! أتممت تحدي ${currentActiveEra.title} وتم الحفظ!`);
+        }
+
+        function loadHorrorLesson(lessonNum) {
+            const workspace = document.getElementById('horror-workspace');
+            let savedText = (gameState.savedTexts && gameState.savedTexts[`horror_${lessonNum}`]) ? gameState.savedTexts[`horror_${lessonNum}`] : "";
+            
+            let title = "", desc = "", placeholder = "", xp = 0;
+            if (lessonNum === 1) {
+                title = "بناء الترقب والصمت"; desc = "اجعل الكائن الخفي غير مرئي لفترة طويلة، واستبدل الرؤية بالأصوات الخافتة، والرائحة الكريهة."; placeholder = "كان ينصت لبرودة الغرفة المتزايدة، حين سمع صوت مقبض الباب يتحرك بطبقة صوتية خافتة جداً..."; xp = 40;
+            } else if (lessonNum === 2) {
+                title = "الأجواء والوصف الظلي"; desc = "استخدم الحواس الخمس: رائحة العفن القديم، ملمس الغبار اللزج، صرير الأخشاب تحت الأقدام."; placeholder = "صف بيتاً مهجوراً بالاعتماد فقط على حاسّتي الشم واللمس..."; xp = 45;
+            } else {
+                title = "الرعب النفسي"; desc = "هنا البطل لا يعرف إن كان الخطر حقيقياً أم مجرد هلوسة ونتاج ذنبه القديم."; placeholder = "اكتب حواراً داخلياً لشخص يشك أن انعكاسه في المرآة يتأخر ثانية واحدة عن الحركة..."; xp = 50;
+            }
+
+            workspace.innerHTML = `
+                <div class="border-b border-slate-800 pb-3">
+                    <span class="text-xs text-red-400 font-bold uppercase">درس الرعب ${lessonNum}</span>
+                    <h3 class="font-title text-xl text-slate-100 mt-1">${title}</h3>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">${desc}</p>
+                <div class="space-y-2">
+                    <textarea id="horror-input" data-lesson="${lessonNum}" rows="4" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 text-sm font-literary focus:outline-none focus:border-red-600 leading-relaxed resize-none" placeholder="${placeholder}">${savedText}</textarea>
+                </div>
+                <div class="flex items-center gap-2 mt-2 flex-wrap">
+                    <button onclick="submitHorrorChallenge(${xp}, ${lessonNum})" class="bg-red-700 hover:bg-red-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                        <i class="fa-solid fa-ghost"></i> تقييم
+                    </button>
+                    <!-- AI & Word Buttons -->
+                    <button onclick="triggerAIReview('horror-input', '${title}')" class="bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2 ai-pulse">
+                        <i class="fa-solid fa-brain"></i> المراجع الذكي
+                    </button>
+                    <button onclick="exportTextAreaToWord('horror-input', '${title}')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-word"></i> Word
+                    </button>
+                </div>
+            `;
+        }
+
+        function submitHorrorChallenge(rewardXp, lessonNum) {
+            const input = document.getElementById('horror-input').value.trim();
+            if (input.length < 20) { alert('اكتب فقرة رعب معبرة لا تقل عن 20 كلمة للحصول على التقييم.'); return; }
+            
+            // Save state
+            if(!gameState.savedTexts) gameState.savedTexts = {};
+            gameState.savedTexts[`horror_${lessonNum}`] = input;
+
+            const wordCount = input.split(/\s+/).filter(Boolean).length;
+            addXP(rewardXp); gameState.wordsWritten += wordCount; gameState.challengesCompleted += 1;
+            updateUIStats(); showToast(`ممتاز! نصلتك المرعبة تنبض بالغموض. تم الحفظ ومنحك +${rewardXp} XP!`);
+        }
+
+        function analyzeExpressionText() {
+            const text = document.getElementById('expr-input').value.trim();
+            if (text.length < 15) { alert('يرجى كتابة نص كافٍ للتقييم العاطفي.'); return; }
+            
+            const feedbackDiv = document.getElementById('expr-feedback'); feedbackDiv.classList.remove('hidden');
+            const forbiddenWords = ['حزين', 'حزن', 'غاضب', 'غضب', 'خائف', 'خوف'];
+            const foundForbidden = forbiddenWords.filter(w => text.includes(w));
+
+            let scoreText = '';
+            if (foundForbidden.length === 0) {
+                scoreText = `<p class="text-emerald-400 font-bold">✨ إنجاز رائع (Show, Don't Tell):</p><p class="text-slate-300 text-xs">نجحت تماماً في تجنب الكلمات المباشرة! عبرت عن المشاعر من خلال الوصف.</p>`;
+                addXP(40); gameState.challengesCompleted += 1;
+            } else {
+                scoreText = `<p class="text-amber-400 font-bold">💡 ملحوظة تحسين:</p><p class="text-slate-300 text-xs">استخدمت الكلمات الصريحة: (${foundForbidden.join('، ')}). جرب استبدالها بوصف جسدي.</p>`;
+            }
+            feedbackDiv.innerHTML = scoreText;
+            const wordCount = text.split(/\s+/).filter(Boolean).length;
+            gameState.wordsWritten += wordCount; updateUIStats();
+        }
+
+        function analyzeStudioText() {
+            const text = document.getElementById('studio-input').value.trim();
+            if (text.length < 15) { alert('اكتب فقرة مناسبة أولاً (على الأقل 15 كلمة) لنتمكن من تحليلها.'); return; }
+            const genre = document.getElementById('genre-select').value;
+            const words = text.split(/\s+/).filter(Boolean); const wordCount = words.length;
+            const richWords = ['تسلل', 'همس', 'تأمل', 'أفق', 'سرمدي', 'وجوم', 'صمت', 'غموض', 'شغف', 'برودة', 'انعكاس', 'ارتجاف', 'أصداء', 'شاحب'];
+            let richCount = 0; words.forEach(w => { if (richWords.some(rw => w.includes(rw)) || w.length > 5) richCount++; });
+
+            let vocabScore = Math.min(100, Math.round((richCount / wordCount) * 100 + 40));
+            let emotionScore = text.includes('!') || text.includes('؟') || text.length > 80 ? 85 : 60;
+            let flowScore = Math.min(100, Math.round((wordCount / 5) + 50));
+
+            document.getElementById('meter-vocab').style.width = vocabScore + '%'; document.getElementById('score-vocab').innerText = vocabScore + '%';
+            document.getElementById('meter-emotion').style.width = emotionScore + '%'; document.getElementById('score-emotion').innerText = emotionScore + '%';
+            document.getElementById('meter-flow').style.width = flowScore + '%'; document.getElementById('score-flow').innerText = flowScore + '%';
+
+            const tipsList = document.getElementById('analysis-tips'); tipsList.innerHTML = '';
+            if (genre === 'horror') tipsList.innerHTML += `<li><b>نصيحة أدب الرعب:</b> أضف عناصر حية للحواس الأخرى.</li>`;
+            else if (genre === 'psychological') tipsList.innerHTML += `<li><b>نصيحة الأدب النفسي:</b> استخدم الحوار الداخلي (Monologue).</li>`;
+            
+            if (vocabScore > 75) tipsList.innerHTML += `<li class="text-emerald-400"><b>حصيلة لغوية ممتازة.</b></li>`;
+            else tipsList.innerHTML += `<li><b>التنوع اللفظي:</b> استبدل الأفعال العادية بأفعال أكثر بلاغة.</li>`;
+
+            document.getElementById('analysis-result').classList.remove('hidden');
+            addXP(25); gameState.wordsWritten += wordCount; updateUIStats();
+        }
+
+        
+        function saveCurrentInputsToState() {
+            if(!gameState.savedTexts) gameState.savedTexts = {};
+            if(document.getElementById('expr-input')) gameState.savedTexts['expr'] = document.getElementById('expr-input').value;
+            if(document.getElementById('studio-input')) gameState.savedTexts['studio'] = document.getElementById('studio-input').value;
+            // Horror and Modal texts are saved on submit
+        }
+
+        function restoreInputsFromState() {
+            if(gameState.savedTexts) {
+                if(document.getElementById('expr-input') && gameState.savedTexts['expr']) document.getElementById('expr-input').value = gameState.savedTexts['expr'];
+                if(document.getElementById('studio-input') && gameState.savedTexts['studio']) document.getElementById('studio-input').value = gameState.savedTexts['studio'];
+            }
+        }
+
+        function saveProjectToPC() {
+            saveCurrentInputsToState();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(gameState));
+            const link = document.createElement('a');
+            link.href = dataStr; link.download = "qalam_academy_project.json";
+            link.click();
+            showToast("تم حفظ المشروع على جهازك بنجاح!");
+        }
+
+        function loadProjectFromPC(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    gameState = JSON.parse(e.target.result);
+                    restoreInputsFromState();
+                    updateRank(); updateUIStats(); renderEras();
+                    loadHorrorLesson(1); // Reload horror to show potentially saved text
+                    showToast('تم استيراد المشروع بنجاح!');
+                } catch(err) { alert('ملف غير صالح'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function generateWordBlob(title, contentHTML) {
+            const html = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: 'Traditional Arabic', 'Amiri', serif; direction: rtl; text-align: right; background: #fff;}
+                        h1 { color: #8b0000; font-size: 26pt; border-bottom: 2px solid #d97706; padding-bottom: 10px; text-align: center;}
+                        h2 { color: #633112; font-size: 20pt; margin-top: 25px;}
+                        h3 { color: #2e1305; font-size: 16pt; margin-top: 15px;}
+                        p { font-size: 16pt; line-height: 1.8; color: #1a202c; }
+                        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #e2e8f0; }
+                    </style>
+                </head>
+                <body>
+                    ${contentHTML}
+                </body>
+                </html>
+            `;
+            return new Blob(['\ufeff', html], { type: 'application/msword' });
+        }
+
+        function downloadWord(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url; link.download = filename;
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function exportTextAreaToWord(textAreaId, title) {
+            const text = document.getElementById(textAreaId).value.trim();
+            if (!text) { alert("عذراً، المربع النصي فارغ. اكتب شيئاً أولاً لتصديره!"); return; }
+            const content = `<h1>${title}</h1><div class="section"><p>${text.replace(/\n/g, '<br>')}</p></div>`;
+            const blob = generateWordBlob(title, content);
+            downloadWord(blob, `${title}.doc`);
+            showToast("تم تصدير ملف Word للقطعة بنجاح!");
+        }
+
+        function exportFullProjectToWord() {
+            saveCurrentInputsToState(); // Ensure latest text is captured
+            let contentHTML = `<h1>تقرير أكاديمية قلم الإبداع الشامل</h1>`;
+            let hasContent = false;
+            
+            if (gameState.savedTexts) {
+                // Check Horror
+                for(let i=1; i<=3; i++) {
+                    if(gameState.savedTexts[`horror_${i}`]) {
+                        contentHTML += `<h2>مدرسة الرعب (تحدي ${i})</h2><div class="section"><p>${gameState.savedTexts[`horror_${i}`].replace(/\n/g, '<br>')}</p></div>`;
+                        hasContent = true;
+                    }
+                }
+                // Check Expression
+                if(gameState.savedTexts['expr']) {
+                    contentHTML += `<h2>التعبير عن الذات والمشاعر</h2><div class="section"><p>${gameState.savedTexts['expr'].replace(/\n/g, '<br>')}</p></div>`;
+                    hasContent = true;
+                }
+                // Check Studio
+                if(gameState.savedTexts['studio']) {
+                    contentHTML += `<h2>المسودة الأدبية (المختبر الحر)</h2><div class="section"><p>${gameState.savedTexts['studio'].replace(/\n/g, '<br>')}</p></div>`;
+                    hasContent = true;
+                }
+                // Check Eras
+                erasData.forEach(era => {
+                    if (gameState.savedTexts[era.title]) {
+                        contentHTML += `<h2>تحديات العصور: ${era.title}</h2><div class="section"><p>${gameState.savedTexts[era.title].replace(/\n/g, '<br>')}</p></div>`;
+                        hasContent = true;
+                    }
+                });
+            }
+
+            if (!hasContent) {
+                alert("لا يوجد أي محتوى محفوظ لتصديره! قم بالكتابة وحفظ التحديات أولاً.");
+                return;
+            }
+            
+            const blob = generateWordBlob('المشروع الأدبي الشامل', contentHTML);
+            downloadWord(blob, `مشروعي_الأدبي_الشامل.doc`);
+            showToast("تم تصدير المشروع بالكامل لملف Word!");
+        }
+
+        
+        function triggerAIReview(textAreaId, contextLabel) {
+            const textarea = document.getElementById(textAreaId);
+            if (!textarea || !textarea.value.trim()) { alert("يرجى كتابة نص أولاً ليتمكن الذكاء الاصطناعي من مراجعته."); return; }
+
+            const textToAnalyze = textarea.value.trim();
+            document.getElementById('ai-modal').classList.remove('hidden');
+            document.getElementById('ai-actions').classList.add('hidden');
+            
+            let apiKey = localStorage.getItem('gemini_api_key_academy');
+            if (!apiKey) { showApiKeyPrompt(textToAnalyze, contextLabel); return; }
+
+            analyzeTextWithAI(apiKey, textToAnalyze, contextLabel);
+        }
+
+        function showApiKeyPrompt(text, contextLabel) {
+            const aiContent = document.getElementById('ai-content');
+            aiContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full gap-4 my-6 p-4 text-center">
+                    <i class="fa-solid fa-key text-5xl text-purple-500 bg-purple-900/30 p-4 rounded-full border border-purple-500/30"></i>
+                    <h3 class="font-bold text-xl text-slate-100 mt-2">مفتاح API مطلوب للتحليل</h3>
+                    <p class="text-sm text-slate-400">للاتصال بالمراجع الذكي (Gemini)، يرجى توفير المفتاح. يمكنك الحصول عليه مجاناً عبر: <br><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-purple-400 underline font-bold mt-2 inline-block">Google AI Studio</a></p>
+                    <div class="w-full max-w-sm flex flex-col gap-3 mt-4">
+                        <input type="password" id="api-key-input" placeholder="أدخل مفتاح Gemini هنا..." class="w-full p-3 bg-slate-950 border border-slate-700 rounded-xl outline-none focus:border-purple-500 text-left font-mono text-sm" dir="ltr">
+                        <button onclick="saveApiKeyAndReview('${encodeURIComponent(text)}', '${contextLabel}')" class="bg-purple-600 hover:bg-purple-500 text-white py-2.5 rounded-xl shadow-md font-bold text-sm transition-all">حفظ ومتابعة</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveApiKeyAndReview(encodedText, contextLabel) {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key_academy', key);
+                analyzeTextWithAI(key, decodeURIComponent(encodedText), contextLabel);
+            } else { showToast("يرجى إدخال المفتاح أولاً"); }
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('gemini_api_key_academy');
+            document.getElementById('ai-content').innerHTML = '<div class="text-center text-slate-400 my-10 font-bold">تم مسح المفتاح. يرجى إغلاق النافذة والمحاولة مرة أخرى لإدخال مفتاح جديد.</div>';
+            document.getElementById('ai-actions').classList.add('hidden');
+            showToast("تم مسح المفتاح بنجاح!");
+        }
+
+        async function analyzeTextWithAI(apiKey, text, contextLabel) {
+            const aiContent = document.getElementById('ai-content');
+            const aiActions = document.getElementById('ai-actions');
+            
+            aiContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-purple-400 gap-4 my-12">
+                    <i class="fa-solid fa-spinner fa-spin text-4xl"></i>
+                    <p class="font-bold text-sm animate-pulse">يقرأ المحلل الذكي نصك ويبحث في أعماقه البلاغية...</p>
+                </div>
+            `;
+
+            try {
+                const prompt = `أنت ناقد أدبي، روائي، ومراجع لغوي خبير باللغة العربية. قم بتحليل هذا النص القصصي أو الأدبي الذي كتبه أحد المتدربين.
+                
+                *سياق التمرين:* ${contextLabel}
+                *النص المكتوب:*
+                "${text}"
+                
+                الرجاء تقديم تقريرك مقسماً إلى:
+                1. الأخطاء الإملائية والنحوية (إن وجدت) وتصحيحها.
+                2. تقييم بلاغي وقصصي (رأيك في الجو النفسي، اختيار المفردات، وقوة الوصف).
+                3. نصيحتان للتحسين وصقل الموهبة.
+                
+                توجيهات التنسيق:
+                استخدم صيغة HTML نظيفة ومناسبة للقراءة داخل متصفح بخلفية داكنة (استخدم <h3> لعناوين الأقسام وتكون بلون #a78bfa، و <ul> و <p> و <strong class="text-amber-400"> للكلمات المهمة). لا تستخدم markdown block ابداً. ابدأ مباشرة بكود الـ HTML.`;
+
+                // باستخدام أحدث وأسرع إصدار gemini-3-flash-preview
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const result = await response.json();
+                
+                if (response.ok && result.candidates && result.candidates.length > 0) {
+                    let aiHtml = result.candidates[0].content.parts[0].text;
+                    aiHtml = aiHtml.replace(/```html/g, '').replace(/```/g, ''); 
+                    
+                    aiContent.innerHTML = `<div class="bg-slate-950/50 p-5 rounded-xl border border-slate-800 shadow-inner">${aiHtml}</div>`;
+                    aiActions.classList.remove('hidden');
+                } else {
+                    throw new Error(result.error?.message || "لم يتم تلقي رد صحيح من النموذج.");
+                }
+
+            } catch (error) {
+                if (error.message && (error.message.toLowerCase().includes("api key not valid") || error.message.toLowerCase().includes("api_key"))) {
+                    clearApiKey();
+                } else {
+                    aiContent.innerHTML = `
+                        <div class="text-center text-red-400 my-10 p-6 bg-red-950/30 rounded-xl border border-red-900/50">
+                            <i class="fa-solid fa-circle-exclamation text-4xl mb-3"></i>
+                            <p class="font-bold text-sm mb-2">حدث خطأ أثناء الاتصال بالمراجع الذكي.</p>
+                            <p class="text-xs bg-slate-950 p-3 rounded text-red-300 font-mono text-left" dir="ltr">${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function copyAIResult() {
+            const content = document.getElementById('ai-content').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = content;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast("تم نسخ تقرير الذكاء الاصطناعي بنجاح!");
+        }
+
+        function togglePaperTheme() {
+            const textarea = document.getElementById('studio-input');
+            gameState.paperDarkTheme = !gameState.paperDarkTheme;
+            if (gameState.paperDarkTheme) {
+                textarea.classList.remove('parchment'); textarea.classList.add('dark-parchment');
+            } else {
+                textarea.classList.remove('dark-parchment'); textarea.classList.add('parchment');
+            }
+        }
+        function clearStudio() {
+            if (confirm('هل تريد مسح المسودة الحالية؟')) {
+                document.getElementById('studio-input').value = '';
+                document.getElementById('analysis-result').classList.add('hidden');
+                updateStudioCounts();
+            }
+        }
+        function setupTextareaListeners() {
+            const studioInput = document.getElementById('studio-input');
+            studioInput.addEventListener('input', updateStudioCounts);
+            const exprInput = document.getElementById('expr-input');
+            exprInput.addEventListener('input', function() {
+                const count = this.value.trim().split(/\s+/).filter(Boolean).length;
+                document.getElementById('expr-word-count').innerText = `${count} كلمة`;
+            });
+        }
+        function updateStudioCounts() {
+            const text = document.getElementById('studio-input').value;
+            const words = text.trim().split(/\s+/).filter(Boolean).length;
+            const chars = text.length;
+            document.getElementById('studio-word-count').innerText = words;
+            document.getElementById('studio-char-count').innerText = chars;
+        }
+        function addXP(amount) {
+            gameState.xp += amount; updateRank(); updateUIStats();
+        }
+        function updateRank() {
+            let currentRank = ranks[0].title; let nextXp = ranks[1].minXp;
+            for (let i = 0; i < ranks.length; i++) {
+                if (gameState.xp >= ranks[i].minXp) {
+                    currentRank = ranks[i].title; nextXp = ranks[i+1] ? ranks[i+1].minXp : 'أقصى مستوى';
+                }
+            }
+            document.getElementById('player-rank').innerText = currentRank; document.getElementById('next-level-xp').innerText = nextXp;
+        }
+        function updateUIStats() {
+            document.getElementById('player-xp').innerText = gameState.xp;
+            document.getElementById('stat-words').innerText = gameState.wordsWritten;
+            document.getElementById('stat-challenges').innerText = gameState.challengesCompleted;
+        }
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 right-5 bg-amber-500 text-slate-950 font-bold text-sm px-5 py-3 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-2';
+            toast.innerHTML = `<i class="fa-solid fa-check-circle"></i> <span>${msg}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+</body>
+</html
