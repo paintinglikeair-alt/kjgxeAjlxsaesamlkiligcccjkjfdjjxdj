@@ -1,0 +1,828 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكي الأثاث الذكي - الإصدار الهندسي الاحترافي</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cairo Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0; overflow: hidden; font-family: 'Cairo', sans-serif;
+            background-color: #0f172a; color: white; user-select: none;
+        }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        
+        .pointer-events-auto { pointer-events: auto; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); border-radius: 1rem;
+        }
+        
+        .btn-tool { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-tool:hover { transform: translateY(-2px); border-color: #eab308; }
+        .btn-tool.active { background-color: #ca8a04; border-color: #fef08a; color: white; }
+
+        .pulse-btn { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+        }
+
+        #loading {
+            position: fixed; inset: 0; background: #0f172a; z-index: 100;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+        .loader {
+            border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #eab308;
+            border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .color-swatch {
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.2s;
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { border-color: white; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+        /* Custom Scrollbar for Sidebar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .lib-item { transition: all 0.3s; border: 2px solid transparent; }
+        .lib-item:hover { background: rgba(255,255,255,0.05); }
+        .lib-item.active { border-color: #eab308; background: rgba(234, 179, 8, 0.1); }
+    </style>
+
+    <!-- Three.js & Tween.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="loader mb-4"></div>
+        <h2 class="text-2xl font-bold text-yellow-500">جاري تحميل الورشة الهندسية...</h2>
+    </div>
+
+    <div id="ui-layer" class="p-4 md:p-6 flex flex-row">
+        
+        <!-- Center/Left Content (Header & Info) -->
+        <div class="flex-1 flex flex-col justify-between h-full pointer-events-none">
+            
+            <!-- Header -->
+            <header class="flex flex-col md:flex-row justify-between items-start gap-4 pointer-events-auto pr-72">
+                <div class="glass-panel p-5 w-full md:w-auto">
+                    <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-2">
+                        المحاكي الهندسي للأثاث
+                    </h1>
+                    <p class="text-gray-300 text-sm">الإصدار التعليمي الاحترافي: ميكانيكا، كينماتيكا، وتحليل التعاشيق.</p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button id="toggleMechanismBtn" class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-lg transition pulse-btn shadow-lg shadow-yellow-900/50">
+                            ⚙️ تشغيل الحركة الميكانيكية
+                        </button>
+                        <button id="xrayBtn" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition shadow-lg">
+                            👁️ وضع الأشعة (X-Ray)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Customization Panel -->
+                <div class="glass-panel p-4 flex flex-col gap-4 min-w-[200px]">
+                    <div>
+                        <h3 class="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">خامة الخشب</h3>
+                        <div class="flex gap-2">
+                            <div class="color-swatch active" style="background-color: #8b5a2b;" onclick="changeWood('oak', this)" title="زان صلب"></div>
+                            <div class="color-swatch" style="background-color: #3e2723;" onclick="changeWood('walnut', this)" title="جوز داكن"></div>
+                            <div class="color-swatch" style="background-color: #f1f5f9;" onclick="changeWood('white', this)" title="MDF أبيض"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">خامة المعدن (الميكانزم)</h3>
+                        <div class="flex gap-2">
+                            <div class="color-swatch active" style="background-color: #94a3b8;" onclick="changeMetal('steel', this)" title="صلب مجلفن"></div>
+                            <div class="color-swatch" style="background-color: #1e293b;" onclick="changeMetal('black', this)" title="معدن معالج حرارياً"></div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Info Panel -->
+            <div class="flex justify-start md:justify-end items-end w-full pointer-events-auto pr-72 pb-6">
+                <div id="info-panel" class="glass-panel p-6 w-full md:w-[450px] transform translate-y-10 opacity-0 transition-all duration-300 border-r-4 border-yellow-500">
+                    <h3 id="part-name" class="text-2xl font-bold text-white mb-2">اختر جزءاً للبدء</h3>
+                    <div class="space-y-3">
+                        <p id="part-desc" class="text-gray-300 text-sm leading-relaxed">
+                            قم بتدوير الكاميرا، واضغط على الأجزاء الهندسية لاكتشاف تفاصيلها ووظيفتها الكينماتيكية.
+                        </p>
+                        <div id="part-specs" class="bg-slate-900/80 p-3 rounded-lg text-xs text-yellow-200 border border-slate-700 hidden"></div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Right Sidebar (Library) -->
+        <aside class="w-72 glass-panel h-full absolute right-4 top-4 bottom-4 flex flex-col pointer-events-auto z-20">
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-xl font-black text-yellow-400 flex items-center gap-2">
+                    <span>📚</span> مكتبة العناصر الذكية
+                </h2>
+                <p class="text-xs text-gray-400 mt-1">اختر الميكانزم المراد دراسته</p>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                <!-- Item 1 -->
+                <div class="lib-item active p-3 rounded-lg cursor-pointer flex gap-3 items-center" onclick="loadFurniture('table', this)">
+                    <div class="w-12 h-12 bg-slate-800 rounded flex items-center justify-center text-2xl shadow-inner">🪚</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-white">طاولة الرفع الذكية</h4>
+                        <p class="text-xs text-gray-400">رفع ميكانيكي وأجنحة انزلاقية</p>
+                    </div>
+                </div>
+                <!-- Item 2 -->
+                <div class="lib-item p-3 rounded-lg cursor-pointer flex gap-3 items-center" onclick="loadFurniture('murphy', this)">
+                    <div class="w-12 h-12 bg-slate-800 rounded flex items-center justify-center text-2xl shadow-inner">🛏️</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-white">سرير الحائط المخفي</h4>
+                        <p class="text-xs text-gray-400">ميكانزم طي أوتوماتيكي للداخل</p>
+                    </div>
+                </div>
+                <!-- Item 3 -->
+                <div class="lib-item p-3 rounded-lg cursor-pointer flex gap-3 items-center" onclick="loadFurniture('sofa', this)">
+                    <div class="w-12 h-12 bg-slate-800 rounded flex items-center justify-center text-2xl shadow-inner">🛋️</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-white">أريكة السرير المستوية</h4>
+                        <p class="text-xs text-gray-400">ميكانزم قلب 180° متساوي</p>
+                    </div>
+                </div>
+                <!-- Item 4 (NEW) -->
+                <div class="lib-item p-3 rounded-lg cursor-pointer flex gap-3 items-center border border-indigo-500/30" onclick="loadFurniture('shelftable', this)">
+                    <div class="w-12 h-12 bg-indigo-900/50 rounded flex items-center justify-center text-2xl shadow-inner">🪜</div>
+                    <div>
+                        <h4 class="font-bold text-sm text-indigo-300">طاولة الرفوف المتحركة</h4>
+                        <p class="text-xs text-gray-400">نظام متوازي الأضلاع الكينماتيكي</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-700 text-xs text-gray-400 text-center">
+                <span>🖱️ اسحب للتدوير</span> • <span>🖲️ العجلة للتقريب</span>
+            </div>
+        </aside>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let raycaster, mouse, INTERSECTED = null;
+        
+        let isXRay = false;
+        const animDuration = 1500;
+        
+        // المتغير النشط الذي يمثل قطعة الأثاث الحالية
+        let activeObj = {
+            group: null,
+            state: 'closed', // 'closed' or 'open'
+            isAnimating: false,
+            woodMeshes: [],
+            metalMeshes: [],
+            interactables: [],
+            toggleFunc: null // الدالة التي تُشغل الحركة لهذه القطعة
+        };
+
+        // قاعدة البيانات التعليمية للميكانيزمات
+        const partsData = {
+            // Table Parts
+            'TableTop': { name: 'القرصة الرئيسية (Main Top)', desc: 'السطح الأساسي للطاولة. مصمم ليكون خفيف الوزن لتسهيل عمل مكابس الرفع.', specs: 'السمك: 18mm<br>المادة: MDF مغطى بـ HPL مقاوم للخدش.' },
+            'TableSlider': { name: 'الأجنحة المنزلقة (Extension Leaves)', desc: 'تم زيادة مساحتها وتعديل مسارها لتندمج صعوداً وتصبح في نفس مستوى الطاولة الأصلية لتشكيل سطح مستوٍ تماماً.', specs: 'الخلوص الميكانيكي: 1mm لضمان استواء مثالي (Flush fit).' },
+            'TableLift': { name: 'ميكانزم الربط الرباعي (4-Bar Linkage)', desc: 'نظام كينماتيكي يحول الحركة الدائرية للأذرع إلى حركة رفع متوازية تحافظ على استواء السطح في كل الزوايا.', specs: 'المادة: صلب مجلفن 3mm<br>مزود بمساعدات هيدروليكية.' },
+            'TableBase': { name: 'القاعدة (Base Frame)', desc: 'قاعدة ثقيلة ومركز ثقل منخفض لمنع انقلاب الطاولة عند تمدد السطح للأمام.', specs: 'تعاشيق: نقر ولسان (Mortise & Tenon).' },
+            
+            // Murphy Bed Parts
+            'MurphyCabinet': { name: 'هيكل الحائط (Cabinet Frame)', desc: 'الهيكل الخارجي المثبت بالحائط كيميائياً (Chemical Anchors) لتحمل العزم الناتج عن وزن السرير أثناء النزول.', specs: 'السمك: 25mm Blockboard لمتانة فائقة.' },
+            'MurphyBedFrame': { name: 'شاسيه السرير (Bed Frame)', desc: 'الشاسيه الحامل للمرتبة، يرتكز على نقطة دوران سفلية (Pivot Point) داخل الهيكل لضمان أمان المكابس.', specs: 'مدعم بشبكة معدنية داخلية لمنع التقوس.' },
+            
+            // Sofa Bed Parts
+            'SofaBase': { name: 'القاعدة / الشلتة السفلية (Trundle Base)', desc: 'قاعدة الأريكة التي تضم شلتة قماشية ثالثة تظهر عند فتح السرير لتكون الجزء الثالث المتساوي.', specs: 'المادة: خشب رقائقي 18mm مع فوم عالي الكثافة.' },
+            'SofaSeat': { name: 'المقعد القلاب (Flip-out Seat)', desc: 'المقعد الرئيسي الذي ينقلب للأمام بزاوية 180 درجة ليصبح مستوياً تماماً مع باقي الشلت.', specs: 'نظام المفصلات: مفصلات تقليب مزدوجة (Double-fold Hinges).' },
+            'SofaBack': { name: 'مسند الظهر (Click-Clack Backrest)', desc: 'مسند الظهر مزود بميكانزم كليك-كلاك يسمح بطيه للخلف 90 درجة ليملأ الفراغ ويستوي مع المقعد.', specs: 'الميكانزم: مفصلة سقاطة (Ratchet Hinge) من الصلب.' },
+
+            // Shelf Table Parts (NEW)
+            'ShelfTableFrame': { name: 'الهيكل المعدني (Structural Frame)', desc: 'هيكل قوي يحمل الرفوف. يدور بزاوية 90 درجة ليتحول من الوضع الرأسي (مكتبة) إلى الأفقي (طاولة).', specs: 'المادة: قطاعات صلب مجوفة لتقليل الوزن.' },
+            'ShelfTableShelf': { name: 'الرفوف ذاتية التوازن (Self-leveling Shelves)', desc: 'نظام متوازي الأضلاع الميكانيكي (Parallelogram linkage) يضمن دوران الرفوف عكسياً بنفس زاوية ميل الهيكل، لتبقى أفقية دائماً حتى أثناء الحركة، مما يمنع سقوط الأغراض!', specs: 'الميكانيكا: ذراع ربط ثانوي موازي للهيكل الرئيسي.' },
+            'ShelfTableBase': { name: 'قاعدة الارتكاز (Pivot Base)', desc: 'أرجل التثبيت التي تدعم النظام في كلا الوضعين وتتحمل عزم الدوران.', specs: 'مزودة بعجلات قابلة للقفل.' }
+        };
+
+        const materials = {
+            wood: {
+                oak: new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 }),
+                walnut: new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 }),
+                white: new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.5 })
+            },
+            metal: {
+                steel: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.8, roughness: 0.2 }),
+                black: new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.5 })
+            },
+            fabric: new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9, bumpScale: 0.02 }),
+            mattress: new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.9 }),
+            xrayWood: new THREE.MeshStandardMaterial({ color: 0x8b5a2b, transparent: true, opacity: 0.2, wireframe: true }),
+            xrayFabric: new THREE.MeshStandardMaterial({ color: 0x475569, transparent: true, opacity: 0.1, wireframe: true })
+        };
+
+        let currentWood = 'oak';
+        let currentMetal = 'steel';
+
+        init();
+        animate();
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.015);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(7, 5, 8);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+            controls.minDistance = 3; controls.maxDistance = 20;
+            controls.target.set(-1, 1, 0);
+
+            // Lighting Setup
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            mainLight.position.set(5, 10, 5);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            scene.add(mainLight);
+
+            const fillLight = new THREE.PointLight(0x38bdf8, 0.8, 20);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+
+            buildWorkshopEnvironment();
+            
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onClick);
+
+            document.getElementById('toggleMechanismBtn').addEventListener('click', () => {
+                if(activeObj.toggleFunc && !activeObj.isAnimating) activeObj.toggleFunc();
+            });
+            document.getElementById('xrayBtn').addEventListener('click', toggleXRay);
+
+            // Load initial furniture
+            setTimeout(() => {
+                loadFurniture('table', document.querySelector('.lib-item.active'));
+                document.getElementById('loading').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+            }, 800);
+        }
+
+        function buildWorkshopEnvironment() {
+            const floorGeo = new THREE.PlaneGeometry(40, 40);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            const grid = new THREE.GridHelper(40, 40, 0x334155, 0x334155);
+            grid.position.y = 0.01;
+            scene.add(grid);
+
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 1 });
+            const wallBack = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), wallMat);
+            wallBack.position.set(0, 10, -10);
+            scene.add(wallBack);
+            
+            const wallSide = new THREE.Mesh(new THREE.PlaneGeometry(40, 20), wallMat);
+            wallSide.position.set(-20, 10, 0); 
+            wallSide.rotation.y = Math.PI / 2;
+            scene.add(wallSide);
+        }
+
+        function registerPart(mesh, type, id) {
+            mesh.userData = { id: id };
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            activeObj.interactables.push(mesh);
+            if(type === 'wood') activeObj.woodMeshes.push(mesh);
+            else if(type === 'metal') activeObj.metalMeshes.push(mesh);
+            return mesh;
+        }
+
+        function clearActiveFurniture() {
+            if (activeObj.group) {
+                scene.remove(activeObj.group);
+                activeObj.group.traverse((child) => {
+                    if (child.isMesh) child.geometry.dispose();
+                });
+            }
+            activeObj.group = new THREE.Group();
+            activeObj.group.position.set(-1, 0, 0); 
+            activeObj.woodMeshes = [];
+            activeObj.metalMeshes = [];
+            activeObj.interactables = [];
+            activeObj.state = 'closed';
+            activeObj.isAnimating = false;
+            
+            const btn = document.getElementById('toggleMechanismBtn');
+            btn.innerHTML = "⚙️ تشغيل الحركة الميكانيكية";
+            btn.classList.replace('bg-red-600', 'bg-yellow-600');
+            btn.classList.add('pulse-btn');
+            
+            document.getElementById('info-panel').classList.add('opacity-0', 'translate-y-10');
+            if(isXRay) toggleXRay();
+        }
+
+        function loadFurniture(type, el) {
+            document.querySelectorAll('.lib-item').forEach(i => i.classList.remove('active'));
+            if(el) el.classList.add('active');
+            
+            clearActiveFurniture();
+            const wMat = materials.wood[currentWood];
+            const mMat = materials.metal[currentMetal];
+
+            if (type === 'table') {
+                buildSmartTable(wMat, mMat);
+                new TWEEN.Tween(camera.position).to({ x: 6, y: 5, z: 7 }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                controls.target.set(-1, 1, 0);
+            } else if (type === 'murphy') {
+                buildMurphyBed(wMat, mMat);
+                new TWEEN.Tween(camera.position).to({ x: 6, y: 5, z: 9 }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                controls.target.set(-1, 2, 0);
+            } else if (type === 'sofa') {
+                buildSofaBed(wMat, mMat, materials.fabric);
+                new TWEEN.Tween(camera.position).to({ x: 5, y: 4, z: 6 }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                controls.target.set(-1, 1, 0);
+            } else if (type === 'shelftable') {
+                buildShelfTable(wMat, mMat);
+                new TWEEN.Tween(camera.position).to({ x: 7, y: 6, z: 6 }, 1000).easing(TWEEN.Easing.Cubic.Out).start();
+                controls.target.set(-1, 2, 0);
+            }
+            
+            scene.add(activeObj.group);
+        }
+
+        // 1. الطاولة الذكية (المحسنة هندسياً)
+        function buildSmartTable(wMat, mMat) {
+            const group = activeObj.group;
+            
+            // القاعدة (منخفضة ومبسطة)
+            const baseGroup = new THREE.Group();
+            const baseBox = registerPart(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.0), wMat), 'wood', 'TableBase');
+            baseBox.position.y = 0.45; baseGroup.add(baseBox);
+            [[-0.7, 0.225, -0.4], [0.7, 0.225, -0.4], [-0.7, 0.225, 0.4], [0.7, 0.225, 0.4]].forEach(pos => {
+                const leg = registerPart(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.45, 0.15), wMat), 'wood', 'TableBase');
+                leg.position.set(...pos); baseGroup.add(leg);
+            });
+            group.add(baseGroup);
+
+            // الميكانزم المركزي (تقليل الارتفاع بتصغير الأذرع)
+            const masterPivot = new THREE.Group(); masterPivot.position.set(0, 0.5, 0.3); group.add(masterPivot);
+            const topMount = new THREE.Group(); topMount.position.set(0, 0.3, 0); masterPivot.add(topMount);
+
+            const armGeo = new THREE.BoxGeometry(0.05, 0.3, 0.08); armGeo.translate(0, 0.15, 0); 
+            const leftArm = registerPart(new THREE.Mesh(armGeo, mMat), 'metal', 'TableLift'); leftArm.position.set(-0.6, 0, 0); masterPivot.add(leftArm);
+            const rightArm = registerPart(new THREE.Mesh(armGeo, mMat), 'metal', 'TableLift'); rightArm.position.set(0.6, 0, 0); masterPivot.add(rightArm);
+            
+            masterPivot.rotation.x = -Math.PI / 2; // وضع أفقي للإغلاق
+            topMount.rotation.x = Math.PI / 2;     // دوران عكسي للحفاظ على الاستواء
+
+            // السطح الرئيسي (عرض كبير: 1.8)
+            const topGroup = new THREE.Group(); topGroup.position.set(0, 0.04, -0.3); 
+            const mainTop = registerPart(new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 1.2), wMat), 'wood', 'TableTop'); 
+            mainTop.position.set(0, 0, 0); topGroup.add(mainTop);
+
+            // الأجنحة (أبعاد تتطابق تماماً لتكوين سطح مستو)
+            const wingGeo = new THREE.BoxGeometry(0.8, 0.08, 1.18);
+            
+            const expLGroup = new THREE.Group(); 
+            expLGroup.position.set(-0.5, -0.08, 0); // مختفية تحت السطح
+            const expL = registerPart(new THREE.Mesh(wingGeo, wMat), 'wood', 'TableSlider'); expLGroup.add(expL);
+            const rL1 = registerPart(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.04), mMat), 'metal', 'TableSlider'); rL1.position.set(0.5, -0.05, 0.4); expLGroup.add(rL1);
+            topGroup.add(expLGroup);
+
+            const expRGroup = new THREE.Group(); 
+            expRGroup.position.set(0.5, -0.08, 0);
+            const expR = registerPart(new THREE.Mesh(wingGeo, wMat), 'wood', 'TableSlider'); expRGroup.add(expR);
+            const rR1 = registerPart(new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.02, 0.04), mMat), 'metal', 'TableSlider'); rR1.position.set(-0.5, -0.05, 0.4); expRGroup.add(rR1);
+            topGroup.add(expRGroup);
+            
+            topMount.add(topGroup);
+
+            activeObj.toggleFunc = () => {
+                const btn = document.getElementById('toggleMechanismBtn');
+                btn.classList.remove('pulse-btn'); activeObj.isAnimating = true;
+                
+                if (activeObj.state === 'closed') {
+                    // 1. رفع السطح لمسافة قصيرة
+                    const mechAngles = { x: -Math.PI / 2 };
+                    new TWEEN.Tween(mechAngles).to({ x: -0.2 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                        .onUpdate(() => { masterPivot.rotation.x = mechAngles.x; topMount.rotation.x = -mechAngles.x; }).start();
+                    
+                    setTimeout(() => {
+                        // 2. خروج الأجنحة للخارج
+                        new TWEEN.Tween(expLGroup.position).to({ x: -1.3 }, animDuration/2).easing(TWEEN.Easing.Quadratic.Out).start();
+                        new TWEEN.Tween(expRGroup.position).to({ x: 1.3 }, animDuration/2).easing(TWEEN.Easing.Quadratic.Out).start();
+                        
+                        // 3. صعود الأجنحة للأعلى لتستوي تماماً مع السطح الأساسي
+                        setTimeout(() => {
+                            new TWEEN.Tween(expLGroup.position).to({ y: 0 }, animDuration/3).easing(TWEEN.Easing.Cubic.Out).start();
+                            new TWEEN.Tween(expRGroup.position).to({ y: 0 }, animDuration/3).easing(TWEEN.Easing.Cubic.Out).start();
+                        }, animDuration/2);
+                    }, animDuration * 0.8);
+                    
+                    btn.innerHTML = "⬇️ طي الأثاث (إغلاق)"; btn.classList.replace('bg-yellow-600', 'bg-red-600');
+                } else {
+                    // نزول الأجنحة أولاً
+                    new TWEEN.Tween(expLGroup.position).to({ y: -0.08 }, animDuration/3).easing(TWEEN.Easing.Cubic.In).start();
+                    new TWEEN.Tween(expRGroup.position).to({ y: -0.08 }, animDuration/3).easing(TWEEN.Easing.Cubic.In).start();
+                    
+                    setTimeout(() => {
+                        // انزلاق للداخل
+                        new TWEEN.Tween(expLGroup.position).to({ x: -0.5 }, animDuration/2).easing(TWEEN.Easing.Quadratic.InOut).start();
+                        new TWEEN.Tween(expRGroup.position).to({ x: 0.5 }, animDuration/2).easing(TWEEN.Easing.Quadratic.InOut).start();
+                        
+                        setTimeout(() => {
+                            // طي الميكانزم للأسفل
+                            const mechAngles = { x: -0.2 };
+                            new TWEEN.Tween(mechAngles).to({ x: -Math.PI / 2 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                                .onUpdate(() => { masterPivot.rotation.x = mechAngles.x; topMount.rotation.x = -mechAngles.x; }).start();
+                        }, animDuration/2);
+                    }, animDuration/3);
+                    
+                    btn.innerHTML = "⚙️ تشغيل الحركة الميكانيكية"; btn.classList.replace('bg-red-600', 'bg-yellow-600'); btn.classList.add('pulse-btn');
+                }
+                setTimeout(() => { activeObj.state = activeObj.state === 'closed' ? 'open' : 'closed'; activeObj.isAnimating = false; }, animDuration * 2);
+            };
+        }
+
+        // 2. سرير الحائط المخفي (تم إخفاء المكابس وتحسين الارتكاز)
+        function buildMurphyBed(wMat, mMat) {
+            const group = activeObj.group;
+            
+            const cabinet = new THREE.Group();
+            const sideL = registerPart(new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.2, 1.2), wMat), 'wood', 'MurphyCabinet'); sideL.position.set(-1.0, 2.1, -0.6);
+            const sideR = registerPart(new THREE.Mesh(new THREE.BoxGeometry(0.1, 4.2, 1.2), wMat), 'wood', 'MurphyCabinet'); sideR.position.set(1.0, 2.1, -0.6);
+            const top = registerPart(new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.1, 1.2), wMat), 'wood', 'MurphyCabinet'); top.position.set(0, 4.25, -0.6);
+            const back = registerPart(new THREE.Mesh(new THREE.BoxGeometry(2.1, 4.2, 0.1), wMat), 'wood', 'MurphyCabinet'); back.position.set(0, 2.1, -1.15);
+            cabinet.add(sideL, sideR, top, back);
+            group.add(cabinet);
+
+            // نقطة الارتكاز أصبحت مخفية ومرتكزة في الأسفل
+            const bedPivot = new THREE.Group();
+            bedPivot.position.set(0, 0.3, -0.4); 
+            group.add(bedPivot);
+
+            const bedFrameGeo = new THREE.BoxGeometry(1.8, 0.2, 4.0);
+            bedFrameGeo.translate(0, 0, 2.0); 
+            const bedFrame = registerPart(new THREE.Mesh(bedFrameGeo, wMat), 'wood', 'MurphyBedFrame');
+            
+            const mattressGeo = new THREE.BoxGeometry(1.7, 0.2, 3.9);
+            mattressGeo.translate(0, 0.2, 2.0);
+            const mattress = registerPart(new THREE.Mesh(mattressGeo, materials.mattress), 'other', 'MurphyBedFrame');
+            
+            bedPivot.add(bedFrame, mattress);
+
+            bedPivot.rotation.x = -Math.PI / 2; // مغلق (عمودي)
+
+            activeObj.toggleFunc = () => {
+                const btn = document.getElementById('toggleMechanismBtn');
+                btn.classList.remove('pulse-btn'); activeObj.isAnimating = true;
+
+                if (activeObj.state === 'closed') {
+                    const animState = { angle: -Math.PI / 2 };
+                    new TWEEN.Tween(animState).to({ angle: 0 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                        .onUpdate(() => { bedPivot.rotation.x = animState.angle; }).start();
+                    btn.innerHTML = "⬆️ طي السرير للحائط"; btn.classList.replace('bg-yellow-600', 'bg-red-600');
+                } else {
+                    const animState = { angle: 0 };
+                    new TWEEN.Tween(animState).to({ angle: -Math.PI / 2 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                        .onUpdate(() => { bedPivot.rotation.x = animState.angle; }).start();
+                    btn.innerHTML = "⚙️ تشغيل الحركة الميكانيكية"; btn.classList.replace('bg-red-600', 'bg-yellow-600'); btn.classList.add('pulse-btn');
+                }
+                setTimeout(() => { activeObj.state = activeObj.state === 'closed' ? 'open' : 'closed'; activeObj.isAnimating = false; }, animDuration);
+            };
+        }
+
+        // 3. أريكة السرير المنزلقة (3 شلت متساوية مع ميكانزم Flip & Click-Clack)
+        function buildSofaBed(wMat, mMat, fMat) {
+            const group = activeObj.group;
+            
+            // أذرع الكنبة
+            const armGeo = new THREE.BoxGeometry(0.2, 0.6, 1.2);
+            const armL = registerPart(new THREE.Mesh(armGeo, wMat), 'wood', 'SofaBase'); armL.position.set(-1.3, 0.3, 0);
+            const armR = registerPart(new THREE.Mesh(armGeo, wMat), 'wood', 'SofaBase'); armR.position.set(1.3, 0.3, 0);
+            group.add(armL, armR);
+
+            // الأبعاد: 3 شلت قماشية متطابقة تماماً لتكوين سطح مستو
+            const cushionGeo = new THREE.BoxGeometry(2.4, 0.25, 0.8);
+
+            // 1. الشلتة السفلية (Trundle Base)
+            const baseCushion = registerPart(new THREE.Mesh(cushionGeo, fMat), 'fabric', 'SofaBase');
+            baseCushion.position.set(0, 0.125, 0);
+            group.add(baseCushion);
+
+            // 2. المقعد القلاب (Seat Cushion - يقلب 180 درجة للأمام)
+            const seatPivot = new THREE.Group();
+            seatPivot.position.set(0, 0.25, 0.4); // الارتكاز في الحافة الأمامية للشلتة السفلية
+            group.add(seatPivot);
+
+            const seatCushion = registerPart(new THREE.Mesh(cushionGeo, fMat), 'fabric', 'SofaSeat');
+            seatCushion.position.set(0, 0.125, -0.4); 
+            seatPivot.add(seatCushion);
+
+            // 3. مسند الظهر (Back Cushion - يطوى 90 درجة للخلف)
+            const backPivot = new THREE.Group();
+            backPivot.position.set(0, 0.125, -0.4); // الارتكاز في الحافة الخلفية للشلتة السفلية
+            group.add(backPivot);
+
+            const backCushion = registerPart(new THREE.Mesh(cushionGeo, fMat), 'fabric', 'SofaBack');
+            backCushion.position.set(0, 0, -0.4); 
+            backPivot.add(backCushion);
+
+            // الوضع المبدئي (كنبة للجلوس)
+            seatPivot.rotation.x = 0; // مطوية فوق الشلتة السفلية
+            backPivot.rotation.x = Math.PI / 2 + 0.1; // مرفوعة كمسند ظهر مع ميلان خفيف
+
+            activeObj.toggleFunc = () => {
+                const btn = document.getElementById('toggleMechanismBtn');
+                btn.classList.remove('pulse-btn'); activeObj.isAnimating = true;
+
+                if (activeObj.state === 'closed') {
+                    // فتح لسرير متساوي تماماً (3 قطع متراصة)
+                    new TWEEN.Tween(seatPivot.rotation).to({ x: Math.PI }, animDuration).easing(TWEEN.Easing.Quadratic.Out).start();
+                    new TWEEN.Tween(backPivot.rotation).to({ x: 0 }, animDuration).easing(TWEEN.Easing.Quadratic.Out).start();
+
+                    btn.innerHTML = "🛋️ طي لـ وضع الأريكة"; btn.classList.replace('bg-yellow-600', 'bg-red-600');
+                } else {
+                    // إعادة لكنبة
+                    new TWEEN.Tween(seatPivot.rotation).to({ x: 0 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut).start();
+                    new TWEEN.Tween(backPivot.rotation).to({ x: Math.PI / 2 + 0.1 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut).start();
+
+                    btn.innerHTML = "⚙️ تشغيل الحركة الميكانيكية"; btn.classList.replace('bg-red-600', 'bg-yellow-600'); btn.classList.add('pulse-btn');
+                }
+                setTimeout(() => { activeObj.state = activeObj.state === 'closed' ? 'open' : 'closed'; activeObj.isAnimating = false; }, animDuration);
+            };
+        }
+
+        // 4. طاولة الرفوف المتحركة (Convertible Shelf Table) - النسخة المعدلة هندسياً
+        function buildShelfTable(wMat, mMat) {
+            const group = activeObj.group;
+            group.position.set(-1, 0, 0); // توسيط
+            
+            // 1. القاعدة الثابتة (بتصميم حرف T مقلوب لتثبيت المحور في المنتصف)
+            const baseGroup = new THREE.Group();
+            const baseFootGeo = new THREE.BoxGeometry(0.1, 0.1, 1.2);
+            const basePillarGeo = new THREE.BoxGeometry(0.1, 0.85, 0.1);
+            
+            // القاعدة اليسرى
+            const baseL = new THREE.Group(); baseL.position.set(-1.0, 0, 0);
+            const footL = registerPart(new THREE.Mesh(baseFootGeo, mMat), 'metal', 'ShelfTableBase'); footL.position.y = 0.05;
+            const pillarL = registerPart(new THREE.Mesh(basePillarGeo, mMat), 'metal', 'ShelfTableBase'); pillarL.position.y = 0.425;
+            baseL.add(footL, pillarL);
+            
+            // القاعدة اليمنى
+            const baseR = new THREE.Group(); baseR.position.set(1.0, 0, 0);
+            const footR = registerPart(new THREE.Mesh(baseFootGeo, mMat), 'metal', 'ShelfTableBase'); footR.position.y = 0.05;
+            const pillarR = registerPart(new THREE.Mesh(basePillarGeo, mMat), 'metal', 'ShelfTableBase'); pillarR.position.y = 0.425;
+            baseR.add(footR, pillarR);
+            
+            group.add(baseL, baseR);
+
+            // نقطة الارتكاز الرئيسية للهيكل مرفوعة لتناسب 5 رفوف وتكون في المنتصف (Center Pivot)
+            const mainPivot = new THREE.Group();
+            mainPivot.position.set(0, 0.85, 0); 
+            group.add(mainPivot);
+
+            // 2. الهيكل المعدني المتحرك (الإطار الجانبي) يرتكز في المنتصف
+            const frameGeo = new THREE.BoxGeometry(0.08, 1.6, 0.08);
+            const frameL = registerPart(new THREE.Mesh(frameGeo, mMat), 'metal', 'ShelfTableFrame'); frameL.position.set(-0.9, 0, 0);
+            const frameR = registerPart(new THREE.Mesh(frameGeo, mMat), 'metal', 'ShelfTableFrame'); frameR.position.set(0.9, 0, 0);
+            mainPivot.add(frameL, frameR);
+
+            // 3. أرجل الدعم (أمامية وخلفية) لمنع "الطيران في الهواء"
+            const legGeo = new THREE.BoxGeometry(0.06, 0.85, 0.06);
+            legGeo.translate(0, -0.425, 0); // الارتكاز من الأعلى لينزل للأسفل
+            
+            // الأرجل الأمامية
+            const frontLegsPivot = new THREE.Group();
+            frontLegsPivot.position.set(0, 0.72, 0); // مرتبطة بأعلى الإطار
+            const frontLegL = registerPart(new THREE.Mesh(legGeo, mMat), 'metal', 'ShelfTableBase'); frontLegL.position.set(-0.9, 0, 0);
+            const frontLegR = registerPart(new THREE.Mesh(legGeo, mMat), 'metal', 'ShelfTableBase'); frontLegR.position.set(0.9, 0, 0);
+            frontLegsPivot.add(frontLegL, frontLegR);
+            mainPivot.add(frontLegsPivot);
+
+            // الأرجل الخلفية (الإضافة الجديدة للدعم الكامل)
+            const backLegsPivot = new THREE.Group();
+            backLegsPivot.position.set(0, -0.72, 0); // مرتبطة بأسفل الإطار
+            const backLegL = registerPart(new THREE.Mesh(legGeo, mMat), 'metal', 'ShelfTableBase'); backLegL.position.set(-0.9, 0, 0);
+            const backLegR = registerPart(new THREE.Mesh(legGeo, mMat), 'metal', 'ShelfTableBase'); backLegR.position.set(0.9, 0, 0);
+            backLegsPivot.add(backLegL, backLegR);
+            mainPivot.add(backLegsPivot);
+
+            // 4. الرفوف (5 رفوف متلاصقة، الدوران يتم من المنتصف بالضبط)
+            const shelves = [];
+            // عمق الرف 0.36 ليتطابق مع مسافات الدوران
+            const shelfGeo = new THREE.BoxGeometry(1.7, 0.06, 0.36);
+            
+            // مسافات الرفوف دقيقة جداً (بفارق 0.36) لتشكل سطحاً واحداً بلا فجوات عند الدوران
+            const yPositions = [0.72, 0.36, 0, -0.36, -0.72]; 
+            
+            yPositions.forEach((yPos) => {
+                const shelfPivot = new THREE.Group();
+                shelfPivot.position.set(0, yPos, 0); 
+                const shelfMesh = registerPart(new THREE.Mesh(shelfGeo, wMat), 'wood', 'ShelfTableShelf');
+                // الرف متمركز في نقطة الـ Pivot الخاصة به (صفر) ليحمل من المنتصف
+                shelfMesh.position.set(0, 0, 0); 
+                shelfPivot.add(shelfMesh);
+                mainPivot.add(shelfPivot);
+                shelves.push(shelfPivot);
+            });
+
+            // وضع مبدئي: مكتبة رفوف عمودية
+            mainPivot.rotation.x = 0;
+            frontLegsPivot.rotation.x = 0; 
+            backLegsPivot.rotation.x = 0; // الأرجل مطوية موازية للإطار
+
+            activeObj.toggleFunc = () => {
+                const btn = document.getElementById('toggleMechanismBtn');
+                btn.classList.remove('pulse-btn'); activeObj.isAnimating = true;
+
+                if (activeObj.state === 'closed') {
+                    // تحويل إلى طاولة أفقية
+                    const animData = { angle: 0 };
+                    new TWEEN.Tween(animData).to({ angle: Math.PI / 2 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                        .onUpdate(() => {
+                            mainPivot.rotation.x = animData.angle;
+                            // أرجل الدعم تدور عكسياً لتظل عمودية وتلمس الأرض
+                            frontLegsPivot.rotation.x = -animData.angle; 
+                            backLegsPivot.rotation.x = -animData.angle; 
+                            // الرفوف تدور عكسياً لتبقى أفقية دائماً
+                            shelves.forEach(shelf => shelf.rotation.x = -animData.angle);
+                        }).start();
+
+                    btn.innerHTML = "🪜 طي لـ وضع المكتبة (رفوف)"; btn.classList.replace('bg-yellow-600', 'bg-red-600');
+                } else {
+                    // تحويل إلى رفوف عمودية
+                    const animData = { angle: Math.PI / 2 };
+                    new TWEEN.Tween(animData).to({ angle: 0 }, animDuration).easing(TWEEN.Easing.Quadratic.InOut)
+                        .onUpdate(() => {
+                            mainPivot.rotation.x = animData.angle;
+                            frontLegsPivot.rotation.x = -animData.angle;
+                            backLegsPivot.rotation.x = -animData.angle;
+                            shelves.forEach(shelf => shelf.rotation.x = -animData.angle);
+                        }).start();
+
+                    btn.innerHTML = "⚙️ تشغيل الحركة الميكانيكية"; btn.classList.replace('bg-red-600', 'bg-yellow-600'); btn.classList.add('pulse-btn');
+                }
+                setTimeout(() => { activeObj.state = activeObj.state === 'closed' ? 'open' : 'closed'; activeObj.isAnimating = false; }, animDuration);
+            };
+        }
+
+        function toggleXRay() {
+            const btn = document.getElementById('xrayBtn');
+            isXRay = !isXRay;
+            
+            if (isXRay) {
+                btn.classList.add('active');
+                activeObj.woodMeshes.forEach(mesh => mesh.material = materials.xrayWood);
+                activeObj.interactables.filter(m => m.userData.id.includes('Fabric') || m.userData.id.includes('SofaSeat') || m.userData.id.includes('SofaBack') || m.userData.id.includes('SofaBase')).forEach(mesh => {
+                    if(activeObj.woodMeshes.includes(mesh)) return; 
+                    mesh.material = materials.xrayFabric;
+                });
+            } else {
+                btn.classList.remove('active');
+                updateMaterials();
+            }
+        }
+
+        function changeWood(type, el) {
+            currentWood = type;
+            updateSwatches(el);
+            if(!isXRay) updateMaterials();
+        }
+
+        function changeMetal(type, el) {
+            currentMetal = type;
+            updateSwatches(el);
+            updateMaterials(); 
+        }
+
+        function updateSwatches(activeEl) {
+            activeEl.parentElement.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+            activeEl.classList.add('active');
+        }
+
+        function updateMaterials() {
+            activeObj.woodMeshes.forEach(mesh => mesh.material = materials.wood[currentWood]);
+            activeObj.metalMeshes.forEach(mesh => mesh.material = materials.metal[currentMetal]);
+            
+            activeObj.interactables.forEach(mesh => {
+                if(mesh.userData.id.includes('SofaSeat') || mesh.userData.id.includes('SofaBack') || mesh.userData.id === 'SofaBase' && mesh.material === materials.xrayFabric) {
+                     mesh.material = materials.fabric;
+                }
+                if(mesh.userData.id === 'MurphyBedFrame' && !activeObj.woodMeshes.includes(mesh)) {
+                    mesh.material = materials.mattress;
+                }
+            });
+        }
+
+        function onMouseMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(activeObj.interactables).filter(hit => hit.object.material !== materials.xrayWood && hit.object.material !== materials.xrayFabric);
+
+            if (intersects.length > 0) {
+                document.body.style.cursor = 'pointer';
+                if (INTERSECTED != intersects[0].object) {
+                    if (INTERSECTED && INTERSECTED.material.emissive) {
+                        INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                    }
+                    INTERSECTED = intersects[0].object;
+                    if(INTERSECTED.material.emissive) {
+                        INTERSECTED.currentHex = INTERSECTED.material.emissive.getHex();
+                        INTERSECTED.material.emissive.setHex(0x444400);
+                    }
+                }
+            } else {
+                document.body.style.cursor = 'default';
+                if (INTERSECTED && INTERSECTED.material.emissive) {
+                    INTERSECTED.material.emissive.setHex(INTERSECTED.currentHex);
+                    INTERSECTED = null;
+                }
+            }
+        }
+
+        function onClick() {
+            if (INTERSECTED && INTERSECTED.userData.id) {
+                const data = partsData[INTERSECTED.userData.id];
+                if (!data) return;
+
+                const panel = document.getElementById('info-panel');
+                document.getElementById('part-name').innerText = data.name;
+                document.getElementById('part-desc').innerText = data.desc;
+                const specs = document.getElementById('part-specs');
+                specs.innerHTML = `<strong>التحليل الهندسي:</strong><br>${data.specs}`;
+                specs.classList.remove('hidden');
+
+                panel.classList.remove('opacity-0', 'translate-y-10');
+                
+                const origScale = INTERSECTED.scale.clone();
+                new TWEEN.Tween(INTERSECTED.scale)
+                    .to({ x: origScale.x * 1.05, y: origScale.y * 1.05, z: origScale.z * 1.05 }, 100)
+                    .yoyo(true).repeat(1).start();
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate(time) {
+            requestAnimationFrame(animate);
+            TWEEN.update(time);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
