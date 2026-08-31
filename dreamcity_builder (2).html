@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamCity Builder - صانع مدن الأحلام</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0fdf4;
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* UI Elements */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .tool-btn {
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .tool-btn:hover { transform: scale(1.05); }
+        .tool-btn.active {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+        }
+
+        /* 2D Canvas Container */
+        #canvas-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 80px);
+            overflow: auto;
+            background-color: #e5e5f7;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            cursor: crosshair;
+        }
+        
+        #map-canvas {
+            background-color: transparent;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            margin: 20px auto;
+            display: block;
+        }
+
+        /* 3D Container */
+        #scene-3d {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50;
+            display: none;
+        }
+
+        /* 3D Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 51;
+            display: none;
+        }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: white;
+        }
+        #crosshair::before { top: 9px; left: 0; width: 20px; height: 2px; }
+        #crosshair::after { top: 0; left: 9px; width: 2px; height: 20px; }
+
+        /* 3D Instructions Overlay */
+        #instructions-3d {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); color: white;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 52; text-align: center; cursor: pointer;
+        }
+
+        /* Custom Toast & Modals */
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 10000; }
+        .toast {
+            background: #1e293b; color: white; padding: 12px 24px; border-radius: 50px;
+            font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            opacity: 0; transform: translateY(20px); transition: all 0.3s; margin-top: 10px;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        #gallery-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200;
+        }
+        
+        .level-tab.active { background-color: #22c55e; color: white; border-color: #16a34a;}
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div id="toast-container"></div>
+
+    <!-- Header -->
+    <header class="h-20 glass-panel flex justify-between items-center px-4 relative z-10 border-b border-gray-200">
+        <div class="flex items-center gap-2">
+            <span class="text-4xl text-green-600">🏙️</span>
+            <div>
+                <h1 class="text-xl font-black text-gray-800 leading-tight">صانع مدن الأحلام</h1>
+                <p class="text-xs font-bold text-gray-500">DreamCity Builder 3D</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 bg-gray-100 p-1 rounded-xl">
+            <button onclick="setLevel('city')" id="tab-city" class="level-tab active px-4 py-2 rounded-lg font-bold text-sm transition">المدينة</button>
+            <button onclick="setLevel('garden')" id="tab-garden" class="level-tab px-4 py-2 rounded-lg font-bold text-sm text-gray-600 transition hover:bg-gray-200">الحدائق</button>
+            <button onclick="setLevel('house')" id="tab-house" class="level-tab px-4 py-2 rounded-lg font-bold text-sm text-gray-600 transition hover:bg-gray-200">الداخل (البيوت)</button>
+            <button onclick="setLevel('facilities')" id="tab-facilities" class="level-tab px-4 py-2 rounded-lg font-bold text-sm text-gray-600 transition hover:bg-gray-200">مطبخ وحمام</button>
+        </div>
+
+        <div class="flex gap-3 items-center">
+            <!-- التحكم بالسرعة - تم مضاعفة القيم لزيادة السرعة -->
+            <select id="speed-selector" class="bg-white border-2 border-gray-200 text-gray-700 font-bold py-2 px-3 rounded-xl outline-none cursor-pointer">
+                <option value="80">بطيء 🐢</option>
+                <option value="160" selected>عادي 🚶</option>
+                <option value="360">سريع 🏃</option>
+                <option value="720">خارق 🚀</option>
+            </select>
+            
+            <button onclick="toggleGallery()" class="bg-purple-100 hover:bg-purple-200 text-purple-700 font-bold py-2 px-4 rounded-xl flex items-center gap-2">
+                📸 المعرض
+            </button>
+            <button onclick="enter3DMode()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-black py-2 px-6 rounded-xl shadow-lg flex items-center gap-2 text-lg">
+                👁️ الـ 3D
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex h-[calc(100vh-80px)]">
+        
+        <!-- Tools Sidebar -->
+        <aside class="w-64 glass-panel p-4 flex flex-col gap-6 z-10 overflow-y-auto border-l border-gray-200">
+            <div>
+                <h3 class="font-black text-gray-400 uppercase text-xs tracking-wider mb-3">أدوات الرسم</h3>
+                <div class="grid grid-cols-2 gap-2" id="tools-container">
+                    <!-- Tools populated by JS based on Level -->
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-black text-gray-400 uppercase text-xs tracking-wider mb-3">إجراءات</h3>
+                <button onclick="clearMap()" class="w-full bg-red-50 text-red-600 hover:bg-red-100 font-bold py-2 px-4 rounded-lg text-sm mb-2">🗑️ مسح الخريطة</button>
+                <button onclick="takeScreenshot()" class="w-full bg-green-50 text-green-600 hover:bg-green-100 font-bold py-2 px-4 rounded-lg text-sm mb-2">📷 التقاط صورة للتخطيط</button>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <button onclick="exportMap()" class="w-full bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold py-2 px-2 rounded-lg text-sm">💾 حفظ</button>
+                    <button onclick="triggerImport()" class="w-full bg-orange-50 text-orange-600 hover:bg-orange-100 font-bold py-2 px-2 rounded-lg text-sm">📂 استيراد</button>
+                </div>
+            </div>
+            
+            <div class="mt-auto p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-xs font-bold text-yellow-800">
+                💡 <b>تلميح:</b> اضغطي واسحبي الماوس للرسم بسرعة على الشبكة. لتمسح عنصر استخدمي أداة الممحاة.
+            </div>
+        </aside>
+
+        <!-- 2D Canvas Area -->
+        <div id="canvas-container" class="flex-1">
+            <canvas id="map-canvas"></canvas>
+        </div>
+
+    </div>
+
+    <!-- 3D Scene Container -->
+    <div id="scene-3d"></div>
+    <div id="crosshair"></div>
+    
+    <!-- 3D Instructions Overlay -->
+    <div id="instructions-3d">
+        <h2 class="text-5xl font-black text-white mb-4">اضغط هنا للبدء</h2>
+        <div class="flex gap-6 mt-6">
+            <div class="text-center">
+                <div class="text-3xl font-bold bg-gray-800 p-4 rounded-lg mb-2">W A S D</div>
+                <p>للتحرك</p>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold bg-gray-800 p-4 rounded-lg mb-2">الماوس</div>
+                <p>للنظر حولك</p>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold bg-green-600 p-4 rounded-lg mb-2">C</div>
+                <p>التقاط صورة</p>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold bg-gray-800 p-4 rounded-lg mb-2">ESC</div>
+                <p>للخروج للـ 2D</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gallery Modal -->
+    <div id="gallery-modal" class="flex items-center justify-center p-8">
+        <div class="bg-white rounded-3xl w-full max-w-4xl max-h-full overflow-y-auto p-6 relative">
+            <button onclick="toggleGallery()" class="absolute top-4 right-4 bg-gray-200 hover:bg-gray-300 w-10 h-10 rounded-full font-bold text-xl">X</button>
+            <h2 class="text-3xl font-black mb-6 text-gray-800">📸 معرض الصور</h2>
+            <div id="gallery-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-500 col-span-full text-center py-10" id="empty-gallery">لا توجد صور بعد. التقطي صوراً لتصميماتك!</p>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="import-input" accept=".json" style="display: none;" onchange="importMap(event)">
+
+    <script>
+        // --- 1. STATE & DATA ---
+        
+        const GRID_SIZE = 40; 
+        const TILE_SIZE = 25; 
+        const CANVAS_SIZE = GRID_SIZE * TILE_SIZE;
+
+        let worldMap = [];
+        for (let y = 0; y < GRID_SIZE; y++) {
+            let row = [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                row.push({ terrain: 'grass', object: null, roof: false });
+            }
+            worldMap.push(row);
+        }
+
+        const ITEM_TYPES = {
+            // TERRAINS (Base layer)
+            'grass':  { type: 'terrain', color: '#86efac', name: 'عشب', icon: '🌱' },
+            'road':   { type: 'terrain', color: '#64748b', name: 'شارع', icon: '🛣️' },
+            'floor':  { type: 'terrain', color: '#fcd34d', name: 'أرضية خشب', icon: '🪵' },
+            'tiles':  { type: 'terrain', color: '#e2e8f0', name: 'سيراميك', icon: '⬜' },
+            'pool':   { type: 'terrain', color: '#38bdf8', name: 'مسبح', icon: '🏊' },
+            'path':   { type: 'terrain', color: '#d6d3d1', name: 'ممر حديقة', icon: '🪨' },
+            'bridge': { type: 'terrain', color: '#94a3b8', name: 'كوبري', icon: '🌉' },
+            'train_track': { type: 'terrain', color: '#475569', name: 'قضبان قطار', icon: '🛤️' },
+            'rug':    { type: 'terrain', color: '#f43f5e', name: 'سجادة', icon: '🪔' },
+            
+            // OBJECTS (Upper layer)
+            'wall':   { type: 'object', color: '#94a3b8', name: 'جدار', icon: '🧱' },
+            'door':   { type: 'object', color: '#8B4513', name: 'باب', icon: '🚪' },
+            'window': { type: 'object', color: '#87CEEB', name: 'شباك', icon: '🪟' },
+            'fence':  { type: 'object', color: '#b45309', name: 'سور حديقة', icon: '🚧' },
+            
+            'tree':   { type: 'object', color: '#166534', name: 'شجرة', icon: '🌳' },
+            'bush':   { type: 'object', color: '#22c55e', name: 'شجيرة', icon: '🌿' },
+            'fountain':{type: 'object', color: '#0ea5e9', name: 'نافورة', icon: '⛲' },
+            'swing':  { type: 'object', color: '#ec4899', name: 'مرجيحة', icon: '🎪' },
+            'pergola':{ type: 'object', color: '#78350f', name: 'برجولة', icon: '⛺' },
+            'park_bench':{type:'object', color: '#d97706', name: 'كنبة جلوس', icon: '🪑' },
+            'flower': { type: 'object', color: '#ec4899', name: 'زهور', icon: '🌺' },
+            
+            'car':    { type: 'object', color: '#ef4444', name: 'سيارة', icon: '🚗' },
+            'bus':    { type: 'object', color: '#eab308', name: 'أتوبيس', icon: '🚌' },
+            'bike':   { type: 'object', color: '#3b82f6', name: 'عجلة', icon: '🚲' },
+            'traffic_light':{type:'object',color: '#1f2937', name: 'إشارة مرور', icon: '🚦' },
+            
+            'sofa':   { type: 'object', color: '#ef4444', name: 'كنبة', icon: '🛋️' },
+            'armchair':{type: 'object', color: '#14b8a6', name: 'كرسي انتريه', icon: '💺' },
+            'table':  { type: 'object', color: '#78350f', name: 'طاولة', icon: '🔲' },
+            'chair':  { type: 'object', color: '#d97706', name: 'كرسي', icon: '🪑' },
+            'bed':    { type: 'object', color: '#4F46E5', name: 'سرير', icon: '🛏️' },
+            'nightstand':{type:'object', color: '#78350f', name: 'كمودينو', icon: '🗄️' },
+            'tv':     { type: 'object', color: '#111827', name: 'تلفاز', icon: '📺' },
+            
+            // New Items (Kitchen, Bath & Lamp)
+            'lamp':   { type: 'object', color: '#fcd34d', name: 'أباجورة', icon: '💡' },
+            'fan':    { type: 'object', color: '#d1d5db', name: 'مروحة', icon: '🌀' },
+            'wall_clock':{type:'object', color: '#f3f4f6', name: 'ساعة حائط', icon: '🕐' },
+            'painting':{type: 'object', color: '#fef08a', name: 'لوحة فنية', icon: '🖼️' },
+            
+            'toilet': { type: 'object', color: '#ffffff', name: 'تواليت', icon: '🚽' },
+            'sink':   { type: 'object', color: '#e2e8f0', name: 'حوض', icon: '🚰' },
+            'bathtub':{ type: 'object', color: '#ffffff', name: 'بانيو', icon: '🛁' },
+            'washer': { type: 'object', color: '#f8fafc', name: 'غسالة', icon: '🧺' },
+            'fridge': { type: 'object', color: '#e2e8f0', name: 'ثلاجة', icon: '🧊' },
+            'stove':  { type: 'object', color: '#94a3b8', name: 'بوتاجاز', icon: '🍳' },
+            
+            'roof':   { type: 'roof', color: '#991b1b', name: 'سقف (يغطى البيت)', icon: '🔺' },
+            
+            // Types of Erasers
+            'eraser_obj': { type: 'action', color: '#ffffff', name: 'ممحاة أشياء', icon: '🧽' },
+            'eraser_terrain': { type: 'action', color: '#ffffff', name: 'ممحاة طرق', icon: '🧹' },
+            'eraser_roof': { type: 'action', color: '#ffffff', name: 'ممحاة أسقف', icon: '🌤️' }
+        };
+
+        const LEVELS = {
+            'city': ['road', 'bridge', 'train_track', 'car', 'bus', 'bike', 'traffic_light', 'wall', 'tree'],
+            'garden': ['path', 'pool', 'fence', 'tree', 'bush', 'fountain', 'swing', 'pergola', 'park_bench', 'flower'],
+            'house': ['floor', 'tiles', 'rug', 'wall', 'door', 'window', 'sofa', 'armchair', 'table', 'chair', 'bed', 'nightstand', 'tv', 'lamp', 'fan', 'wall_clock', 'painting', 'roof'],
+            'facilities': ['tiles', 'wall', 'door', 'window', 'toilet', 'sink', 'bathtub', 'washer', 'fridge', 'stove']
+        };
+
+        let currentLevel = 'city';
+        let currentTool = 'road';
+        let isDrawing = false;
+        
+        let animatedObjects = []; // To store 3D objects that need animation
+
+        function showToast(msg) {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast'; t.innerText = msg;
+            container.appendChild(t);
+            setTimeout(() => t.classList.add('show'), 10);
+            setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 2000);
+        }
+
+        // --- 2. 2D CANVAS ENGINE ---
+        
+        const canvas = document.getElementById('map-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_SIZE;
+        canvas.height = CANVAS_SIZE;
+
+        function render2D() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    let cell = worldMap[y][x];
+                    
+                    // رسم الأرضية
+                    ctx.fillStyle = ITEM_TYPES[cell.terrain].color;
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    
+                    // رسم الشبكة
+                    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+                    ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+                    // رسم العناصر (Objects)
+                    if (cell.object) {
+                        const objData = ITEM_TYPES[cell.object];
+                        
+                        if (cell.object === 'wall' || cell.object === 'fence' || cell.object === 'door' || cell.object === 'window') {
+                            ctx.fillStyle = objData.color;
+                            ctx.fillRect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        } 
+                        else if (cell.object === 'tree') {
+                            ctx.fillStyle = objData.color;
+                            ctx.beginPath();
+                            ctx.arc(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2, TILE_SIZE/2 - 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        else if (cell.object === 'bush') {
+                            ctx.fillStyle = objData.color;
+                            ctx.beginPath();
+                            ctx.arc(x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2, TILE_SIZE/2 - 4, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        else if (cell.object === 'swing') {
+                            // رسم واضح ومميز للمرجيحة لضمان ظهورها في التخطيط
+                            ctx.fillStyle = '#a16207'; 
+                            ctx.fillRect(x * TILE_SIZE + 2, y * TILE_SIZE + TILE_SIZE/2 - 2, TILE_SIZE - 4, 4); 
+                            ctx.fillStyle = '#ec4899'; 
+                            ctx.fillRect(x * TILE_SIZE + TILE_SIZE/2 - 4, y * TILE_SIZE + TILE_SIZE/2 + 2, 8, 4);
+                        }
+                        else {
+                            // الرموز التعبيرية للأثاث والأشياء الأخرى
+                            ctx.font = `${TILE_SIZE * 0.7}px Arial`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(objData.icon, x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2 + 2);
+                        }
+                    }
+
+                    // رسم السقف كطبقة شفافة فوق الخلية
+                    if (cell.roof) {
+                        ctx.fillStyle = 'rgba(153, 27, 27, 0.4)'; 
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                        ctx.beginPath();
+                        ctx.moveTo(x * TILE_SIZE, y * TILE_SIZE);
+                        ctx.lineTo((x+1) * TILE_SIZE, (y+1) * TILE_SIZE);
+                        ctx.moveTo((x+1) * TILE_SIZE, y * TILE_SIZE);
+                        ctx.lineTo(x * TILE_SIZE, (y+1) * TILE_SIZE);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function handleInteract(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = Math.floor(((e.clientX - rect.left) * scaleX) / TILE_SIZE);
+            const y = Math.floor(((e.clientY - rect.top) * scaleY) / TILE_SIZE);
+
+            if (x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE) {
+                const toolData = ITEM_TYPES[currentTool];
+                
+                if (currentTool === 'eraser_obj') {
+                    worldMap[y][x].object = null;
+                } else if (currentTool === 'eraser_terrain') {
+                    worldMap[y][x].terrain = 'grass';
+                    worldMap[y][x].object = null;
+                    worldMap[y][x].roof = false;
+                } else if (currentTool === 'eraser_roof') {
+                    worldMap[y][x].roof = false;
+                } else if (toolData.type === 'terrain') {
+                    worldMap[y][x].terrain = currentTool;
+                } else if (toolData.type === 'object') {
+                    worldMap[y][x].object = currentTool;
+                } else if (toolData.type === 'roof') {
+                    worldMap[y][x].roof = true;
+                }
+                render2D();
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => { isDrawing = true; handleInteract(e); });
+        canvas.addEventListener('mousemove', handleInteract);
+        window.addEventListener('mouseup', () => { isDrawing = false; });
+
+        // --- 3. UI CONTROLS ---
+
+        function setLevel(lvl) {
+            currentLevel = lvl;
+            
+            document.querySelectorAll('.level-tab').forEach(t => {
+                t.classList.remove('active', 'bg-green-500', 'text-white', 'border-green-600');
+                t.classList.add('text-gray-600');
+            });
+            const activeTab = document.getElementById(`tab-${lvl}`);
+            activeTab.classList.remove('text-gray-600');
+            activeTab.classList.add('active', 'bg-green-500', 'text-white', 'border-green-600');
+
+            const toolsContainer = document.getElementById('tools-container');
+            toolsContainer.innerHTML = '';
+            
+            let levelTools = [...LEVELS[lvl], 'eraser_obj', 'eraser_terrain'];
+            if (lvl === 'house') levelTools.push('eraser_roof');
+            
+            levelTools.forEach((toolKey, index) => {
+                const tool = ITEM_TYPES[toolKey];
+                const btn = document.createElement('button');
+                btn.className = `tool-btn bg-white border-2 border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-sm font-bold shadow-sm ${index===0 ? 'active' : ''}`;
+                btn.innerHTML = `<span class="text-2xl mb-1">${tool.icon}</span> ${tool.name}`;
+                btn.onclick = () => selectTool(toolKey, btn);
+                toolsContainer.appendChild(btn);
+            });
+            
+            currentTool = levelTools[0];
+        }
+
+        function selectTool(toolKey, btnElement) {
+            currentTool = toolKey;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+        }
+
+        function clearMap() {
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    worldMap[y][x] = { terrain: 'grass', object: null };
+                }
+            }
+            render2D();
+            showToast('تم مسح الخريطة بالكامل');
+        }
+
+        function takeScreenshot() {
+            const dataUrl = canvas.toDataURL('image/png');
+            const imgEl = document.createElement('img');
+            imgEl.src = dataUrl;
+            imgEl.className = 'w-full h-auto rounded-xl shadow border-2 border-gray-200';
+            
+            const grid = document.getElementById('gallery-grid');
+            document.getElementById('empty-gallery').style.display = 'none';
+            grid.prepend(imgEl);
+            showToast('تم حفظ الصورة في المعرض! 📸');
+        }
+
+        function toggleGallery() {
+            const modal = document.getElementById('gallery-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // --- وظائف الحفظ والاستيراد ---
+        function exportMap() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(worldMap));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "dreamcity_project.json");
+            document.body.appendChild(downloadAnchorNode); // مطلوب لفايرفوكس
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            showToast('تم حفظ المشروع على جهازك بنجاح! 💾');
+        }
+
+        function triggerImport() {
+            document.getElementById('import-input').click();
+        }
+
+        function importMap(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loadedMap = JSON.parse(e.target.result);
+                    if (Array.isArray(loadedMap) && loadedMap.length === GRID_SIZE) {
+                        worldMap = loadedMap;
+                        render2D();
+                        showToast('تم تحميل المشروع بنجاح! 📂');
+                    } else {
+                        showToast('ملف المشروع غير صالح أو غير متوافق!');
+                    }
+                } catch (error) {
+                    showToast('حدث خطأ أثناء قراءة الملف!');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // إعادة تعيين الحقل
+        }
+
+        setLevel('city');
+        render2D();
+
+        // --- 4. 3D ENGINE (THREE.JS) ---
+        
+        let scene, camera, renderer, controls;
+        let is3DMode = false;
+
+        const UNIT_SIZE = 10; 
+        const WALL_HEIGHT = 12;
+
+        function init3D() {
+            const container = document.getElementById('scene-3d');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); 
+            scene.fog = new THREE.Fog(0x87CEEB, 50, 400); 
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            hemiLight.position.set(0, 200, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 200, 50);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            const blocker = document.getElementById('instructions-3d');
+            
+            blocker.addEventListener('click', function () { controls.lock(); });
+            controls.addEventListener('lock', function () {
+                blocker.style.display = 'none';
+                document.getElementById('crosshair').style.display = 'block';
+            });
+            controls.addEventListener('unlock', function () { exit3DMode(); });
+
+            scene.add(controls.getObject());
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        const materials = {
+            road: new THREE.MeshLambertMaterial({ color: 0x555555 }),
+            grass: new THREE.MeshLambertMaterial({ color: 0x4ade80 }),
+            poolWater: new THREE.MeshLambertMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.8 }),
+            poolBorder: new THREE.MeshLambertMaterial({ color: 0xeeeeee }),
+            floor: new THREE.MeshLambertMaterial({ color: 0xd97706 }),
+            tiles: new THREE.MeshLambertMaterial({ color: 0xf8fafc }),
+            path: new THREE.MeshLambertMaterial({ color: 0xa8a29e }),
+            bridgeRoad: new THREE.MeshLambertMaterial({ color: 0x94a3b8 }),
+            trainMetal: new THREE.MeshLambertMaterial({ color: 0x64748b }),
+            trainWood: new THREE.MeshLambertMaterial({ color: 0x78350f }),
+            rug: new THREE.MeshLambertMaterial({ color: 0xf43f5e }),
+            
+            wall: new THREE.MeshLambertMaterial({ color: 0xf1f5f9 }), 
+            door: new THREE.MeshLambertMaterial({ color: 0x6b4619 }), // لون خشب غامق
+            windowFrame: new THREE.MeshLambertMaterial({ color: 0x333333 }),
+            windowGlass: new THREE.MeshLambertMaterial({ color: 0xa5f3fc, transparent: true, opacity: 0.5 }),
+            fence: new THREE.MeshLambertMaterial({ color: 0x92400e }), 
+            
+            trunk: new THREE.MeshLambertMaterial({ color: 0x78350f }),
+            leaves: new THREE.MeshLambertMaterial({ color: 0x15803d }),
+            bush: new THREE.MeshLambertMaterial({ color: 0x16a34a }),
+            flowerPetal: new THREE.MeshLambertMaterial({ color: 0xec4899 }),
+            
+            sofa: new THREE.MeshLambertMaterial({ color: 0xef4444 }),
+            armchair: new THREE.MeshLambertMaterial({ color: 0x14b8a6 }),
+            table: new THREE.MeshLambertMaterial({ color: 0x78350f }),
+            chair: new THREE.MeshLambertMaterial({ color: 0xd97706 }),
+            bedBase: new THREE.MeshLambertMaterial({ color: 0x452b0f }),
+            bedLinen: new THREE.MeshLambertMaterial({ color: 0xffffff }),
+            tvBlack: new THREE.MeshLambertMaterial({ color: 0x111111 }),
+            tvScreen: new THREE.MeshBasicMaterial({ color: 0x1e3a8a }), // شاشة مضيئة قليلاً
+            
+            metal: new THREE.MeshLambertMaterial({ color: 0x9ca3af }),
+            swingSeat: new THREE.MeshLambertMaterial({ color: 0xec4899 }),
+            
+            whiteAppliance: new THREE.MeshLambertMaterial({ color: 0xf8fafc }),
+            stoveBlack: new THREE.MeshLambertMaterial({ color: 0x222222 }),
+            lampShade: new THREE.MeshLambertMaterial({ color: 0xfef08a, transparent: true, opacity: 0.9 }),
+            
+            carBody: new THREE.MeshLambertMaterial({ color: 0xef4444 }),
+            busBody: new THREE.MeshLambertMaterial({ color: 0xeab308 }),
+            tire: new THREE.MeshLambertMaterial({ color: 0x111827 }),
+            glassDark: new THREE.MeshLambertMaterial({ color: 0x1f2937 }),
+            trafficDark: new THREE.MeshLambertMaterial({ color: 0x374151 }),
+            redLight: new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+            yellowLight: new THREE.MeshBasicMaterial({ color: 0xffff00 }),
+            greenLight: new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
+            paintingCanvas: new THREE.MeshLambertMaterial({ color: 0xfef08a }),
+            roofMat: new THREE.MeshLambertMaterial({ color: 0x991b1b })
+        };
+
+        function build3DWorld() {
+            // تفريغ المشهد القديم
+            while(scene.children.length > 0){ 
+                let child = scene.children[0];
+                scene.remove(child); 
+            }
+            animatedObjects = []; // إعادة تعيين العناصر المتحركة
+            
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            hemiLight.position.set(0, 200, 0);
+            scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 200, 50);
+            scene.add(dirLight);
+            scene.add(controls.getObject());
+
+            // أرضية العالم
+            const groundGeo = new THREE.PlaneGeometry(2000, 2000);
+            const ground = new THREE.Mesh(groundGeo, materials.grass);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.1;
+            scene.add(ground);
+
+            const offset = (GRID_SIZE * UNIT_SIZE) / 2; 
+
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = worldMap[y][x];
+                    const posX = (x * UNIT_SIZE) - offset;
+                    const posZ = (y * UNIT_SIZE) - offset;
+
+                    // بناء الأرضيات
+                    if (cell.terrain === 'pool') {
+                        const poolGroup = new THREE.Group();
+                        
+                        // المياه
+                        const waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE), materials.poolWater);
+                        waterMesh.rotation.x = -Math.PI / 2;
+                        waterMesh.position.y = 0.2; 
+                        poolGroup.add(waterMesh);
+
+                        // خوارزمية دمج حمامات السباحة: فحص الجيران
+                        const hasTop = y > 0 && worldMap[y-1][x].terrain === 'pool'; // -Z
+                        const hasBottom = y < GRID_SIZE-1 && worldMap[y+1][x].terrain === 'pool'; // +Z
+                        const hasLeft = x > 0 && worldMap[y][x-1].terrain === 'pool'; // -X
+                        const hasRight = x < GRID_SIZE-1 && worldMap[y][x+1].terrain === 'pool'; // +X
+
+                        const borderThick = 0.5;
+                        const borderHeight = 0.5;
+
+                        if (!hasTop) {
+                            const borderT = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, borderHeight, borderThick), materials.poolBorder);
+                            borderT.position.set(0, borderHeight/2, -UNIT_SIZE/2 + borderThick/2);
+                            poolGroup.add(borderT);
+                        }
+                        if (!hasBottom) {
+                            const borderB = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, borderHeight, borderThick), materials.poolBorder);
+                            borderB.position.set(0, borderHeight/2, UNIT_SIZE/2 - borderThick/2);
+                            poolGroup.add(borderB);
+                        }
+                        if (!hasLeft) {
+                            const borderL = new THREE.Mesh(new THREE.BoxGeometry(borderThick, borderHeight, UNIT_SIZE), materials.poolBorder);
+                            borderL.position.set(-UNIT_SIZE/2 + borderThick/2, borderHeight/2, 0);
+                            poolGroup.add(borderL);
+                        }
+                        if (!hasRight) {
+                            const borderR = new THREE.Mesh(new THREE.BoxGeometry(borderThick, borderHeight, UNIT_SIZE), materials.poolBorder);
+                            borderR.position.set(UNIT_SIZE/2 - borderThick/2, borderHeight/2, 0);
+                            poolGroup.add(borderR);
+                        }
+
+                        poolGroup.position.set(posX, 0, posZ);
+                        scene.add(poolGroup);
+
+                    } else if (cell.terrain === 'bridge') {
+                        const bGroup = new THREE.Group();
+                        const road = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 1, UNIT_SIZE), materials.bridgeRoad);
+                        road.position.y = 3; 
+                        const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,3), materials.wall); p1.position.set(-3, 1.5, -3);
+                        const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,3), materials.wall); p2.position.set(3, 1.5, -3);
+                        const p3 = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,3), materials.wall); p3.position.set(-3, 1.5, 3);
+                        const p4 = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,3), materials.wall); p4.position.set(3, 1.5, 3);
+                        bGroup.add(road, p1, p2, p3, p4);
+                        bGroup.position.set(posX, 0, posZ);
+                        scene.add(bGroup);
+                        
+                    } else if (cell.terrain === 'train_track') {
+                        const tGroup = new THREE.Group();
+                        const base = new THREE.Mesh(new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE), materials.path);
+                        base.rotation.x = -Math.PI / 2; base.position.y = 0.05;
+                        const r1 = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 0.2, 0.4), materials.trainMetal); r1.position.set(0, 0.15, -2);
+                        const r2 = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 0.2, 0.4), materials.trainMetal); r2.position.set(0, 0.15, 2);
+                        tGroup.add(base, r1, r2);
+                        for(let i=-4; i<=4; i+=2) {
+                            const sl = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 6), materials.trainWood);
+                            sl.position.set(i, 0.1, 0);
+                            tGroup.add(sl);
+                        }
+                        tGroup.position.set(posX, 0, posZ);
+                        scene.add(tGroup);
+                        
+                    } else if (cell.terrain === 'rug') {
+                        const rGroup = new THREE.Group();
+                        const floor = new THREE.Mesh(new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE), materials.floor);
+                        floor.rotation.x = -Math.PI / 2; floor.position.y = 0.05;
+                        const rug = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE - 2, 0.1, UNIT_SIZE - 4), materials.rug);
+                        rug.position.y = 0.1;
+                        rGroup.add(floor, rug);
+                        rGroup.position.set(posX, 0, posZ);
+                        scene.add(rGroup);
+                        
+                    } else if (cell.terrain !== 'grass') { 
+                        const terrainMesh = new THREE.Mesh(new THREE.PlaneGeometry(UNIT_SIZE, UNIT_SIZE), materials[cell.terrain]);
+                        terrainMesh.rotation.x = -Math.PI / 2;
+                        terrainMesh.position.set(posX, 0.05, posZ);
+                        scene.add(terrainMesh);
+                    }
+
+                    // بناء العناصر (Objects)
+                    if (cell.object) {
+                        if (cell.object === 'wall') {
+                            const objMesh = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, WALL_HEIGHT, UNIT_SIZE), materials.wall);
+                            objMesh.position.set(posX, WALL_HEIGHT / 2, posZ);
+                            scene.add(objMesh);
+                        } 
+                        else if (cell.object === 'door') {
+                            // باب خشبي
+                            const doorGroup = new THREE.Group();
+                            const doorMesh = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, WALL_HEIGHT, 2), materials.door);
+                            doorMesh.position.set(0, WALL_HEIGHT / 2, 0);
+                            // مقبض الباب
+                            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), materials.metal);
+                            knob.position.set(UNIT_SIZE/3, WALL_HEIGHT/2, 1.2);
+                            doorGroup.add(doorMesh, knob);
+                            doorGroup.position.set(posX, 0, posZ);
+                            scene.add(doorGroup);
+                        }
+                        else if (cell.object === 'window') {
+                            const winGroup = new THREE.Group();
+                            
+                            // الجزء السفلي من الجدار
+                            const wallBottom = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 3, UNIT_SIZE), materials.wall);
+                            wallBottom.position.set(0, 1.5, 0);
+                            
+                            // الجزء العلوي من الجدار
+                            const wallTop = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 4, UNIT_SIZE), materials.wall);
+                            wallTop.position.set(0, WALL_HEIGHT - 2, 0);
+                            
+                            // الزجاج الشفاف (ممتد كشريط أفقي)
+                            const glass = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE + 0.1, 5, UNIT_SIZE + 0.1), materials.windowGlass);
+                            glass.position.set(0, 5.5, 0);
+                            
+                            // الإطار الداخلي لإعطاء عمق
+                            const frameV = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE - 1, 5, UNIT_SIZE - 1), materials.windowFrame);
+                            frameV.position.set(0, 5.5, 0);
+                            
+                            winGroup.add(wallBottom, wallTop, glass, frameV);
+                            winGroup.position.set(posX, 0, posZ);
+                            scene.add(winGroup);
+                        }
+                        else if (cell.object === 'fence') {
+                            const objMesh = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, WALL_HEIGHT/3, UNIT_SIZE/4), materials.fence);
+                            objMesh.position.set(posX, WALL_HEIGHT / 6, posZ);
+                            scene.add(objMesh);
+                        }
+                        else if (cell.object === 'tree') {
+                            const objMesh = new THREE.Group();
+                            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.5, 5, 8), materials.trunk);
+                            trunk.position.y = 2.5;
+                            const leaves = new THREE.Mesh(new THREE.ConeGeometry(5, 10, 8), materials.leaves);
+                            leaves.position.y = 8;
+                            objMesh.add(trunk, leaves);
+                            objMesh.position.set(posX, 0, posZ);
+                            scene.add(objMesh);
+                        }
+                        else if (cell.object === 'bush') {
+                            const objMesh = new THREE.Mesh(new THREE.SphereGeometry(3, 8, 8), materials.bush);
+                            objMesh.position.set(posX, 2, posZ);
+                            scene.add(objMesh);
+                        }
+                        else if (cell.object === 'sofa') {
+                            const sofaGroup = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 4), materials.sofa);
+                            base.position.set(0, 1, 0);
+                            const back = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 1), materials.sofa);
+                            back.position.set(0, 3.5, -1.5);
+                            const armL = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 4), materials.sofa);
+                            armL.position.set(-3.5, 2.5, 0);
+                            const armR = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 4), materials.sofa);
+                            armR.position.set(3.5, 2.5, 0);
+                            sofaGroup.add(base, back, armL, armR);
+                            sofaGroup.position.set(posX, 0, posZ);
+                            scene.add(sofaGroup);
+                        }
+                        else if (cell.object === 'table') {
+                            const tableGroup = new THREE.Group();
+                            const top = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 6), materials.table);
+                            top.position.set(0, 4, 0);
+                            tableGroup.add(top);
+                            const legGeo = new THREE.BoxGeometry(0.5, 4, 0.5);
+                            [[-2.5, -2.5], [2.5, -2.5], [-2.5, 2.5], [2.5, 2.5]].forEach(pos => {
+                                const leg = new THREE.Mesh(legGeo, materials.table);
+                                leg.position.set(pos[0], 2, pos[1]);
+                                tableGroup.add(leg);
+                            });
+                            tableGroup.position.set(posX, 0, posZ);
+                            scene.add(tableGroup);
+                        }
+                        else if (cell.object === 'chair') {
+                            const chairGroup = new THREE.Group();
+                            const seat = new THREE.Mesh(new THREE.BoxGeometry(3, 0.5, 3), materials.chair);
+                            seat.position.set(0, 2.5, 0);
+                            chairGroup.add(seat);
+                            const cLegGeo = new THREE.BoxGeometry(0.5, 2.5, 0.5);
+                            [[-1.25, -1.25], [1.25, -1.25], [-1.25, 1.25], [1.25, 1.25]].forEach(pos => {
+                                const leg = new THREE.Mesh(cLegGeo, materials.chair);
+                                leg.position.set(pos[0], 1.25, pos[1]);
+                                chairGroup.add(leg);
+                            });
+                            const cBack = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.5), materials.chair);
+                            cBack.position.set(0, 4.25, -1.25);
+                            chairGroup.add(cBack);
+                            chairGroup.position.set(posX, 0, posZ);
+                            scene.add(chairGroup);
+                        }
+                        else if (cell.object === 'bed') {
+                            const bedGroup = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.BoxGeometry(7, 1.5, 9), materials.bedBase);
+                            base.position.set(0, 0.75, 0);
+                            const mattress = new THREE.Mesh(new THREE.BoxGeometry(6.5, 1, 8.5), materials.bedLinen);
+                            mattress.position.set(0, 2, 0);
+                            const pillow = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 2), materials.bedLinen);
+                            pillow.position.set(0, 2.5, -3);
+                            bedGroup.add(base, mattress, pillow);
+                            bedGroup.position.set(posX, 0, posZ);
+                            scene.add(bedGroup);
+                        }
+                        else if (cell.object === 'tv') {
+                            const tvGroup = new THREE.Group();
+                            const stand = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 2), materials.table);
+                            stand.position.set(0, 1, 0);
+                            const screenBody = new THREE.Mesh(new THREE.BoxGeometry(7, 4, 0.5), materials.tvBlack);
+                            screenBody.position.set(0, 4, 0);
+                            const screenDisplay = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3.5, 0.6), materials.tvScreen);
+                            screenDisplay.position.set(0, 4, 0);
+                            tvGroup.add(stand, screenBody, screenDisplay);
+                            tvGroup.position.set(posX, 0, posZ);
+                            scene.add(tvGroup);
+                        }
+                        else if (cell.object === 'car') {
+                            const carG = new THREE.Group();
+                            const body = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 4), materials.carBody);
+                            body.position.set(0, 1.5, 0);
+                            const top = new THREE.Mesh(new THREE.BoxGeometry(4, 1.5, 3.8), materials.glassDark);
+                            top.position.set(-0.5, 3.25, 0);
+                            const wGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.5, 16);
+                            wGeo.rotateX(Math.PI/2);
+                            [[-2.5,-2], [2.5,-2], [-2.5,2], [2.5,2]].forEach(p => {
+                                const w = new THREE.Mesh(wGeo, materials.tire);
+                                w.position.set(p[0], 0.8, p[1]); carG.add(w);
+                            });
+                            carG.add(body, top);
+                            carG.position.set(posX, 0, posZ);
+                            scene.add(carG);
+                        }
+                        else if (cell.object === 'bus') {
+                            const busG = new THREE.Group();
+                            const body = new THREE.Mesh(new THREE.BoxGeometry(9.5, 4, 4.5), materials.busBody);
+                            body.position.set(0, 3, 0);
+                            const windows = new THREE.Mesh(new THREE.BoxGeometry(9.6, 1.5, 4.6), materials.glassDark);
+                            windows.position.set(0, 3.5, 0);
+                            const wGeo = new THREE.CylinderGeometry(1, 1, 0.6, 16);
+                            wGeo.rotateX(Math.PI/2);
+                            [[-3,-2.2], [3,-2.2], [-3,2.2], [3,2.2]].forEach(p => {
+                                const w = new THREE.Mesh(wGeo, materials.tire);
+                                w.position.set(p[0], 1, p[1]); busG.add(w);
+                            });
+                            busG.add(body, windows);
+                            busG.position.set(posX, 0, posZ);
+                            scene.add(busG);
+                        }
+                        else if (cell.object === 'bike') {
+                            const bikeG = new THREE.Group();
+                            const wGeo = new THREE.TorusGeometry(1, 0.1, 8, 16);
+                            const w1 = new THREE.Mesh(wGeo, materials.tire); w1.position.set(-2, 1, 0);
+                            const w2 = new THREE.Mesh(wGeo, materials.tire); w2.position.set(2, 1, 0);
+                            const frame = new THREE.Mesh(new THREE.BoxGeometry(3, 0.2, 0.2), materials.carBody);
+                            frame.position.set(0, 2, 0);
+                            bikeG.add(w1, w2, frame);
+                            bikeG.position.set(posX, 0, posZ);
+                            scene.add(bikeG);
+                        }
+                        else if (cell.object === 'traffic_light') {
+                            const tlG = new THREE.Group();
+                            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 8), materials.metal);
+                            pole.position.set(0, 4, 0);
+                            const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 4, 1.5), materials.trafficDark);
+                            box.position.set(0, 6, 0);
+                            const r = new THREE.Mesh(new THREE.SphereGeometry(0.5), materials.redLight); r.position.set(0, 7.2, 0.8);
+                            const y = new THREE.Mesh(new THREE.SphereGeometry(0.5), materials.yellowLight); y.position.set(0, 6, 0.8);
+                            const g = new THREE.Mesh(new THREE.SphereGeometry(0.5), materials.greenLight); g.position.set(0, 4.8, 0.8);
+                            tlG.add(pole, box, r, y, g);
+                            tlG.position.set(posX, 0, posZ);
+                            scene.add(tlG);
+                        }
+                        else if (cell.object === 'pergola') {
+                            const pG = new THREE.Group();
+                            const pGeo = new THREE.BoxGeometry(0.5, 7, 0.5);
+                            [[-4,-4], [4,-4], [-4,4], [4,4]].forEach(p => {
+                                const pole = new THREE.Mesh(pGeo, materials.trunk);
+                                pole.position.set(p[0], 3.5, p[1]); pG.add(pole);
+                            });
+                            for(let i=-4.5; i<=4.5; i+=1.5) {
+                                const beam = new THREE.Mesh(new THREE.BoxGeometry(9, 0.4, 0.4), materials.trunk);
+                                beam.position.set(0, 7, i); pG.add(beam);
+                            }
+                            pG.position.set(posX, 0, posZ);
+                            scene.add(pG);
+                        }
+                        else if (cell.object === 'park_bench') {
+                            const pbG = new THREE.Group();
+                            const seat = new THREE.Mesh(new THREE.BoxGeometry(6, 0.4, 2), materials.trunk);
+                            seat.position.set(0, 1.5, 0);
+                            const back = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 0.4), materials.trunk);
+                            back.position.set(0, 3, -1);
+                            const legGeo = new THREE.BoxGeometry(0.3, 1.5, 0.3);
+                            [[-2.5,-0.8], [2.5,-0.8], [-2.5,0.8], [2.5,0.8]].forEach(p => {
+                                const leg = new THREE.Mesh(legGeo, materials.metal);
+                                leg.position.set(p[0], 0.75, p[1]); pbG.add(leg);
+                            });
+                            pbG.add(seat, back);
+                            pbG.position.set(posX, 0, posZ);
+                            scene.add(pbG);
+                        }
+                        else if (cell.object === 'flower') {
+                            const fG = new THREE.Group();
+                            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.5), materials.leaves);
+                            stem.position.set(0, 0.75, 0);
+                            const top = new THREE.Mesh(new THREE.DodecahedronGeometry(0.8), materials.flowerPetal);
+                            top.position.set(0, 1.8, 0);
+                            fG.add(stem, top);
+                            fG.position.set(posX, 0, posZ);
+                            scene.add(fG);
+                        }
+                        else if (cell.object === 'armchair') {
+                            const acG = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.BoxGeometry(4, 2, 4), materials.armchair);
+                            base.position.set(0, 1, 0);
+                            const back = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 1), materials.armchair);
+                            back.position.set(0, 3.5, -1.5);
+                            const armL = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 4), materials.armchair);
+                            armL.position.set(-1.5, 2.5, 0);
+                            const armR = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 4), materials.armchair);
+                            armR.position.set(1.5, 2.5, 0);
+                            acG.add(base, back, armL, armR);
+                            acG.position.set(posX, 0, posZ);
+                            scene.add(acG);
+                        }
+                        else if (cell.object === 'nightstand') {
+                            const nsG = new THREE.Group();
+                            const box = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 3), materials.trunk);
+                            box.position.set(0, 1.5, 0);
+                            const drawer = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 3.1), materials.metal);
+                            drawer.position.set(0, 2, 0); 
+                            nsG.add(box, drawer);
+                            nsG.position.set(posX, 0, posZ);
+                            scene.add(nsG);
+                        }
+                        else if (cell.object === 'fan') {
+                            const fanG = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2), materials.metal);
+                            base.position.set(0, 0.1, 0);
+                            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 4), materials.metal);
+                            pole.position.set(0, 2, 0);
+                            
+                            const head = new THREE.Group();
+                            head.position.set(0, 4.5, 0);
+                            const motor = new THREE.Mesh(new THREE.BoxGeometry(1,1,1.5), materials.whiteAppliance);
+                            
+                            const blades = new THREE.Group();
+                            const bladeGeo = new THREE.BoxGeometry(3, 0.1, 0.4);
+                            const b1 = new THREE.Mesh(bladeGeo, materials.windowGlass);
+                            const b2 = new THREE.Mesh(bladeGeo, materials.windowGlass); b2.rotation.y = Math.PI/2;
+                            blades.add(b1, b2);
+                            blades.position.set(0, 0, 0.8);
+                            
+                            head.add(motor, blades);
+                            fanG.add(base, pole, head);
+                            fanG.position.set(posX, 0, posZ);
+                            scene.add(fanG);
+                            
+                            animatedObjects.push({ type: 'fan', blades: blades });
+                        }
+                        else if (cell.object === 'wall_clock' || cell.object === 'painting') {
+                            const wallG = new THREE.Group();
+                            const wallMesh = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, WALL_HEIGHT, UNIT_SIZE), materials.wall);
+                            wallMesh.position.set(0, WALL_HEIGHT / 2, 0);
+                            wallG.add(wallMesh);
+                            
+                            if (cell.object === 'wall_clock') {
+                                const cGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 16);
+                                cGeo.rotateX(Math.PI/2);
+                                const clock1 = new THREE.Mesh(cGeo, materials.whiteAppliance);
+                                clock1.position.set(0, WALL_HEIGHT - 3, UNIT_SIZE/2 + 0.1);
+                                const clock2 = clock1.clone();
+                                clock2.position.set(0, WALL_HEIGHT - 3, -UNIT_SIZE/2 - 0.1);
+                                wallG.add(clock1, clock2);
+                            } else {
+                                const pGeo = new THREE.BoxGeometry(4, 3, 0.2);
+                                const p1 = new THREE.Mesh(pGeo, materials.paintingCanvas);
+                                p1.position.set(0, WALL_HEIGHT - 4, UNIT_SIZE/2 + 0.1);
+                                const p2 = p1.clone();
+                                p2.position.set(0, WALL_HEIGHT - 4, -UNIT_SIZE/2 - 0.1);
+                                wallG.add(p1, p2);
+                            }
+                            wallG.position.set(posX, 0, posZ);
+                            scene.add(wallG);
+                        }
+                        else if (cell.object === 'fountain') {
+                            const fountainGroup = new THREE.Group();
+                            // Base
+                            const base = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 1, 16), materials.poolBorder);
+                            base.position.set(0, 0.5, 0);
+                            // Pillar
+                            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4, 8), materials.poolBorder);
+                            pillar.position.set(0, 2, 0);
+                            // Water
+                            const waterBase = new THREE.Mesh(new THREE.CylinderGeometry(3.5, 3.5, 1.2, 16), materials.poolWater);
+                            waterBase.position.set(0, 0.6, 0);
+                            
+                            fountainGroup.add(base, pillar, waterBase);
+                            
+                            // Water Drops for Animation
+                            let drops = [];
+                            const dropGeo = new THREE.SphereGeometry(0.2, 4, 4);
+                            for(let i=0; i<15; i++) {
+                                let drop = new THREE.Mesh(dropGeo, materials.poolWater);
+                                drop.position.set(0, 4, 0);
+                                fountainGroup.add(drop);
+                                drops.push(drop);
+                            }
+                            
+                            fountainGroup.position.set(posX, 0, posZ);
+                            scene.add(fountainGroup);
+                            
+                            // Add to animated objects
+                            animatedObjects.push({ type: 'fountain', drops: drops, x: posX, z: posZ });
+                        }
+                        else if (cell.object === 'swing') {
+                            const swingGroup = new THREE.Group();
+                            
+                            // تصميم جديد للحوامل: إطار قوي ومنطقي غير معكوس
+                            const supportGeo = new THREE.BoxGeometry(0.6, 8, 0.6);
+                            const baseGeo = new THREE.BoxGeometry(0.6, 0.4, 6);
+                            
+                            // الحامل الأيسر
+                            const leftBase = new THREE.Mesh(baseGeo, materials.trunk);
+                            leftBase.position.set(-3.5, 0.2, 0);
+                            const leftPole = new THREE.Mesh(supportGeo, materials.trunk);
+                            leftPole.position.set(-3.5, 4, 0);
+                            
+                            // الحامل الأيمن
+                            const rightBase = new THREE.Mesh(baseGeo, materials.trunk);
+                            rightBase.position.set(3.5, 0.2, 0);
+                            const rightPole = new THREE.Mesh(supportGeo, materials.trunk);
+                            rightPole.position.set(3.5, 4, 0);
+                            
+                            // العارضة العلوية
+                            const topBar = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 0.6), materials.trunk);
+                            topBar.position.set(0, 8, 0);
+                            
+                            swingGroup.add(leftBase, leftPole, rightBase, rightPole, topBar);
+                            
+                            // الجزء المتحرك (المحور)
+                            const pivot = new THREE.Group();
+                            pivot.position.set(0, 8, 0); // نقطة التعليق
+                            
+                            const ropeGeo = new THREE.CylinderGeometry(0.05, 0.05, 5);
+                            const ropeL = new THREE.Mesh(ropeGeo, materials.metal);
+                            ropeL.position.set(-1.5, -2.5, 0);
+                            const ropeR = new THREE.Mesh(ropeGeo, materials.metal);
+                            ropeR.position.set(1.5, -2.5, 0);
+                            
+                            const seat = new THREE.Mesh(new THREE.BoxGeometry(4, 0.3, 1.5), materials.swingSeat);
+                            seat.position.set(0, -5, 0);
+                            
+                            pivot.add(ropeL, ropeR, seat);
+                            swingGroup.add(pivot);
+                            
+                            swingGroup.position.set(posX, 0, posZ);
+                            scene.add(swingGroup);
+                            
+                            animatedObjects.push({ type: 'swing', pivot: pivot, offset: Math.random() * Math.PI });
+                        }
+                        else if (cell.object === 'lamp') {
+                            const lampG = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 16), materials.metal);
+                            base.position.set(0, 0.15, 0);
+                            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 5), materials.metal);
+                            pole.position.set(0, 2.5, 0);
+                            const shade = new THREE.Mesh(new THREE.ConeGeometry(2, 2.5, 16), materials.lampShade);
+                            shade.position.set(0, 5, 0);
+                            
+                            // إضافة إضاءة حقيقية للأباجورة
+                            const pLight = new THREE.PointLight(0xfff5b6, 0.8, 40);
+                            pLight.position.set(0, 4.5, 0);
+                            
+                            lampG.add(base, pole, shade, pLight);
+                            lampG.position.set(posX, 0, posZ);
+                            scene.add(lampG);
+                        }
+                        else if (cell.object === 'toilet') {
+                            const tG = new THREE.Group();
+                            const base = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.5, 3.5), materials.whiteAppliance);
+                            base.position.set(0, 1.25, 0);
+                            const tank = new THREE.Mesh(new THREE.BoxGeometry(3.5, 3.5, 1.5), materials.whiteAppliance);
+                            tank.position.set(0, 3, -1);
+                            const bowl = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.5, 16), materials.whiteAppliance);
+                            bowl.position.set(0, 2.75, 0.5);
+                            tG.add(base, tank, bowl);
+                            tG.position.set(posX, 0, posZ);
+                            scene.add(tG);
+                        }
+                        else if (cell.object === 'sink') {
+                            const sG = new THREE.Group();
+                            const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1, 3, 12), materials.whiteAppliance);
+                            ped.position.set(0, 1.5, 0);
+                            const basin = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1, 2.5), materials.whiteAppliance);
+                            basin.position.set(0, 3.5, 0);
+                            const faucet = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.8), materials.metal);
+                            faucet.position.set(0, 4.3, -0.8);
+                            sG.add(ped, basin, faucet);
+                            sG.position.set(posX, 0, posZ);
+                            scene.add(sG);
+                        }
+                        else if (cell.object === 'bathtub') {
+                            const bG = new THREE.Group();
+                            const bottom = new THREE.Mesh(new THREE.BoxGeometry(7, 0.5, 4), materials.whiteAppliance);
+                            bottom.position.set(0, 0.25, 0);
+                            const wL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.5, 4), materials.whiteAppliance);
+                            wL.position.set(-3.25, 1.5, 0);
+                            const wR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.5, 4), materials.whiteAppliance);
+                            wR.position.set(3.25, 1.5, 0);
+                            const wF = new THREE.Mesh(new THREE.BoxGeometry(6, 2.5, 0.5), materials.whiteAppliance);
+                            wF.position.set(0, 1.5, 1.75);
+                            const wB = new THREE.Mesh(new THREE.BoxGeometry(6, 2.5, 0.5), materials.whiteAppliance);
+                            wB.position.set(0, 1.5, -1.75);
+                            const water = new THREE.Mesh(new THREE.BoxGeometry(6, 1.5, 3), materials.poolWater);
+                            water.position.set(0, 1.2, 0);
+                            bG.add(bottom, wL, wR, wF, wB, water);
+                            bG.position.set(posX, 0, posZ);
+                            scene.add(bG);
+                        }
+                        else if (cell.object === 'washer') {
+                            const wG = new THREE.Group();
+                            const body = new THREE.Mesh(new THREE.BoxGeometry(4, 5, 4), materials.whiteAppliance);
+                            body.position.set(0, 2.5, 0);
+                            const door = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 16), materials.tvBlack);
+                            door.rotation.x = Math.PI / 2;
+                            door.position.set(0, 2.5, 2.05);
+                            wG.add(body, door);
+                            wG.position.set(posX, 0, posZ);
+                            scene.add(wG);
+                        }
+                        else if (cell.object === 'fridge') {
+                            const fG = new THREE.Group();
+                            const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 8, 4.5), materials.whiteAppliance);
+                            body.position.set(0, 4, 0);
+                            const line = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.1, 4.6), materials.metal);
+                            line.position.set(0, 5, 0); // فاصل الفريزر
+                            fG.add(body, line);
+                            fG.position.set(posX, 0, posZ);
+                            scene.add(fG);
+                        }
+                        else if (cell.object === 'stove') {
+                            const stG = new THREE.Group();
+                            const body = new THREE.Mesh(new THREE.BoxGeometry(4.5, 4.5, 4.5), materials.metal);
+                            body.position.set(0, 2.25, 0);
+                            const top = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.2, 4.6), materials.stoveBlack);
+                            top.position.set(0, 4.6, 0);
+                            const bGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.1, 16);
+                            const positions = [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]];
+                            positions.forEach(p => {
+                                const burner = new THREE.Mesh(bGeo, materials.tvBlack);
+                                burner.position.set(p[0], 4.7, p[1]);
+                                stG.add(burner);
+                            });
+                            stG.add(body, top);
+                            stG.position.set(posX, 0, posZ);
+                            scene.add(stG);
+                        }
+                    }
+                    
+                    // بناء الأسقف
+                    if (cell.roof) {
+                        const roofGroup = new THREE.Group();
+                        // سقف هرمي يغطي الخلية
+                        const roofMesh = new THREE.Mesh(new THREE.ConeGeometry(UNIT_SIZE * 0.75, 4, 4), materials.roofMat);
+                        roofMesh.rotation.y = Math.PI / 4; // لمطابقة شكل المربع
+                        roofMesh.position.set(posX, WALL_HEIGHT + 2, posZ);
+                        
+                        // قاعدة السقف (إغلاق السقف من الأسفل)
+                        const roofBase = new THREE.Mesh(new THREE.BoxGeometry(UNIT_SIZE, 0.5, UNIT_SIZE), materials.wall);
+                        roofBase.position.set(posX, WALL_HEIGHT + 0.25, posZ);
+                        
+                        scene.add(roofMesh, roofBase);
+                    }
+                }
+            }
+            controls.getObject().position.set(0, 5, 0); // Eye level
+        }
+
+        // --- 5. 3D MOVEMENT & ANIMATION LOGIC ---
+        
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let prevTime = performance.now();
+
+        const onKeyDown = function (event) {
+            switch (event.code) {
+                case 'ArrowUp': case 'KeyW': moveForward = true; break;
+                case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+                case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+                case 'ArrowRight': case 'KeyD': moveRight = true; break;
+                case 'KeyC': 
+                    if (is3DMode && controls.isLocked) take3DScreenshot(); 
+                    break;
+            }
+        };
+
+        const onKeyUp = function (event) {
+            switch (event.code) {
+                case 'ArrowUp': case 'KeyW': moveForward = false; break;
+                case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+                case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+                case 'ArrowRight': case 'KeyD': moveRight = false; break;
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        function animate3D() {
+            if (!is3DMode) return;
+            requestAnimationFrame(animate3D);
+
+            const time = performance.now();
+
+            // تحريك العناصر (المرجيحة والنافورة والمروحة)
+            const animTime = time * 0.002;
+            animatedObjects.forEach(obj => {
+                if (obj.type === 'swing') {
+                    // حركة المرجيحة للأمام والخلف
+                    obj.pivot.rotation.x = Math.sin(animTime * 1.5 + obj.offset) * 0.7;
+                } else if (obj.type === 'fountain') {
+                    // حركة قطرات الماء
+                    obj.drops.forEach((drop, i) => {
+                        drop.position.y += 0.15;
+                        drop.position.x = Math.sin(animTime * 5 + i) * (drop.position.y - 4) * 0.2;
+                        drop.position.z = Math.cos(animTime * 5 + i) * (drop.position.y - 4) * 0.2;
+                        
+                        if(drop.position.y > 6.5) {
+                            drop.position.y = 4; // العودة لنقطة الانطلاق
+                            drop.position.x = 0;
+                            drop.position.z = 0;
+                        }
+                    });
+                } else if (obj.type === 'fan') {
+                    // دوران المروحة
+                    obj.blades.rotation.z += 0.2;
+                }
+            });
+
+            // حركة اللاعب
+            if (controls.isLocked === true) {
+                const delta = (time - prevTime) / 1000;
+
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize(); 
+
+                const speedSelect = document.getElementById('speed-selector');
+                const moveSpeed = parseFloat(speedSelect.value); // القيم هنا مضاعفة وجاهزة
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * moveSpeed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * moveSpeed * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+                
+                controls.getObject().position.y = 5; 
+            }
+
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+
+        // --- التقاط صورة للـ 3D ---
+        function take3DScreenshot() {
+            try {
+                // استخدام الـ Renderer الخاص بـ Three.js لالتقاط الصورة
+                const dataUrl = renderer.domElement.toDataURL('image/png');
+                const imgEl = document.createElement('img');
+                imgEl.src = dataUrl;
+                imgEl.className = 'w-full h-auto rounded-xl shadow border-2 border-green-400 relative';
+                
+                // إضافة إشارة صغيرة على الصورة أنها التقطت من الـ 3D
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+                wrapper.innerHTML = '<span class="absolute top-2 left-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded shadow">3D 📸</span>';
+                wrapper.appendChild(imgEl);
+
+                const grid = document.getElementById('gallery-grid');
+                document.getElementById('empty-gallery').style.display = 'none';
+                grid.prepend(wrapper);
+                
+                // رسالة واهتزاز خفيف كأنها كاميرا
+                showToast('تم التقاط صورة ثلاثية الأبعاد! 📸');
+                
+            } catch (e) {
+                console.error(e);
+                showToast('فشل التقاط الصورة، يرجى المحاولة مرة أخرى.');
+            }
+        }
+
+        // --- 6. STATE MANAGERS ---
+
+        function enter3DMode() {
+            if (!scene) init3D();
+            showToast('جاري بناء عالمك ثلاثي الأبعاد... 🏗️');
+            
+            setTimeout(() => {
+                build3DWorld();
+                document.getElementById('scene-3d').style.display = 'block';
+                document.getElementById('instructions-3d').style.display = 'flex';
+                is3DMode = true;
+                
+                prevTime = performance.now();
+                animate3D();
+            }, 100);
+        }
+
+        function exit3DMode() {
+            document.getElementById('scene-3d').style.display = 'none';
+            document.getElementById('instructions-3d').style.display = 'none';
+            document.getElementById('crosshair').style.display = 'none';
+            is3DMode = false;
+            if(controls.isLocked) controls.unlock();
+        }
+
+        function onWindowResize() {
+            if(camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+    </script>
+</body>
+</html>
