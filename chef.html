@@ -1,0 +1,898 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>مطعم الشيف - النسخة التفاعلية الكاملة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            margin: 0; 
+            padding: 0;
+            overflow: hidden; 
+            background-color: #0f172a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #top-bar {
+            background: linear-gradient(90deg, #1e293b, #334155);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            z-index: 50;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #475569;
+            flex-shrink: 0;
+            height: 80px;
+        }
+
+        #main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        #sidebar {
+            width: 260px;
+            background-color: #1e293b;
+            border-right: 3px solid #475569;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        #game-container { 
+            flex: 1; 
+            position: relative;
+            background-color: #1e293b; 
+            overflow: hidden;
+        }
+        
+        canvas { 
+            display: block; 
+            width: 100%; 
+            height: 100%;
+            cursor: pointer; 
+        }
+
+        .inventory-item { transition: transform 0.1s ease; }
+        .inventory-item:active { transform: scale(0.9); }
+        
+        .modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+        .modal-content { background: linear-gradient(145deg, #1e293b, #0f172a); border: 2px solid #3b82f6; border-radius: 20px; padding: 30px; min-width: 400px; max-width: 90% ; max-height: 90%; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,1); text-align: center; }
+        .recipe-card, .store-card { background: #334155; padding: 15px; border-radius: 12px; margin: 10px; display: inline-block; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; width: 150px; vertical-align: top; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .recipe-card:hover, .store-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 8px 20px rgba(59,130,246,0.5); }
+        .recipe-card.disabled { opacity: 0.5; cursor: not-allowed; border-color: #ef4444; }
+        .recipe-card.disabled:hover { transform: none; box-shadow: none; }
+        
+        .close-btn { background: #ef4444; color: white; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1.1rem; margin-top: 20px; transition: background 0.2s; border: none; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4); }
+        .close-btn:hover { background: #dc2626; transform: scale(1.05); }
+
+        .innovation-slot { width: 70px; height: 70px; background: #0f172a; border: 3px dashed #475569; border-radius: 15px; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; margin: 5px; transition: all 0.2s; }
+        .innovation-slot.filled { border-style: solid; border-color: #10b981; background: #1e293b; transform: scale(1.05); }
+        
+        #joystick-area { display: none; }
+        @media (max-width: 768px) { #joystick-area { display: flex; } }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">
+        <div class="flex items-center gap-4">
+            <div class="flex flex-col min-w-[120px]">
+                <span class="text-2xl font-bold text-yellow-400 drop-shadow-md" id="level-display">مستوى 1</span>
+                <div class="w-full h-3 bg-gray-700 rounded-full mt-1 overflow-hidden border border-gray-600">
+                    <div id="xp-bar" class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-gray-800 px-4 py-2 rounded-xl border border-yellow-600 shadow-inner">
+                <span class="text-2xl">🪙</span>
+                <span id="coins-display" class="text-2xl font-bold text-yellow-400">0</span>
+            </div>
+            <button onclick="openStore()" class="bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold py-2 px-4 rounded-xl shadow-lg border-b-4 border-blue-900 active:border-b-0 active:translate-y-1 transition-all flex items-center gap-2">
+                <span class="text-xl">🛒</span> المتجر
+            </button>
+        </div>
+
+        <div id="inventory-ui" class="flex gap-2 bg-gray-900 p-2 rounded-xl border border-gray-700 shadow-inner overflow-x-auto mx-2 flex-1 justify-end">
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="sidebar">
+            <h3 class="text-xl font-bold text-center mb-4 text-green-400 border-b border-gray-600 pb-2">🍽️ الوجبات الجاهزة</h3>
+            <div class="text-xs text-gray-400 text-center mb-3">سيقوم النادل بتقديمها للزبائن السعداء تلقائياً</div>
+            <div id="cooked-food-ui" class="flex flex-col gap-3">
+            </div>
+        </div>
+
+        <div id="game-container">
+            <canvas id="gameCanvas"></canvas>
+            
+            <div id="joystick-area" class="absolute bottom-5 left-5 right-5 justify-between pointer-events-none z-10">
+                <div class="grid grid-cols-3 gap-2 pointer-events-auto">
+                    <div></div><button class="bg-gray-800/80 p-5 rounded-lg border-2 border-gray-600 active:bg-gray-600" onmousedown="keys['ArrowUp']=true" onmouseup="keys['ArrowUp']=false" ontouchstart="keys['ArrowUp']=true" ontouchend="keys['ArrowUp']=false">⬆️</button><div></div>
+                    <button class="bg-gray-800/80 p-5 rounded-lg border-2 border-gray-600 active:bg-gray-600" onmousedown="keys['ArrowLeft']=true" onmouseup="keys['ArrowLeft']=false" ontouchstart="keys['ArrowLeft']=true" ontouchend="keys['ArrowLeft']=false">⬅️</button>
+                    <button class="bg-gray-800/80 p-5 rounded-lg border-2 border-gray-600 active:bg-gray-600" onmousedown="keys['ArrowDown']=true" onmouseup="keys['ArrowDown']=false" ontouchstart="keys['ArrowDown']=true" ontouchend="keys['ArrowDown']=false">⬇️</button>
+                    <button class="bg-gray-800/80 p-5 rounded-lg border-2 border-gray-600 active:bg-gray-600" onmousedown="keys['ArrowRight']=true" onmouseup="keys['ArrowRight']=false" ontouchstart="keys['ArrowRight']=true" ontouchend="keys['ArrowRight']=false">➡️</button>
+                </div>
+                <button class="bg-green-600/90 p-6 rounded-full font-bold shadow-[0_0_20px_rgba(16,185,129,0.5)] pointer-events-auto border-4 border-green-400 text-xl text-white active:scale-95 transition-transform" onmousedown="interact()" ontouchstart="interact()">تفاعل 🤚</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="cooking-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="cooking-title" class="text-4xl font-bold mb-4 text-white drop-shadow-md"></h2>
+            <p class="text-gray-300 mb-6 text-lg">اضغط على الوصفة لطبخها (تحتاج للمكونات والمستوى المناسب)</p>
+            <div id="recipes-container" class="flex flex-wrap justify-center gap-4"></div>
+            <button class="close-btn" onclick="closeModal('cooking-modal')">إغلاق وتكملة العمل</button>
+        </div>
+    </div>
+
+    <div id="store-modal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <h2 class="text-4xl font-bold mb-2 text-yellow-400">🛒 سوق المدينة</h2>
+            <p class="text-gray-300 mb-6">اشتري مكونات فريدة لابتكار أكلات سرية في طاولة الابتكار!</p>
+            <div class="text-2xl mb-6 bg-gray-800 inline-block px-6 py-2 rounded-full border border-yellow-600">رصيدك: <span id="store-coins" class="text-yellow-400 font-bold">0</span> 🪙</div>
+            <div id="store-container" class="flex flex-wrap justify-center gap-4"></div>
+            <button class="close-btn mt-8" onclick="closeModal('store-modal')">العودة للمطعم</button>
+        </div>
+    </div>
+
+    <div id="innovation-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <h2 class="text-4xl font-bold mb-2 text-purple-400">🧪 طاولة الابتكار السري</h2>
+            <p class="text-gray-300 mb-4 text-lg">ادمج أي 3 مكونات لاكتشاف أكثر من 100 وصفة جديدة وارفع مستواك!</p>
+            
+            <div class="bg-gray-800 p-6 rounded-2xl mb-6 border-2 border-purple-900 shadow-inner">
+                <h3 class="text-xl text-gray-400 mb-4 font-bold">وعاء الدمج السحري</h3>
+                <div class="flex justify-center gap-4 mb-6" id="innovation-slots">
+                    <div class="innovation-slot" onclick="removeIngredient(0)"></div>
+                    <div class="innovation-slot" onclick="removeIngredient(1)"></div>
+                    <div class="innovation-slot" onclick="removeIngredient(2)"></div>
+                </div>
+                <button onclick="attemptInnovation()" class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-4 px-10 rounded-full shadow-[0_0_20px_rgba(168,85,247,0.6)] text-2xl transition-transform transform hover:scale-105 active:scale-95">
+                    ✨ ادمج المكونات! ✨
+                </button>
+            </div>
+
+            <div class="text-right">
+                <h3 class="text-xl text-gray-300 mb-3 font-bold border-b border-gray-600 pb-2">مخزونك الحالي (اضغط للإضافة):</h3>
+                <div id="innovation-inventory" class="flex flex-wrap justify-center gap-3 bg-gray-900 p-4 rounded-xl border border-gray-700 min-h-[120px]"></div>
+            </div>
+            <button class="close-btn mt-6" onclick="closeModal('innovation-modal')">العودة للمطعم</button>
+        </div>
+    </div>
+
+    <div id="notification" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] font-bold text-xl transition-all duration-300 opacity-0 pointer-events-none z-[200] border-2 border-green-400"></div>
+
+    <script>
+        let synth, coinSound, successSound, popSound;
+        let audioInitialized = false;
+        let isModalOpen = false; // [إصلاح التهنيج 1]: متغير يمنع البحث المتكرر في الـ DOM
+        
+        function initAudio() {
+            if(audioInitialized) return;
+            Tone.start();
+            synth = new Tone.PolySynth(Tone.Synth).toDestination();
+            synth.volume.value = -15;
+            
+            coinSound = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.05, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination();
+            coinSound.volume.value = -10;
+            
+            successSound = new Tone.PolySynth(Tone.Synth).toDestination();
+            successSound.volume.value = -12;
+            
+            popSound = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+            popSound.volume.value = -15;
+            
+            audioInitialized = true;
+        }
+
+        window.addEventListener('mousedown', initAudio);
+        window.addEventListener('keydown', initAudio);
+        window.addEventListener('touchstart', initAudio);
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); 
+        const GAME_WIDTH = 1400; 
+        const GAME_HEIGHT = 1000; 
+        canvas.width = GAME_WIDTH; 
+        canvas.height = GAME_HEIGHT;
+
+        const INGREDIENTS = {
+            apple: { emoji: '🍎', zone: 'garden', name: 'تفاح' },
+            tomato: { emoji: '🍅', zone: 'garden', name: 'طماطم' },
+            egg: { emoji: '🥚', zone: 'barn', name: 'بيض' },
+            milk: { emoji: '🥛', zone: 'barn', name: 'لبن' },
+            meat: { emoji: '🥩', zone: 'butcher', name: 'لحم' },
+            fish: { emoji: '🐟', zone: 'lake', name: 'سمك' },
+            flour: { emoji: '🌾', zone: 'store', name: 'دقيق', price: 5 },
+            sugar: { emoji: '🍬', zone: 'store', name: 'سكر', price: 5 },
+            chocolate: { emoji: '🍫', zone: 'store', name: 'شوكولاتة', price: 10 },
+            cheese: { emoji: '🧀', zone: 'store', name: 'جبنة', price: 10 },
+            spices: { emoji: '🌶️', zone: 'store', name: 'بهارات', price: 15 },
+            potato: { emoji: '🥔', zone: 'store', name: 'بطاطس', price: 5 },
+            rice: { emoji: '🍚', zone: 'store', name: 'أرز', price: 5 },
+            onion: { emoji: '🧅', zone: 'store', name: 'بصل', price: 5 }
+        };
+
+        const ZONES = {
+            kitchen: { x: 0, y: 0, w: 500, h: 600, color: '#94a3b8', name: 'المطبخ', level: 1 },
+            dining:  { x: 500, y: 0, w: 900, h: 600, color: '#fbbf24', name: 'صالة الطعام', level: 1 },
+            garden:  { x: 0, y: 600, w: 500, h: 400, color: '#4ade80', name: 'الحديقة', level: 1 },
+            barn:    { x: 500, y: 600, w: 450, h: 400, color: '#f87171', name: 'الحظيرة', level: 2 },
+            butcher: { x: 950, y: 600, w: 450, h: 200, color: '#cbd5e1', name: 'المجزر', level: 3 },
+            lake:    { x: 950, y: 800, w: 450, h: 200, color: '#60a5fa', name: 'البحيرة', level: 4 }
+        };
+
+        const APPLIANCES = [
+            { id: 'blender', name: 'خلاط كهربائي', emoji: '🌪️', x: 80, y: 80, w: 90, h: 90, color: '#cbd5e1' },
+            { id: 'stove', name: 'بوتاجاز', emoji: '🔥', x: 80, y: 220, w: 90, h: 90, color: '#ef4444' },
+            { id: 'oven', name: 'فرن حجري', emoji: '🍞', x: 80, y: 360, w: 90, h: 90, color: '#ea580c' },
+            { id: 'grill', name: 'شواية فحم', emoji: '🥓', x: 80, y: 500, w: 90, h: 90, color: '#334155', reqLevel: 2 },
+            { id: 'innovation', name: 'طاولة الابتكار', emoji: '🧪', x: 300, y: 80, w: 120, h: 100, color: '#8b5cf6' }
+        ];
+
+        const BASE_RECIPES = [
+            { id: 'tomato_salad', name: 'سلطة طماطم', emoji: '🥗', req: { tomato: 2 }, appliance: 'blender', level: 1 },
+            { id: 'apple_juice', name: 'عصير تفاح', emoji: '🧃', req: { apple: 2 }, appliance: 'blender', level: 1 },
+            { id: 'fried_egg', name: 'بيض مقلي', emoji: '🍳', req: { egg: 1 }, appliance: 'stove', level: 2 },
+            { id: 'tomato_soup', name: 'حساء طماطم', emoji: '🥣', req: { tomato: 2, milk: 1 }, appliance: 'stove', level: 2 },
+            { id: 'pizza', name: 'بيتزا مارجريتا', emoji: '🍕', req: { tomato: 2, flour: 1, cheese: 1 }, appliance: 'oven', level: 2 },
+            { id: 'cake', name: 'كعكة الفانيليا', emoji: '🍰', req: { flour: 1, milk: 1, sugar: 1, egg: 1 }, appliance: 'oven', level: 2 },
+            { id: 'steak', name: 'شريحة لحم', emoji: '🥩', req: { meat: 1, spices: 1 }, appliance: 'grill', level: 3 },
+            { id: 'burger', name: 'برجر كلاسيك', emoji: '🍔', req: { meat: 1, tomato: 1, flour: 1 }, appliance: 'grill', level: 3 },
+            { id: 'fried_fish', name: 'سمك مقلي', emoji: '🍤', req: { fish: 1, flour: 1 }, appliance: 'stove', level: 4 },
+            { id: 'sushi', name: 'سوشي', emoji: '🍣', req: { fish: 1, rice: 1 }, appliance: 'blender', level: 4 }
+        ];
+
+        const SECRET_RECIPES = [
+            { req: ['flour', 'sugar', 'chocolate'], result: 'كعكة شوكولاتة', emoji: '🎂' },
+            { req: ['meat', 'spices', 'onion'], result: 'كباب حار', emoji: '🍢' },
+            { req: ['potato', 'meat', 'cheese'], result: 'طاجن لحم بالجبن', emoji: '🍲' },
+            { req: ['fish', 'rice', 'spices'], result: 'سوشي مبهر', emoji: '🍱' },
+            { req: ['apple', 'flour', 'sugar'], result: 'فطيرة تفاح', emoji: '🥧' },
+            { req: ['tomato', 'onion', 'spices'], result: 'صلصة حارة', emoji: '🌶️' },
+            { req: ['egg', 'cheese', 'tomato'], result: 'أومليت إيطالي', emoji: '🍳' },
+            { req: ['milk', 'chocolate', 'sugar'], result: 'حليب بالشوكولاتة', emoji: '🧋' },
+            { req: ['meat', 'potato', 'onion'], result: 'يخنة لحم', emoji: '🍛' },
+            { req: ['rice', 'milk', 'sugar'], result: 'أرز بلبن', emoji: '🍮' },
+            { req: ['potato', 'spices', 'cheese'], result: 'بطاطس مقلية بالجبن', emoji: '🍟' },
+            { req: ['apple', 'milk', 'sugar'], result: 'ميلك شيك تفاح', emoji: '🥤' }
+        ];
+
+        const TABLES = [
+            { x: 600, y: 120, w: 100, h: 100, customer: null },
+            { x: 850, y: 120, w: 100, h: 100, customer: null },
+            { x: 1100, y: 120, w: 100, h: 100, customer: null },
+            { x: 600, y: 350, w: 100, h: 100, customer: null },
+            { x: 850, y: 350, w: 100, h: 100, customer: null },
+            { x: 1100, y: 350, w: 100, h: 100, customer: null }
+        ];
+
+        // [إصلاح التهنيج 2]: تخزين عناصر البيئة الثابتة لعدم إعادة حسابها 60 مرة في الثانية
+        const staticDecorations = {
+            garden: Array.from({length: 60}, () => ({x: Math.random()*450, y: Math.random()*350})),
+            lake: Array.from({length: 25}, () => ({x: Math.random()*350, y: Math.random()*150}))
+        };
+
+        let state = {
+            coins: 50, level: 1, xp: 0, xpToNext: 100,
+            inventory: Object.keys(INGREDIENTS).reduce((a, v) => ({ ...a, [v]: 0 }), {}),
+            activeRecipes: [...BASE_RECIPES], 
+            cookedFood: [], itemsOnGround: [], customers: [], particles: []
+        };
+
+        let player = { x: 250, y: 250, speed: 7, size: 70, emoji: '👨‍🍳', isWalking: false };
+        let waiter = { x: 700, y: 250, speed: 5, size: 65, emoji: '🤵', state: 'idle', targetX: 700, targetY: 250, carrying: null, targetCustomer: null, isWalking: false };
+
+        let keys = {};
+        window.addEventListener('keydown', e => { 
+            keys[e.code] = true; 
+            if(e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault(); 
+                interact();
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        const invUI = document.getElementById('inventory-ui');
+        for(let ing in INGREDIENTS) {
+            invUI.innerHTML += `<div class="inventory-item flex flex-col items-center bg-gray-800 rounded-lg p-2 min-w-[60px] border border-gray-700"><span class="text-2xl">${INGREDIENTS[ing].emoji}</span><span id="inv-${ing}" class="font-bold text-md text-gray-500">0</span></div>`;
+        }
+
+        function updateUIText() {
+            document.getElementById('level-display').textContent = `مستوى ${state.level}`;
+            document.getElementById('coins-display').textContent = state.coins;
+            document.getElementById('xp-bar').style.width = `${Math.min((state.xp / state.xpToNext) * 100, 100)}%`;
+            
+            for (let ing in INGREDIENTS) {
+                const el = document.getElementById(`inv-${ing}`);
+                if(el) {
+                    el.textContent = state.inventory[ing];
+                    el.style.color = state.inventory[ing] > 0 ? '#4ade80' : '#6b7280';
+                    el.parentElement.style.borderColor = state.inventory[ing] > 0 ? '#4ade80' : '#374151';
+                }
+            }
+            renderCookedSidebar();
+        }
+
+        function getMousePos(canvas, evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (evt.clientX - rect.left) * scaleX,
+                y: (evt.clientY - rect.top) * scaleY
+            };
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if(isModalOpen) return;
+            initAudio();
+            const pos = getMousePos(canvas, e);
+            
+            for (let app of APPLIANCES) {
+                if (pos.x >= app.x && pos.x <= app.x + app.w && pos.y >= app.y && pos.y <= app.y + app.h) {
+                    if(app.reqLevel && state.level < app.reqLevel) {
+                        showNotification(`🔒 هذا الجهاز يفتح في المستوى ${app.reqLevel}`);
+                        return;
+                    }
+                    if(app.id === 'innovation') openInnovationModal();
+                    else openCookingModal(app);
+                    return;
+                }
+            }
+        });
+
+        function interact() {
+            if(isModalOpen) return;
+            
+            let nearestApp = APPLIANCES.find(a => Math.hypot(player.x - (a.x+a.w/2), player.y - (a.y+a.h/2)) < 200);
+            if (nearestApp) {
+                if(nearestApp.reqLevel && state.level < nearestApp.reqLevel) {
+                    showNotification(`🔒 هذا الجهاز يفتح في المستوى ${nearestApp.reqLevel}`);
+                    return;
+                }
+                if(nearestApp.id === 'innovation') openInnovationModal();
+                else openCookingModal(nearestApp);
+            }
+        }
+
+        function spawnCustomer() {
+            if(isModalOpen) return;
+            let emptyTables = TABLES.filter(t => !t.customer);
+            if(emptyTables.length === 0) return;
+            
+            const availableRecipes = state.activeRecipes.filter(r => r.level <= state.level || !r.level);
+            if(availableRecipes.length === 0) return;
+
+            const chosenRecipe = availableRecipes[Math.floor(Math.random() * availableRecipes.length)];
+            let table = emptyTables[Math.floor(Math.random() * emptyTables.length)];
+            
+            const c = {
+                x: 1500, y: 300, targetX: table.x + table.w/2, targetY: table.y + table.h/2,
+                state: 'walking_in', emoji: ['👨', '👩', '👴', '👵', '👱‍♂️', '👩‍🦰', '👮‍♂️', '👩‍⚕️'][Math.floor(Math.random()*8)],
+                orderId: chosenRecipe.id || chosenRecipe.result, orderEmoji: chosenRecipe.emoji, 
+                eatTimer: 0, isWalking: true
+            };
+            table.customer = c; state.customers.push(c);
+        }
+
+        function updateWaiter() {
+            waiter.isWalking = false;
+            if (waiter.state === 'idle') {
+                if (state.cookedFood.length > 0) {
+                    for (let i = 0; i < state.cookedFood.length; i++) {
+                        const food = state.cookedFood[i];
+                        const hungryCustomer = state.customers.find(c => c.state === 'sitting' && c.orderId === food.id && !c.beingServed);
+                        
+                        if (hungryCustomer) {
+                            hungryCustomer.beingServed = true;
+                            waiter.carrying = state.cookedFood.splice(i, 1)[0];
+                            waiter.targetCustomer = hungryCustomer;
+                            waiter.state = 'delivering';
+                            updateUIText();
+                            break;
+                        }
+                    }
+                }
+                if(waiter.state === 'idle') { waiter.targetX = 700; waiter.targetY = 250; }
+            } else if (waiter.state === 'delivering') {
+                waiter.targetX = waiter.targetCustomer.x - 70;
+                waiter.targetY = waiter.targetCustomer.y;
+                
+                if (Math.hypot(waiter.x - waiter.targetX, waiter.y - waiter.targetY) < 10) {
+                    waiter.targetCustomer.state = 'eating';
+                    waiter.targetCustomer.eatTimer = 150; 
+                    waiter.carrying = null;
+                    waiter.targetCustomer = null;
+                    waiter.state = 'idle';
+                    updateUIText();
+                }
+            }
+
+            let dx = waiter.targetX - waiter.x; let dy = waiter.targetY - waiter.y;
+            let dist = Math.hypot(dx, dy);
+            if(dist > 5) {
+                waiter.x += (dx / dist) * waiter.speed; waiter.y += (dy / dist) * waiter.speed;
+                waiter.isWalking = true;
+            }
+        }
+
+        function spawnItem() {
+            if(isModalOpen) return;
+            // حماية ضد تكدس الموارد
+            if (state.itemsOnGround.length >= 35) return; 
+
+            const zones = Object.keys(ZONES).filter(z => ZONES[z].level <= state.level && z !== 'kitchen' && z !== 'dining');
+            if (zones.length === 0) return;
+            const zoneKey = zones[Math.floor(Math.random() * zones.length)];
+            const zone = ZONES[zoneKey];
+            const zoneIngs = Object.keys(INGREDIENTS).filter(i => INGREDIENTS[i].zone === zoneKey);
+            if(zoneIngs.length === 0) return;
+            const ing = zoneIngs[Math.floor(Math.random() * zoneIngs.length)];
+            
+            state.itemsOnGround.push({
+                type: ing, emoji: INGREDIENTS[ing].emoji,
+                x: zone.x + 50 + Math.random() * (zone.w - 100),
+                y: zone.y + 50 + Math.random() * (zone.h - 100),
+                bounce: Math.random() * Math.PI * 2
+            });
+        }
+
+        function update() {
+            let nx = player.x, ny = player.y;
+            player.isWalking = false;
+            
+            if(keys['ArrowUp'] || keys['KeyW']) { ny -= player.speed; player.isWalking = true; }
+            if(keys['ArrowDown'] || keys['KeyS']) { ny += player.speed; player.isWalking = true; }
+            if(keys['ArrowLeft'] || keys['KeyA']) { nx -= player.speed; player.isWalking = true; }
+            if(keys['ArrowRight'] || keys['KeyD']) { nx += player.speed; player.isWalking = true; }
+
+            player.x = Math.max(40, Math.min(GAME_WIDTH - 40, nx));
+            player.y = Math.max(40, Math.min(GAME_HEIGHT - 40, ny));
+
+            for (let i = state.itemsOnGround.length - 1; i >= 0; i--) {
+                let item = state.itemsOnGround[i];
+                item.bounce += 0.1;
+                if (Math.hypot(player.x - item.x, player.y - item.y) < 60) {
+                    state.inventory[item.type]++;
+                    state.itemsOnGround.splice(i, 1);
+                    if(popSound) popSound.triggerAttackRelease("C6", "32n");
+                    createParticles(item.x, item.y, '#4ade80');
+                    updateUIText();
+                }
+            }
+
+            // استخدام حلقة عكسية بأمان لحذف الزبائن المغادرين
+            for (let index = state.customers.length - 1; index >= 0; index--) {
+                let c = state.customers[index];
+                if(c.state === 'walking_in' || c.state === 'leaving') {
+                    let dx = c.targetX - c.x, dy = c.targetY - c.y;
+                    let dist = Math.hypot(dx, dy);
+                    if(dist > 5) {
+                        c.x += (dx/dist) * 3; c.y += (dy/dist) * 3; c.isWalking = true;
+                    } else {
+                        c.isWalking = false;
+                        if(c.state === 'walking_in') c.state = 'sitting';
+                        if(c.state === 'leaving') {
+                            let t = TABLES.find(t => t.customer === c);
+                            if(t) t.customer = null;
+                            state.customers.splice(index, 1);
+                        }
+                    }
+                } else if (c.state === 'eating') {
+                    c.eatTimer--;
+                    if(c.eatTimer <= 0) {
+                        c.state = 'leaving';
+                        c.targetX = 1500; c.targetY = 300;
+                        state.coins += 25; addXP(30);
+                        showNotification("زبون سعيد! +25🪙");
+                        if(coinSound) coinSound.triggerAttackRelease("E6", "8n");
+                        createParticles(c.x, c.y, '#fde047');
+                        updateUIText();
+                    }
+                }
+            }
+
+            updateWaiter();
+
+            for(let i = state.particles.length-1; i>=0; i--) {
+                let p = state.particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+                if(p.life <= 0) state.particles.splice(i,1);
+            }
+        }
+
+        function drawCharacter(char) {
+            let time = Date.now() / 150;
+            let legSwing = char.isWalking ? Math.sin(time) * 20 : 0;
+            let bounce = char.isWalking ? Math.abs(Math.sin(time)) * 6 : 0;
+            
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.ellipse(char.x, char.y + char.size/2 + 10, 25, 10, 0, 0, Math.PI*2); ctx.fill();
+            
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath(); ctx.moveTo(char.x - 12, char.y + 15 + bounce); ctx.lineTo(char.x - 12 + legSwing, char.y + 35 + bounce); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(char.x + 12, char.y + 15 + bounce); ctx.lineTo(char.x + 12 - legSwing, char.y + 35 + bounce); ctx.stroke();
+            
+            ctx.font = char.size + 'px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(char.emoji, char.x, char.y - 10 + bounce);
+            
+            if(char.carrying) {
+                ctx.font = '35px Arial';
+                ctx.fillText(char.carrying.emoji, char.x + 30, char.y - 30 + bounce);
+            }
+            ctx.restore();
+        }
+
+        function drawRegion(zone, key) {
+            ctx.save();
+            let grad = ctx.createLinearGradient(zone.x, zone.y, zone.x + zone.w, zone.y + zone.h);
+            grad.addColorStop(0, zone.color); grad.addColorStop(1, adjustColor(zone.color, -30));
+            ctx.fillStyle = grad;
+            ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+            
+            // [إصلاح التهنيج 3]: استخدام الذاكرة لرسم الديكورات بدلاً من Math.random لكل فريم
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 2;
+            if(key === 'kitchen') {
+                for(let i=0; i<zone.w; i+=50) for(let j=0; j<zone.h; j+=50) {
+                    if((i/50 + j/50)%2===0) { ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(zone.x+i, zone.y+j, 50, 50); }
+                }
+            } else if (key === 'dining') {
+                for(let i=0; i<zone.h; i+=40) { ctx.beginPath(); ctx.moveTo(zone.x, zone.y+i); ctx.lineTo(zone.x+zone.w, zone.y+i); ctx.stroke(); }
+            } else if (key === 'garden') {
+                ctx.fillStyle = 'rgba(0,100,0,0.15)'; 
+                for(let dec of staticDecorations.garden) {
+                    ctx.fillRect(zone.x + dec.x, zone.y + dec.y, 15, 8);
+                }
+            } else if (key === 'lake') {
+                ctx.strokeStyle = 'rgba(255,255,255,0.3)'; 
+                for(let dec of staticDecorations.lake) {
+                    ctx.beginPath(); ctx.arc(zone.x + 50 + dec.x, zone.y + dec.y, 15, 0, Math.PI); ctx.stroke();
+                }
+            }
+
+            if (zone.level > state.level) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+                ctx.font = '60px Arial'; ctx.textAlign = 'center'; ctx.fillText('🔒', zone.x + zone.w/2, zone.y + zone.h/2 - 20);
+                ctx.fillStyle = '#fca5a5'; ctx.font = 'bold 30px Cairo'; ctx.fillText(`يفتح في مستوى ${zone.level}`, zone.x + zone.w/2, zone.y + zone.h/2 + 30);
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 40px Cairo'; ctx.textAlign = 'left'; ctx.fillText(zone.name, zone.x + 20, zone.y + 50);
+            }
+            ctx.restore();
+        }
+
+        function adjustColor(color, amount) {
+            return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for(let z in ZONES) drawRegion(ZONES[z], z);
+
+            for (let app of APPLIANCES) {
+                ctx.save();
+                // [إصلاح التهنيج 4]: استخدام ظلال هندسية وهمية بدلاً من shadowBlur الثقيل
+                ctx.fillStyle = 'rgba(0,0,0,0.4)'; 
+                ctx.beginPath(); ctx.roundRect(app.x, app.y + 10, app.w, app.h, 20); ctx.fill(); 
+
+                ctx.fillStyle = app.color; 
+                ctx.beginPath(); ctx.roundRect(app.x, app.y, app.w, app.h, 20); ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.2)'; 
+                ctx.beginPath(); ctx.roundRect(app.x+5, app.y+5, app.w-10, app.h/2.5, 10); ctx.fill(); 
+                
+                if(app.reqLevel && state.level < app.reqLevel) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.roundRect(app.x, app.y, app.w, app.h, 20); ctx.fill();
+                    ctx.font = '40px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🔒', app.x+app.w/2, app.y+app.h/2);
+                } else {
+                    ctx.font = '50px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(app.emoji, app.x+app.w/2, app.y+app.h/2 + 5);
+                }
+                ctx.restore();
+            }
+
+            for (let t of TABLES) {
+                ctx.save();
+                // ظلال وهمية
+                ctx.fillStyle = 'rgba(0,0,0,0.4)'; 
+                ctx.beginPath(); ctx.roundRect(t.x, t.y + 10, t.w, t.h, 25); ctx.fill();
+
+                let tGrad = ctx.createRadialGradient(t.x+t.w/2, t.y+t.h/2, 10, t.x+t.w/2, t.y+t.h/2, t.w);
+                tGrad.addColorStop(0, '#92400e'); tGrad.addColorStop(1, '#451a03');
+                ctx.fillStyle = tGrad; ctx.beginPath(); ctx.roundRect(t.x, t.y, t.w, t.h, 25); ctx.fill();
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; ctx.beginPath(); ctx.roundRect(t.x+15, t.y+15, t.w-30, t.h-30, 15); ctx.fill(); 
+                ctx.restore();
+            }
+
+            for (let item of state.itemsOnGround) {
+                ctx.font = '40px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(item.emoji, item.x, item.y + Math.sin(item.bounce)*10);
+            }
+
+            for (let c of state.customers) {
+                drawCharacter(c);
+                if (c.state === 'sitting' && !c.beingServed) {
+                    ctx.save();
+                    // ظلال وهمية فقاعة الطلب
+                    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                    ctx.beginPath(); ctx.roundRect(c.x - 42, c.y - 97, 90, 60, 20); ctx.fill(); 
+
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath(); ctx.roundRect(c.x - 45, c.y - 100, 90, 60, 20); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(c.x, c.y - 30); ctx.lineTo(c.x - 15, c.y - 45); ctx.lineTo(c.x + 15, c.y - 45); ctx.fill();
+                    ctx.font = '40px Arial'; ctx.fillText(c.orderEmoji, c.x, c.y - 70);
+                    ctx.restore();
+                } else if (c.state === 'eating') {
+                    ctx.font = '35px Arial'; ctx.fillText('😋', c.x + 30, c.y - 40);
+                }
+            }
+
+            drawCharacter(waiter);
+            drawCharacter(player);
+
+            let nearestApp = APPLIANCES.find(a => Math.hypot(player.x - (a.x+a.w/2), player.y - (a.y+a.h/2)) < 200);
+            if (nearestApp && !isModalOpen) {
+                let pBounce = player.isWalking ? Math.abs(Math.sin(Date.now() / 150)) * 6 : 0;
+                ctx.save();
+                ctx.font = 'bold 24px Cairo'; ctx.textAlign = 'center';
+                let msg = nearestApp.reqLevel && state.level < nearestApp.reqLevel ? "مغلق" : "اضغط مسافة (Space) للتفاعل";
+                
+                // ظلال وهمية للنص
+                ctx.fillStyle = '#022c22'; 
+                ctx.fillText(msg, player.x + 3, player.y - 67 + pBounce);
+
+                ctx.fillStyle = '#10b981'; ctx.strokeStyle = '#022c22'; ctx.lineWidth = 5;
+                ctx.strokeText(msg, player.x, player.y - 70 + pBounce);
+                ctx.fillText(msg, player.x, player.y - 70 + pBounce);
+                ctx.restore();
+            }
+
+            for(let p of state.particles) {
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1;
+            }
+        }
+
+        function renderCookedSidebar() {
+            const container = document.getElementById('cooked-food-ui');
+            if(state.cookedFood.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 text-center text-sm font-bold bg-gray-800 p-4 rounded-xl border border-gray-700">لا توجد وجبات جاهزة. اطبخ لكي يقوم النادل بتقديمها!</div>';
+                return;
+            }
+            let html = '';
+            state.cookedFood.forEach(food => {
+                html += `<div class="bg-gradient-to-r from-gray-800 to-gray-700 p-3 rounded-xl border border-gray-600 flex justify-between items-center shadow-md transform transition hover:scale-105">
+                            <span class="text-3xl">${food.emoji}</span>
+                            <span class="text-md font-bold text-white">${food.name}</span>
+                         </div>`;
+            });
+            if(container.innerHTML !== html) container.innerHTML = html;
+        }
+
+        function showNotification(text) {
+            const notif = document.getElementById('notification');
+            notif.textContent = text;
+            notif.style.opacity = '1';
+            notif.style.transform = 'translate(-50%, 0) scale(1.1)';
+            setTimeout(() => { notif.style.opacity = '0'; notif.style.transform = 'translate(-50%, -20px) scale(1)'; }, 3000);
+        }
+
+        function openStore() {
+            initAudio();
+            const container = document.getElementById('store-container');
+            document.getElementById('store-coins').textContent = state.coins;
+            container.innerHTML = '';
+            
+            for(let key in INGREDIENTS) {
+                if(INGREDIENTS[key].zone === 'store') {
+                    const item = INGREDIENTS[key];
+                    container.innerHTML += `
+                        <div class="store-card" onclick="buyItem('${key}', ${item.price})">
+                            <div class="text-5xl mb-3">${item.emoji}</div>
+                            <div class="font-bold text-lg text-white">${item.name}</div>
+                            <div class="text-yellow-400 text-md mt-2 font-bold bg-gray-800 rounded-full px-2 py-1 inline-block">🪙 ${item.price}</div>
+                        </div>
+                    `;
+                }
+            }
+            document.getElementById('store-modal').style.display = 'flex';
+            isModalOpen = true;
+        }
+
+        function buyItem(key, price) {
+            if(state.coins >= price) {
+                state.coins -= price; state.inventory[key]++;
+                document.getElementById('store-coins').textContent = state.coins;
+                updateUIText();
+                if(coinSound) coinSound.triggerAttackRelease("C6", "16n");
+            } else {
+                showNotification("لا تملك عملات كافية!");
+            }
+        }
+
+        function openCookingModal(appliance) {
+            document.getElementById('cooking-title').textContent = `${appliance.name} ${appliance.emoji}`;
+            const container = document.getElementById('recipes-container');
+            container.innerHTML = '';
+            
+            const relevantRecipes = state.activeRecipes.filter(r => r.appliance === appliance.id);
+            
+            relevantRecipes.forEach(recipe => {
+                let canCook = true;
+                let reqHtml = '';
+                for(let ing in recipe.req) {
+                    const have = state.inventory[ing]; const need = recipe.req[ing];
+                    const color = have >= need ? 'text-green-400 font-bold' : 'text-red-400 font-bold';
+                    if(have < need) canCook = false;
+                    reqHtml += `<span class="${color} text-sm bg-gray-900 px-2 py-1 rounded">${INGREDIENTS[ing].emoji} ${have}/${need}</span> `;
+                }
+                
+                let lockOverlay = '';
+                if(recipe.level && state.level < recipe.level) {
+                    canCook = false;
+                    lockOverlay = `<div class="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center flex-col"><span class="text-3xl">🔒</span><span class="text-red-400 font-bold">مستوى ${recipe.level}</span></div>`;
+                }
+
+                container.innerHTML += `
+                    <div class="recipe-card relative ${canCook ? '' : 'disabled'}" onclick="cookRecipe('${recipe.id}', ${canCook}, ${appliance.x}, ${appliance.y})">
+                        ${lockOverlay}
+                        <div class="text-5xl mb-3">${recipe.emoji}</div>
+                        <div class="font-bold text-lg text-white">${recipe.name}</div>
+                        <div class="mt-3 flex flex-wrap justify-center gap-2">${reqHtml}</div>
+                    </div>
+                `;
+            });
+            document.getElementById('cooking-modal').style.display = 'flex';
+            isModalOpen = true;
+        }
+
+        function cookRecipe(recipeId, canCook, appX, appY) {
+            if(!canCook) return;
+            if(state.cookedFood.length >= 12) {
+                showNotification("الطاولة ممتلئة! دع النادل يوصل الطلبات أولاً.");
+                return;
+            }
+
+            const recipe = state.activeRecipes.find(r => r.id === recipeId);
+            for(let ing in recipe.req) state.inventory[ing] -= recipe.req[ing]; 
+            
+            state.cookedFood.push({ id: recipe.id || recipe.result, name: recipe.name || recipe.result, emoji: recipe.emoji });
+            createParticles(appX + 45, appY + 45, '#f59e0b');
+            if(successSound) successSound.triggerAttackRelease(["C5", "E5", "G5"], "8n");
+            
+            updateUIText();
+            closeModal('cooking-modal');
+        }
+
+        let innovationSlots = [null, null, null];
+        function openInnovationModal() {
+            innovationSlots = [null, null, null];
+            updateInnovationUI();
+            document.getElementById('innovation-modal').style.display = 'flex';
+            isModalOpen = true;
+        }
+
+        function updateInnovationUI() {
+            const slotsDiv = document.getElementById('innovation-slots');
+            slotsDiv.innerHTML = '';
+            innovationSlots.forEach((item, index) => {
+                if(item) slotsDiv.innerHTML += `<div class="innovation-slot filled" onclick="removeIngredient(${index})">${INGREDIENTS[item].emoji}</div>`;
+                else slotsDiv.innerHTML += `<div class="innovation-slot" onclick="removeIngredient(${index})"></div>`;
+            });
+
+            const invDiv = document.getElementById('innovation-inventory');
+            invDiv.innerHTML = '';
+            for(let key in state.inventory) {
+                if(state.inventory[key] > 0) {
+                    invDiv.innerHTML += `<div class="cursor-pointer bg-gray-800 p-3 rounded-xl border border-gray-600 text-3xl hover:bg-gray-700 hover:-translate-y-1 transition shadow-md" onclick="addIngredientToSlot('${key}')" title="${INGREDIENTS[key].name}">${INGREDIENTS[key].emoji} <span class="text-md block text-center text-white font-bold">${state.inventory[key]}</span></div>`;
+                }
+            }
+        }
+
+        function addIngredientToSlot(key) {
+            const emptyIndex = innovationSlots.indexOf(null);
+            if(emptyIndex !== -1 && state.inventory[key] > 0) {
+                innovationSlots[emptyIndex] = key;
+                state.inventory[key]--;
+                updateInnovationUI(); updateUIText();
+                if(popSound) popSound.triggerAttackRelease("A5", "32n");
+            }
+        }
+
+        function removeIngredient(index) {
+            if(innovationSlots[index]) {
+                state.inventory[innovationSlots[index]]++;
+                innovationSlots[index] = null;
+                updateInnovationUI(); updateUIText();
+            }
+        }
+
+        function attemptInnovation() {
+            if(innovationSlots.includes(null)) { showNotification("يجب ملء الـ 3 خانات للابتكار!"); return; }
+            if(state.cookedFood.length >= 12) {
+                showNotification("الطاولة ممتلئة! دع النادل يوصل الطلبات أولاً.");
+                return;
+            }
+
+            const currentMix = [...innovationSlots].sort();
+            let foundRecipe = SECRET_RECIPES.find(r => JSON.stringify([...r.req].sort()) === JSON.stringify(currentMix));
+            
+            if(foundRecipe) {
+                const alreadyDiscovered = state.activeRecipes.find(r => r.result === foundRecipe.result);
+                state.cookedFood.push({ id: foundRecipe.result, name: foundRecipe.result, emoji: foundRecipe.emoji });
+                if(successSound) successSound.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n");
+                
+                if(!alreadyDiscovered) {
+                    state.activeRecipes.push({...foundRecipe, id: foundRecipe.result, name: foundRecipe.result, appliance: 'blender'});
+                    addXP(100); 
+                    showNotification(`🎉 وصفة سرية جديدة: ${foundRecipe.result}! تم رفع مستواك!`);
+                } else {
+                    showNotification(`نجاح! طبخت: ${foundRecipe.result} ${foundRecipe.emoji}`);
+                }
+            } else {
+                state.cookedFood.push({ id: 'strange_mix', name: 'مزيج غريب', emoji: '🍲' });
+                showNotification("ابتكرت مزيجاً غريباً! 🍲");
+            }
+
+            innovationSlots = [null, null, null];
+            updateInnovationUI(); updateUIText();
+            closeModal('innovation-modal');
+        }
+
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+            isModalOpen = false;
+        }
+
+        function addXP(amount) {
+            state.xp += amount;
+            if(state.xp >= state.xpToNext) {
+                state.level++; state.xp -= state.xpToNext; state.xpToNext = Math.floor(state.xpToNext * 1.5);
+                if(synth) synth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n");
+                showNotification(`🎉 مبروك! ارتقيت للمستوى ${state.level}! 🎉`);
+            }
+            updateUIText();
+        }
+
+        function createParticles(x, y, color) {
+            for(let i=0; i<15; i++) state.particles.push({ x, y, vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12, life: 1, color });
+        }
+
+        function gameLoop() { update(); draw(); requestAnimationFrame(gameLoop); }
+
+        setInterval(spawnItem, 1500);
+        setInterval(spawnCustomer, 4000);
+        setTimeout(spawnItem, 100); 
+        setTimeout(spawnCustomer, 500); 
+        
+        updateUIText();
+        gameLoop();
+    </script>
+</body>
+</html>
