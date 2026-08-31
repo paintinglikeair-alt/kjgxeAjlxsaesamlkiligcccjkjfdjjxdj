@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مختبر نيوتن التفاعلي | فيزياء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a; 
+            --panel-bg: #1e293b;
+            --neon-blue: #0ea5e9;
+            --neon-pink: #ec4899;
+            --neon-green: #10b981;
+            --neon-yellow: #f59e0b;
+        }
+
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-dark); color: #f8fafc; overflow-x: hidden; user-select: none; }
+        
+        /* Grid Background */
+        .grid-bg { position: fixed; inset: 0; z-index: -1; background-image: linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px); background-size: 40px 40px; }
+
+        /* Navigation Tabs */
+        .tab-btn { padding: 12px 20px; border-radius: 8px 8px 0 0; font-weight: bold; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; border-bottom: none; opacity: 0.6; }
+        .tab-btn.active { background: var(--panel-bg); border-color: var(--neon-green); color: var(--neon-green); opacity: 1; box-shadow: 0 -5px 15px rgba(16, 185, 129, 0.1); }
+
+        .sim-container { background: var(--panel-bg); border: 2px solid var(--neon-green); border-radius: 0 0 16px 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: none; animation: fadeIn 0.5s; }
+        .sim-container.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 1. Newton's First Law (Inertia) --- */
+        .inertia-area { width: 100%; height: 300px; background: #020617; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid #334155; display: flex; align-items: flex-end; padding-bottom: 20px;}
+        .road { position: absolute; bottom: 10px; width: 100%; height: 4px; background: #475569; border-bottom: 2px dashed #94a3b8; }
+        
+        .cart-group { position: absolute; left: 20px; bottom: 14px; transition: transform 0s; z-index: 10;}
+        .cart { width: 120px; height: 40px; background: var(--neon-blue); border-radius: 10px; position: relative; border: 2px solid #fff; box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);}
+        .wheel { width: 24px; height: 24px; background: #111; border: 3px solid #fff; border-radius: 50%; position: absolute; bottom: -12px; }
+        .wheel.w-left { left: 15px; } .wheel.w-right { right: 15px; }
+        
+        .box-item { width: 50px; height: 50px; background: var(--neon-yellow); border: 3px solid #b45309; border-radius: 8px; position: absolute; top: -50px; left: 35px; display: flex; align-items: center; justify-content: center; font-size: 2rem; transition: transform 0s; transform-origin: bottom center;}
+        
+        /* Inertia Animations */
+        /* Sudden Start */
+        .anim-start .cart-group { transform: translateX(250px); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .anim-start .box-item { transform: translate(-60px, 40px) rotate(-90deg); transition: transform 0.5s ease-in; }
+        
+        /* Sudden Stop */
+        .anim-stop .cart-group { transform: translateX(250px); transition: transform 1.5s ease-out; }
+        .anim-stop-hit .cart-group { transform: translateX(250px); transition: none; }
+        .anim-stop-hit .box-item { transform: translate(80px, 40px) rotate(90deg); transition: transform 0.5s ease-out; }
+
+        /* --- 2. Newton's Second Law (F = ma) --- */
+        .fma-area { width: 100%; height: 300px; background: #020617; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid #334155; }
+        .spaceship { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 3rem; z-index: 10; transition: left 0s linear; }
+        .asteroid { position: absolute; left: 80px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; background: radial-gradient(circle, #94a3b8, #334155); border-radius: 50%; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.5); transition: all 0.3s, left 0s linear; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;}
+        .thruster-flame { position: absolute; right: 100%; top: 50%; transform: translateY(-50%); width: 0; height: 10px; background: var(--neon-pink); border-radius: 10px 0 0 10px; box-shadow: 0 0 15px var(--neon-pink); transition: width 0.3s; }
+
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 10px 0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: var(--neon-green); cursor: pointer; margin-top: -8px; box-shadow: 0 0 10px var(--neon-green); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        /* --- 3. Newton's Third Law (Action/Reaction) --- */
+        .reaction-area { width: 100%; height: 350px; background: #020617; border-radius: 12px; position: relative; overflow: hidden; border: 1px solid #334155; }
+        .astronaut { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 4rem; transition: all 1s ease-out; z-index: 10;}
+        .capsule { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 4rem; opacity: 0.8; }
+        .gas-cloud { position: absolute; width: 40px; height: 40px; background: rgba(255, 255, 255, 0.8); border-radius: 50%; filter: blur(5px); opacity: 0; pointer-events: none;}
+        
+        @keyframes shootGasRight { 0% { transform: translate(0, 0) scale(0.5); opacity: 1; } 100% { transform: translate(100px, 0) scale(2); opacity: 0; } }
+        @keyframes shootGasLeft { 0% { transform: translate(0, 0) scale(0.5); opacity: 1; } 100% { transform: translate(-100px, 0) scale(2); opacity: 0; } }
+        @keyframes shootGasUp { 0% { transform: translate(0, 0) scale(0.5); opacity: 1; } 100% { transform: translate(0, -100px) scale(2); opacity: 0; } }
+        @keyframes shootGasDown { 0% { transform: translate(0, 0) scale(0.5); opacity: 1; } 100% { transform: translate(0, 100px) scale(2); opacity: 0; } }
+
+        .f-mono { font-family: 'Share Tech Mono', monospace; direction: ltr; display: inline-block;}
+    </style>
+</head>
+<body class="flex flex-col items-center py-8 px-4">
+
+    <div class="grid-bg"></div>
+
+    <div class="w-full max-w-4xl relative z-10">
+        <h1 class="text-4xl font-black text-center text-white mb-2 tracking-wide drop-shadow-md">مختبر قوانين نيوتن</h1>
+        <p class="text-center text-slate-400 mb-8 font-semibold text-lg">العب واكتشف كيف يتحرك الكون!</p>
+
+        <!-- Tabs -->
+        <div class="flex justify-center gap-2">
+            <div class="tab-btn active" onclick="switchTab(1)">📦 القصور الذاتي (القانون 1)</div>
+            <div class="tab-btn" onclick="switchTab(2)">🚀 القوة والكتلة (القانون 2)</div>
+            <div class="tab-btn" onclick="switchTab(3)">👨‍🚀 الفعل ورد الفعل (القانون 3)</div>
+        </div>
+
+        <!-- Simulation 1: Inertia (Newton's 1st Law) -->
+        <div id="sim-1" class="sim-container active">
+            <div class="inertia-area" id="inertia-stage">
+                <div class="road"></div>
+                <div class="cart-group" id="inertia-cart">
+                    <div class="box-item" id="inertia-box">📦</div>
+                    <div class="cart">
+                        <div class="wheel w-left"></div>
+                        <div class="wheel w-right"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-4 mt-6 justify-center">
+                <button onclick="triggerInertia('start')" class="bg-neon-blue text-slate-900 font-black py-3 px-6 rounded-lg hover:bg-sky-400 transition-colors shadow-[0_0_15px_rgba(14,165,233,0.4)]">
+                    انطلاق مفاجئ 🏎️💨
+                </button>
+                <button onclick="triggerInertia('stop')" class="bg-neon-pink text-white font-black py-3 px-6 rounded-lg hover:bg-pink-600 transition-colors shadow-[0_0_15px_rgba(236,72,153,0.4)]">
+                    فرملة مفاجئة 🛑
+                </button>
+                <button onclick="resetInertia()" class="bg-slate-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-600 transition-colors">
+                    إعادة الترتيب 🔄
+                </button>
+            </div>
+            
+            <div class="mt-6 p-4 bg-slate-900 border border-neon-blue rounded-xl text-center">
+                <h3 class="text-neon-blue font-bold text-xl mb-2">القانون الأول لنيوتن (القصور الذاتي)</h3>
+                <p class="text-slate-300" id="inertia-fact">
+                    جرب الانطلاق أو الفرملة المفاجئة لتلاحظ ماذا يحدث للصندوق!
+                </p>
+            </div>
+        </div>
+
+        <!-- Simulation 2: F = ma (Newton's 2nd Law) -->
+        <div id="sim-2" class="sim-container">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1">
+                    <div class="fma-area relative">
+                        <div class="spaceship" id="fma-ship">
+                            🛸
+                            <div class="thruster-flame" id="fma-flame"></div>
+                        </div>
+                        <div class="asteroid" id="fma-asteroid">M</div>
+                    </div>
+                </div>
+                
+                <div class="w-full md:w-1/3 bg-slate-800 p-5 rounded-xl border border-slate-600 flex flex-col justify-between">
+                    <div>
+                        <div class="mb-5">
+                            <label class="flex justify-between text-sm font-bold text-slate-300 mb-2">
+                                <span>قوة الدفع (F)</span> <span id="force-val" class="text-neon-pink font-bold text-lg">50 N</span>
+                            </label>
+                            <input type="range" id="force-slider" min="10" max="100" value="50">
+                        </div>
+                        <div class="mb-6">
+                            <label class="flex justify-between text-sm font-bold text-slate-300 mb-2">
+                                <span>كتلة الكويكب (m)</span> <span id="mass-val" class="text-neon-blue font-bold text-lg">5 kg</span>
+                            </label>
+                            <input type="range" id="mass-slider" min="1" max="20" value="5">
+                        </div>
+                    </div>
+                    
+                    <button onclick="fireThrusters()" class="w-full bg-neon-green text-slate-900 font-black py-3 rounded-lg hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                        تفعيل المحركات 🔥
+                    </button>
+                    <button onclick="resetFMA()" class="w-full bg-slate-700 text-white font-bold py-2 mt-2 rounded-lg hover:bg-slate-600 transition-colors">
+                        إعادة 🔄
+                    </button>
+                    
+                    <div class="mt-4 p-4 bg-slate-900 rounded-lg border border-slate-700 text-center">
+                        <span class="text-slate-400 font-bold text-sm">التسارع (العجلة a):</span>
+                        <div id="accel-val" class="text-neon-yellow f-mono font-bold text-3xl mt-1 dir-ltr">10.0 m/s²</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-slate-900 border border-neon-green rounded-xl text-center">
+                <h3 class="text-neon-green font-bold text-xl mb-2">القانون الثاني لنيوتن (a = F/m)</h3>
+                <p class="text-slate-300">
+                    كلما زادت <span class="text-neon-pink">القوة (F)</span> زادت العجلة، وكلما زادت <span class="text-neon-blue">الكتلة (m)</span> قلت العجلة (تتحرك أبطأ). جرب تغيير القيم!
+                </p>
+            </div>
+        </div>
+
+        <!-- Simulation 3: Action / Reaction (Newton's 3rd Law) -->
+        <div id="sim-3" class="sim-container">
+            <div class="reaction-area" id="reaction-stage">
+                <div class="capsule" id="target-capsule">🚀</div>
+                <div class="astronaut" id="astronaut">👨‍🚀</div>
+                <!-- Gas clouds will be injected here via JS -->
+            </div>
+            
+            <div class="text-center mt-4 mb-2 font-bold text-slate-300">
+                أنت تطفو في الفراغ! للوصول إلى سفينتك على اليمين، في أي اتجاه يجب أن تطلق طفاية الحريق؟
+            </div>
+
+            <div class="flex justify-center gap-4 mt-2">
+                <button onclick="fireExtinguisher('left')" class="bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-colors border-b-4 border-slate-900 active:border-b-0 active:translate-y-1">
+                    إطلاق الغاز لليسار ⬅️💨
+                </button>
+                <button onclick="fireExtinguisher('right')" class="bg-slate-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-slate-600 transition-colors border-b-4 border-slate-900 active:border-b-0 active:translate-y-1">
+                    إطلاق الغاز لليمين 💨➡️
+                </button>
+                <button onclick="resetAstronaut()" class="bg-neon-yellow text-slate-900 font-bold py-3 px-4 rounded-lg hover:bg-amber-400 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                    إعادة المحاولة 🔄
+                </button>
+            </div>
+
+            <div class="mt-6 p-4 bg-slate-900 border border-neon-yellow rounded-xl text-center">
+                <h3 class="text-neon-yellow font-bold text-xl mb-2">القانون الثالث لنيوتن (الفعل ورد الفعل)</h3>
+                <p class="text-slate-300" id="reaction-fact">
+                    "لكل فعل رد فعل، مساوٍ له في المقدار ومضاد له في الاتجاه". لتتحرك يميناً، يجب أن تدفع الغاز يساراً!
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Sound Engine ---
+        const sfx = {
+            ctx: null, init() { if(!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); if(this.ctx.state === 'suspended') this.ctx.resume(); },
+            play(f, t, d, v=0.1) { try { this.init(); const o=this.ctx.createOscillator(), g=this.ctx.createGain(); o.type=t; o.frequency.value=f; g.gain.setValueAtTime(v, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime+d); o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime+d); }catch(e){} },
+            click() { this.play(1200, 'sine', 0.05, 0.05); },
+            engine() { this.play(100, 'sawtooth', 0.5, 0.15); setTimeout(()=>this.play(150, 'sawtooth', 1, 0.1), 100); },
+            brake() { this.play(400, 'sine', 0.8, 0.1); },
+            crash() { this.play(100, 'sawtooth', 0.3, 0.2); setTimeout(()=>this.play(50, 'square', 0.4, 0.2), 100); },
+            gas() { this.play(800, 'noise', 0.5, 0.2); }, // approximation of gas using a high pitched wave
+            success() { this.play(600, 'sine', 0.1, 0.1); setTimeout(()=>this.play(900, 'sine', 0.2, 0.1), 100); }
+        };
+
+        // --- Tab Switching ---
+        function switchTab(tabIndex) {
+            sfx.click();
+            document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i + 1 === tabIndex);
+            });
+            document.querySelectorAll('.sim-container').forEach((sim, i) => {
+                sim.classList.toggle('active', i + 1 === tabIndex);
+            });
+            
+            // Reset states when switching
+            if(tabIndex === 1) resetInertia();
+            if(tabIndex === 2) resetFMA();
+            if(tabIndex === 3) resetAstronaut();
+        }
+
+        // --- SIM 1: INERTIA ---
+        let inertiaStage = document.getElementById('inertia-stage');
+        function triggerInertia(type) {
+            resetInertia(); // clean slate
+            setTimeout(() => {
+                if(type === 'start') {
+                    sfx.engine();
+                    inertiaStage.classList.add('anim-start');
+                    document.getElementById('inertia-fact').innerHTML = "السيارة تحركت للأمام فجأة، لكن الصندوق قاوم الحركة (القصور الذاتي) وحاول البقاء <span class='text-neon-yellow'>ساكناً</span>، فسقط للخلف!";
+                } else if (type === 'stop') {
+                    sfx.engine();
+                    inertiaStage.classList.add('anim-stop');
+                    document.getElementById('inertia-fact').innerHTML = "السيارة والصندوق يتحركان معاً...";
+                    
+                    // Trigger brake after it moves a bit
+                    setTimeout(() => {
+                        sfx.brake();
+                        inertiaStage.classList.remove('anim-stop');
+                        inertiaStage.classList.add('anim-stop-hit');
+                        sfx.crash();
+                        document.getElementById('inertia-fact').innerHTML = "توقفت السيارة فجأة! الصندوق قاوم التوقف وحاول البقاء في <span class='text-neon-pink'>حالة حركة</span> للأمام، فسقط من المقدمة!";
+                    }, 1000);
+                }
+            }, 50);
+        }
+
+        function resetInertia() {
+            sfx.click();
+            inertiaStage.classList.remove('anim-start', 'anim-stop', 'anim-stop-hit');
+            document.getElementById('inertia-fact').innerHTML = "جرب الانطلاق أو الفرملة المفاجئة لتلاحظ ماذا يحدث للصندوق!";
+        }
+
+        // --- SIM 2: F = ma ---
+        const forceSlider = document.getElementById('force-slider');
+        const massSlider = document.getElementById('mass-slider');
+        const fmaAsteroid = document.getElementById('fma-asteroid');
+        const fmaShip = document.getElementById('fma-ship');
+        const fmaFlame = document.getElementById('fma-flame');
+        const accelVal = document.getElementById('accel-val');
+
+        function updateFMASliders() {
+            const f = parseInt(forceSlider.value);
+            const m = parseInt(massSlider.value);
+            const a = f / m;
+            
+            document.getElementById('force-val').textContent = f + ' N';
+            document.getElementById('mass-val').textContent = m + ' kg';
+            accelVal.textContent = a.toFixed(1) + ' m/s²';
+
+            // Visually change asteroid size based on mass (from 30px to 90px)
+            const size = 20 + (m * 3); 
+            fmaAsteroid.style.width = size + 'px';
+            fmaAsteroid.style.height = size + 'px';
+            
+            // Adjust flame length based on force
+            fmaFlame.style.width = (f / 2) + 'px';
+        }
+
+        forceSlider.oninput = updateFMASliders;
+        massSlider.oninput = updateFMASliders;
+
+        function fireThrusters() {
+            resetFMA();
+            setTimeout(() => {
+                sfx.engine();
+                const f = parseInt(forceSlider.value);
+                const m = parseInt(massSlider.value);
+                const a = f / m;
+                
+                // Calculate duration based on acceleration (higher accel = lower time)
+                // Let's map a=0.5 to ~3s, a=100 to ~0.5s
+                const duration = Math.max(0.5, 4 / Math.sqrt(a)); 
+
+                fmaAsteroid.style.transition = `left ${duration}s ease-in`;
+                fmaShip.style.transition = `left ${duration}s ease-in`;
+                
+                fmaAsteroid.style.left = 'calc(100% + 50px)';
+                fmaShip.style.left = 'calc(100% - 20px)';
+            }, 50);
+        }
+
+        function resetFMA() {
+            sfx.click();
+            fmaAsteroid.style.transition = `none`;
+            fmaShip.style.transition = `none`;
+            fmaAsteroid.style.left = '80px';
+            fmaShip.style.left = '10px';
+        }
+
+        // Initialize FMA visual sizes
+        updateFMASliders();
+
+        // --- SIM 3: Action / Reaction ---
+        const astro = document.getElementById('astronaut');
+        const rStage = document.getElementById('reaction-stage');
+
+        function fireExtinguisher(dir) {
+            sfx.engine(); // use as gas sound
+            
+            // Create gas cloud visual
+            const cloud = document.createElement('div');
+            cloud.className = 'gas-cloud';
+            
+            // Position cloud at astronaut
+            const astroRect = astro.getBoundingClientRect();
+            const stageRect = rStage.getBoundingClientRect();
+            
+            // Astronaut is centered roughly
+            let currentLeft = parseFloat(astro.style.left || '50');
+            
+            cloud.style.top = '50%';
+            cloud.style.left = currentLeft + '%';
+            
+            if (dir === 'left') {
+                cloud.style.animation = 'shootGasLeft 1s ease-out forwards';
+                rStage.appendChild(cloud);
+                
+                // Reaction: Move Astronaut RIGHT
+                currentLeft += 25;
+                astro.style.left = currentLeft + '%';
+                
+                // Check Win
+                if (currentLeft >= 85) {
+                    setTimeout(() => {
+                        sfx.success();
+                        document.getElementById('reaction-fact').innerHTML = "🎉 <span class='text-neon-green'>رائع! لقد وصلت للسفينة!</span> استخدمت إطلاق الغاز للخلف كفعل، ليكون رد الفعل دفعك للأمام.";
+                    }, 1000);
+                }
+            } else if (dir === 'right') {
+                cloud.style.animation = 'shootGasRight 1s ease-out forwards';
+                rStage.appendChild(cloud);
+                
+                // Reaction: Move Astronaut LEFT
+                currentLeft -= 25;
+                astro.style.left = currentLeft + '%';
+                
+                if (currentLeft <= 10) {
+                    setTimeout(() => {
+                        sfx.crash();
+                        document.getElementById('reaction-fact').innerHTML = "⚠️ <span class='text-neon-pink'>لقد ابتعدت عن السفينة!</span> الفعل لليمين جعلك تتحرك لليسار. اضغط (إعادة) والمحاولة لليمين.";
+                    }, 1000);
+                }
+            }
+            
+            // Cleanup cloud
+            setTimeout(() => { cloud.remove(); }, 1000);
+        }
+
+        function resetAstronaut() {
+            sfx.click();
+            astro.style.left = '50%';
+            document.getElementById('reaction-fact').innerHTML = "\"لكل فعل رد فعل، مساوٍ له في المقدار ومضاد له في الاتجاه\". لتتحرك يميناً، يجب أن تدفع الغاز يساراً!";
+        }
+
+    </script>
+</body>
+</html>
