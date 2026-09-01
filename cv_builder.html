@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS CV Builder - Nuran Pro Version</title>
+  
+  <style>
+      :root { --primary: #2c3e50; --bg: #eef2f5; --border: #ccc; --accent: #2980b9; }
+      
+      /* إضافة Box Sizing لضمان عدم تجاوز الأبعاد المطلوبة خاصة للورقة A4 */
+      *, *::before, *::after { box-sizing: border-box; }
+      
+      body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+      
+      .controls-panel { width: 35%; background: white; padding: 20px; overflow-y: auto; border-left: 2px solid var(--border); box-shadow: -2px 0 10px rgba(0,0,0,0.05); }
+      .preview-panel { width: 65%; padding: 20px; overflow-y: auto; overflow-x: auto; display: flex; flex-direction: column; align-items: center; background: #525659; position: relative;}
+      
+      .profile-manager { background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #bce8f1; }
+      .profile-manager select, .profile-manager input { width: calc(100% - 20px); padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
+      
+      .flex-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+      .flex-btns button { flex: 1; padding: 8px 10px; cursor: pointer; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; transition: opacity 0.2s;}
+      .flex-btns button:hover { opacity: 0.8; }
+      .btn-blue { background: #3498db; } .btn-green { background: #27ae60; } .btn-orange { background: #e67e22; }
+      .btn-purple { background: #8e44ad; } .btn-red { background: #c0392b; } .btn-word { background: #2b579a; }
+      
+      .group { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 15px; background: #fff; overflow: hidden; }
+      .group-header { background: var(--primary); color: white; padding: 10px 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+      .group-body { padding: 15px; }
+      
+      .dyn-item { display: flex; gap: 10px; align-items: flex-start; background: #fdfdfd; padding: 10px; border: 1px dashed #bbb; margin-bottom: 10px; border-radius: 5px; }
+      .dyn-inputs { flex-grow: 1; display: flex; flex-direction: column; gap: 5px; }
+      .dyn-inputs input, .dyn-inputs textarea { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit;}
+      .btn-add { background: var(--accent); color: white; border: none; padding: 4px 10px; cursor: pointer; border-radius: 4px; }
+      .btn-del { background: #e74c3c; color: white; border: none; padding: 5px 8px; cursor: pointer; border-radius: 4px; }
+      
+      .toolbars-container { width: 210mm; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
+      .toolbar { background: white; padding: 10px; border-radius: 8px; display: flex; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-wrap: wrap; align-items: center; }
+      .toolbar button, .toolbar select, .toolbar input[type="color"] { background: #eee; border: 1px solid #ccc; padding: 5px 8px; cursor: pointer; border-radius: 4px; font-size: 13px; font-family: inherit;}
+      .toolbar button:hover { background: #ddd; }
+      
+      .cv-wrapper { padding: 20px; display: flex; justify-content: center; min-width: max-content; }
+      .cv-paper { 
+          background: white; 
+          width: 210mm; 
+          min-height: 297mm; 
+          padding: 20mm; 
+          box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+          color: #222; 
+          direction: rtl; 
+          transition: all 0.3s; 
+          position: relative; 
+          /* ضروري جداً لضمان عدم زيادة العرض بسبب الـ Padding */
+          box-sizing: border-box; 
+      }
+      
+      .cv-paper.has-border { border: 2px solid var(--primary); padding: 18mm; outline: 5px double var(--primary); outline-offset: -10px; }
+      .cv-paper.wide-margins { padding: 30mm; }
+      .cv-paper.show-dividers .sec-title { border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+      .cv-paper.show-dividers .drag-section { border-bottom: 1px dashed #ccc; margin-bottom: 20px; padding-bottom: 10px; }
+      .cv-paper.show-pagination::after { content: "1"; position: absolute; bottom: 15mm; left: 50%; transform: translateX(-50%); font-weight: bold; color: #777; }
+
+      .cv-header-area { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid var(--primary); padding-bottom: 15px; margin-bottom: 20px; }
+      .cv-profile-img { width: 110px; height: 110px; border-radius: 50%; object-fit: cover; }
+      .cv-name { font-size: 32px; font-weight: bold; margin: 0 0 5px 0; color: var(--primary); }
+      .cv-contact-list { display: flex; flex-wrap: wrap; gap: 15px; font-size: 13px; margin-top: 10px; }
+      
+      .drag-section { padding: 10px 0; margin-bottom: 15px; border: 2px solid transparent; cursor: grab; }
+      .drag-section:hover { border-color: #eee; }
+      .drag-item { padding: 5px; margin-bottom: 5px; border: 1px dashed transparent; cursor: grab; }
+      .drag-item:hover { border-color: #ccc; background: #fcfcfc; }
+      .dragging { opacity: 0.4; background: #f0f8ff !important; }
+      
+      .sec-title { font-size: 20px; color: var(--primary); border-bottom: 1px solid #ddd; margin-bottom: 10px; padding-bottom: 5px; font-weight: bold; }
+      .hidden { display: none !important; }
+
+      .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+      .toast { background: #2c3e50; color: white; padding: 12px 20px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 14px; opacity: 0; transform: translateY(20px); transition: all 0.3s ease; }
+      .toast.show { opacity: 1; transform: translateY(0); }
+
+      .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+      
+      .loader-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 100; display: none; justify-content: center; align-items: center; flex-direction: column; font-weight: bold; color: var(--primary);}
+      .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 10px;}
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+      @media print {
+          @page { size: A4; margin: 0; }
+          body, html { margin: 0; padding: 0; width: 100%; height: auto; background: white !important; }
+          .controls-panel, .toolbars-container, .toast-container, .loader-overlay { display: none !important; }
+          .preview-panel { width: 100%; padding: 0; margin: 0; display: block; background: transparent; }
+          .cv-wrapper { padding: 0; display: block; width: 100%; }
+          .cv-paper { 
+              width: 210mm; 
+              min-height: 297mm; 
+              box-shadow: none; 
+              margin: 0 auto; 
+              padding: 20mm; /* الحفاظ على الـ Padding الداخلي كعازل طبيعي للنص */
+              border: none; 
+              -webkit-print-color-adjust: exact; 
+              print-color-adjust: exact; 
+              box-sizing: border-box; /* للتأكد من أن 210 ملم تشمل الـ padding */
+          }
+          .drag-section { page-break-inside: avoid; } /* منع انقسام القسم بين صفحتين إن أمكن */
+          .drag-item { border: none !important; background: transparent !important; page-break-inside: avoid; }
+      }
+  </style>
+</head>
+<body>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <div class="controls-panel">
+      <div class="profile-manager">
+          <h3 style="margin-top:0;">إدارة الشخصيات</h3>
+          <select id="profile-select" onchange="switchProfile(this.value)">
+              <option value="default">الشخصية الأساسية (نوران)</option>
+          </select>
+          <input type="text" id="new-profile-name" placeholder="اسم شخصية جديدة...">
+          <div class="flex-btns">
+              <button class="btn-blue" onclick="addProfile()">+ أضف شخصية</button>
+          </div>
+          <hr style="border: 0; border-top: 1px solid #bce8f1; margin: 15px 0;">
+          <div class="flex-btns">
+              <button class="btn-green" onclick="exportProfileJSON()">تصدير الشخصية</button>
+              <button class="btn-orange" onclick="document.getElementById('import-file').click()">استيراد شخصية</button>
+              <input type="file" id="import-file" class="hidden" accept=".json" onchange="importProfileJSON(event)">
+          </div>
+      </div>
+
+      <div id="data-inputs-area">
+          <div class="group"><div class="group-header">الصورة والاسم</div><div class="group-body">
+              <div class="dyn-item"><input type="checkbox" checked onchange="toggleVis('cv-img-box', this)">
+                  <div class="dyn-inputs"><label style="font-size: 13px;">الصورة:</label><input type="file" accept="image/*" onchange="loadMainImg(event)"></div>
+              </div>
+              <div class="dyn-item"><input type="checkbox" checked onchange="toggleVis('cv-name', this)">
+                  <div class="dyn-inputs"><input type="text" class="translatable-input" placeholder="الاسم" oninput="updateTxt('cv-name', this.value)" value="نوران بهاء الدين"></div>
+              </div>
+          </div></div>
+
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('cv-titles-list', this)"> المسميات الوظيفية</label> <button class="btn-add" onclick="addEl('titles')">+ أضف</button></div><div class="group-body" id="ctrl-titles"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('cv-contact-list', this)"> بيانات الاتصال</label> <button class="btn-add" onclick="addEl('contact')">+ أضف</button></div><div class="group-body" id="ctrl-contact"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-summary', this)"> التعريف الشخصي</label> <button class="btn-add" onclick="addEl('summary')">+ أضف</button></div><div class="group-body" id="ctrl-summary"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-exp', this)"> الخبرات</label> <button class="btn-add" onclick="addEl('exp')">+ أضف</button></div><div class="group-body" id="ctrl-exp"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-edu', this)"> التعليم</label> <button class="btn-add" onclick="addEl('edu')">+ أضف</button></div><div class="group-body" id="ctrl-edu"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-courses', this)"> الدورات والشهادات</label> <button class="btn-add" onclick="addEl('courses')">+ أضف</button></div><div class="group-body" id="ctrl-courses"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-skills', this)"> المهارات</label> <button class="btn-add" onclick="addEl('skills')">+ أضف</button></div><div class="group-body" id="ctrl-skills"></div></div>
+          
+          <div class="group"><div class="group-header"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" checked onchange="toggleVis('sec-portfolio', this)"> معرض الأعمال والصور</label> <button class="btn-add" onclick="addEl('portfolio')">+ أضف</button></div><div class="group-body" id="ctrl-portfolio"></div></div>
+      </div>
+  </div>
+
+  <div class="preview-panel">
+      <div class="loader-overlay" id="trans-loader">
+          <div class="spinner"></div>
+          <div>جاري ترجمة المحتوى بالكامل...</div>
+      </div>
+
+      <div class="toolbars-container">
+          <div class="flex-btns" style="margin:0;">
+              <button class="btn-purple" onclick="translateAll()" id="trans-btn">ترجمة شاملة (عربي / English)</button>
+              <button class="btn-word" onclick="exportWord()">تصدير Word (.doc)</button>
+              <button class="btn-red" onclick="window.print()">طباعة / تصدير PDF</button>
+          </div>
+          
+          <div class="toolbar">
+              <span style="font-size:12px; font-weight:bold;">تنسيق النص:</span>
+              <select onchange="formatText('fontName', this.value)">
+                  <option value="Arial">Arial</option>
+                  <option value="Tahoma">Tahoma</option>
+                  <option value="Times New Roman">Times New Roman</option>
+                  <option value="Courier New">Courier</option>
+              </select>
+              <select onchange="formatText('fontSize', this.value)">
+                  <option value="3">عادي</option><option value="4">متوسط</option><option value="5">كبير</option><option value="6">ضخم</option>
+              </select>
+              <button onclick="formatText('bold')"><b>B</b></button>
+              <button onclick="formatText('italic')"><i>I</i></button>
+              <button onclick="formatText('underline')"><u>U</u></button>
+              <input type="color" onchange="formatText('foreColor', this.value)" title="لون النص">
+              <button onclick="formatText('justifyLeft')">يسار</button>
+              <button onclick="formatText('justifyCenter')">وسط</button>
+              <button onclick="formatText('justifyRight')">يمين</button>
+          </div>
+
+          <div class="toolbar">
+              <span style="font-size:12px; font-weight:bold;">تخطيط الصفحة:</span>
+              <button onclick="toggleLayout('has-border')">إطار الصفحة</button>
+              <button onclick="toggleLayout('wide-margins')">توسيع الهوامش</button>
+              <button onclick="toggleLayout('show-dividers')">فواصل الأقسام</button>
+              <button onclick="toggleLayout('show-pagination')">ترقيم الصفحة</button>
+          </div>
+      </div>
+
+      <div class="cv-wrapper">
+          <div class="cv-paper" id="cv-paper" contenteditable="true">
+              <div class="cv-header-area" id="cv-header-sec">
+                  <div id="cv-img-box"><img id="cv-img" class="cv-profile-img" src="https://via.placeholder.com/150/eef2f5/2c3e50?text=الصورة" alt="Profile"></div>
+                  <div style="flex-grow: 1;">
+                      <div id="cv-name">نوران بهاء الدين</div>
+                      <div id="cv-titles-list" class="drag-container"></div>
+                      <div id="cv-contact-list" class="cv-contact-list drag-container" style="flex-direction: row;"></div>
+                  </div>
+              </div>
+
+              <div id="cv-sections-container" class="drag-container">
+                  <div class="drag-section" id="sec-summary"><div class="sec-title lang-txt">التعريف الشخصي</div><div id="cv-summary-list" class="drag-container"></div></div>
+                  <div class="drag-section" id="sec-exp"><div class="sec-title lang-txt">الخبرات العملية</div><div id="cv-exp-list" class="drag-container"></div></div>
+                  <div class="drag-section" id="sec-edu"><div class="sec-title lang-txt">التعليم والمؤهلات</div><div id="cv-edu-list" class="drag-container"></div></div>
+                  <div class="drag-section" id="sec-courses"><div class="sec-title lang-txt">الدورات والشهادات</div><div id="cv-courses-list" class="drag-container"></div></div>
+                  <div class="drag-section" id="sec-skills"><div class="sec-title lang-txt">المهارات</div><div id="cv-skills-list" class="drag-container"></div></div>
+                  <div class="drag-section" id="sec-portfolio"><div class="sec-title lang-txt">معرض الأعمال</div><div id="cv-portfolio-list" class="drag-container portfolio-grid"></div></div>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <script>
+      let counter = 0;
+      let profilesData = {};
+      let activeProfile = 'default';
+      let blankInputsHTML = '';
+      let blankPaperHTML = '';
+
+      document.addEventListener("DOMContentLoaded", () => {
+          blankInputsHTML = document.getElementById('data-inputs-area').innerHTML;
+          blankPaperHTML = document.getElementById('cv-paper').innerHTML;
+      });
+
+      function showToast(message) {
+          const container = document.getElementById('toast-container');
+          const toast = document.createElement('div');
+          toast.className = 'toast';
+          toast.innerText = message;
+          container.appendChild(toast);
+          
+          setTimeout(() => toast.classList.add('show'), 10);
+          
+          setTimeout(() => {
+              toast.classList.remove('show');
+              setTimeout(() => toast.remove(), 300);
+          }, 3000);
+      }
+
+      function toggleVis(id, cb) { const el = document.getElementById(id); if(el) cb.checked ? el.classList.remove('hidden') : el.classList.add('hidden'); }
+      function updateTxt(id, val) { const el = document.getElementById(id); if(el) el.innerText = val; }
+      function loadMainImg(e) { if(e.target.files[0]) { const r = new FileReader(); r.onload = (ev) => document.getElementById('cv-img').src = ev.target.result; r.readAsDataURL(e.target.files[0]); } }
+      function loadPortImg(e, imgId) {
+          if(e.target.files[0]) {
+              const r = new FileReader();
+              r.onload = (ev) => document.getElementById(imgId).src = ev.target.result;
+              r.readAsDataURL(e.target.files[0]);
+          }
+      }
+      function formatText(cmd, val = null) {
+          document.execCommand(cmd, false, val);
+          document.getElementById('cv-paper').focus();
+      }
+      function toggleLayout(className) { document.getElementById('cv-paper').classList.toggle(className); }
+
+      function addEl(type) {
+          counter++;
+          const cId = `ctrl-${counter}`; const vId = `view-${counter}`;
+          const ctrlDiv = document.createElement('div'); ctrlDiv.className = 'dyn-item'; ctrlDiv.id = cId;
+          const viewDiv = document.createElement('div'); viewDiv.className = 'drag-item'; viewDiv.id = vId; viewDiv.setAttribute('draggable', 'true');
+          
+          viewDiv.addEventListener('dragstart', handleDragStart); viewDiv.addEventListener('dragend', handleDragEnd);
+
+          let ctrlHTML = `<input type="checkbox" checked onchange="toggleVis('${vId}', this)"><div class="dyn-inputs">`;
+          
+          if(type === 'titles') {
+              ctrlHTML += `<input type="text" class="translatable-input" placeholder="مسمى وظيفي" oninput="updateTxt('${vId}-txt', this.value)">`;
+              viewDiv.innerHTML = `<div id="${vId}-txt" style="font-size:18px; color:#555; margin-bottom:5px;">مسمى وظيفي جديد</div>`;
+              document.getElementById('ctrl-titles').appendChild(ctrlDiv); document.getElementById('cv-titles-list').appendChild(viewDiv);
+          }
+          else if(type === 'contact') {
+              ctrlHTML += `<input type="text" placeholder="النوع (تليفون/إيميل...)" oninput="updateTxt('${vId}-lbl', this.value + ': ')">
+                           <input type="text" class="translatable-input" placeholder="البيان" oninput="updateTxt('${vId}-val', this.value)">`;
+              viewDiv.innerHTML = `<span style="display:inline-block; margin-left:15px;"><strong id="${vId}-lbl" class="lang-txt">النوع: </strong><span id="${vId}-val">البيان</span></span>`;
+              viewDiv.style.display = "inline-block";
+              document.getElementById('ctrl-contact').appendChild(ctrlDiv); document.getElementById('cv-contact-list').appendChild(viewDiv);
+          }
+          else if(type === 'summary') {
+              ctrlHTML += `<textarea rows="2" class="translatable-input" placeholder="النبذة" oninput="updateTxt('${vId}-txt', this.value)"></textarea>`;
+              viewDiv.innerHTML = `<p id="${vId}-txt" style="margin:0 0 10px 0;"></p>`;
+              document.getElementById('ctrl-summary').appendChild(ctrlDiv); document.getElementById('cv-summary-list').appendChild(viewDiv);
+          }
+          else if(type === 'exp') {
+              ctrlHTML += `<input type="text" class="translatable-input" placeholder="المسمى" oninput="updateTxt('${vId}-t', this.value)">
+                           <input type="text" class="translatable-input" placeholder="الجهة" oninput="updateTxt('${vId}-c', this.value)">
+                           <input type="text" class="translatable-input" placeholder="التاريخ" oninput="updateTxt('${vId}-d', this.value)">`;
+              viewDiv.innerHTML = `<div style="margin-bottom:15px;"><div style="display:flex; justify-content:space-between;"><strong id="${vId}-t" style="font-size:16px;">المسمى</strong><span id="${vId}-d" style="color:#777;">التاريخ</span></div><div id="${vId}-c" style="color:var(--accent); font-weight:bold;">الجهة</div></div>`;
+              document.getElementById('ctrl-exp').appendChild(ctrlDiv); document.getElementById('cv-exp-list').appendChild(viewDiv);
+          }
+          else if(type === 'edu') {
+              ctrlHTML += `<input type="text" class="translatable-input" placeholder="الدرجة" oninput="updateTxt('${vId}-deg', this.value)">
+                           <input type="text" class="translatable-input" placeholder="الجامعة" oninput="updateTxt('${vId}-uni', this.value)">
+                           <input type="text" class="translatable-input" placeholder="السنة" oninput="updateTxt('${vId}-yr', this.value)">`;
+              viewDiv.innerHTML = `<div style="margin-bottom:10px;"><strong id="${vId}-deg">الدرجة</strong> - <span id="${vId}-uni">الجامعة</span> <span id="${vId}-yr" style="color:#777;">(السنة)</span></div>`;
+              document.getElementById('ctrl-edu').appendChild(ctrlDiv); document.getElementById('cv-edu-list').appendChild(viewDiv);
+          }
+          else if(type === 'courses') {
+              ctrlHTML += `<input type="text" class="translatable-input" placeholder="اسم الدورة / الشهادة" oninput="updateTxt('${vId}-cname', this.value)">
+                           <input type="text" class="translatable-input" placeholder="جهة الإصدار" oninput="updateTxt('${vId}-corg', this.value)">
+                           <input type="text" class="translatable-input" placeholder="التاريخ / السنة" oninput="updateTxt('${vId}-cyr', this.value)">`;
+              viewDiv.innerHTML = `<div style="margin-bottom:10px;"><strong id="${vId}-cname" class="lang-txt">اسم الدورة</strong> - <span id="${vId}-corg">جهة الإصدار</span> <span id="${vId}-cyr" style="color:#777;">(التاريخ)</span></div>`;
+              document.getElementById('ctrl-courses').appendChild(ctrlDiv); document.getElementById('cv-courses-list').appendChild(viewDiv);
+          }
+          else if(type === 'skills') {
+              ctrlHTML += `<input type="text" class="translatable-input" placeholder="المهارة" oninput="updateTxt('${vId}-sk', this.value)">`;
+              viewDiv.innerHTML = `<li id="${vId}-sk">مهارة جديدة</li>`;
+              document.getElementById('ctrl-skills').appendChild(ctrlDiv); document.getElementById('cv-skills-list').appendChild(viewDiv);
+          }
+          else if(type === 'portfolio') {
+              ctrlHTML += `<input type="file" accept="image/*" onchange="loadPortImg(event, '${vId}-img')">
+                           <input type="text" class="translatable-input" placeholder="وصف الصورة" oninput="updateTxt('${vId}-desc', this.value)">`;
+              viewDiv.innerHTML = `<div style="text-align:center; padding:5px; border:1px solid #eee; border-radius:8px;">
+                                      <img id="${vId}-img" src="https://via.placeholder.com/150/cccccc/ffffff?text=صورة+العمل" style="max-width:100%; height:120px; object-fit:cover; border-radius:5px; display:block; margin:0 auto;">
+                                      <div id="${vId}-desc" style="font-size:14px; color:#555; margin-top:8px; font-weight:bold;">وصف الصورة</div>
+                                   </div>`;
+              document.getElementById('ctrl-portfolio').appendChild(ctrlDiv); document.getElementById('cv-portfolio-list').appendChild(viewDiv);
+          }
+
+          ctrlHTML += `</div><button class="btn-del" onclick="document.getElementById('${cId}').remove(); document.getElementById('${vId}').remove(); showToast('تم الحذف بنجاح');">X</button>`;
+          ctrlDiv.innerHTML = ctrlHTML;
+      }
+
+      let draggedObj = null;
+      function handleDragStart(e) { draggedObj = this; setTimeout(() => this.classList.add('dragging'), 0); e.stopPropagation(); }
+      function handleDragEnd(e) { this.classList.remove('dragging'); draggedObj = null; e.stopPropagation(); }
+      
+      function handleDragOver(e) {
+          e.preventDefault(); e.stopPropagation();
+          if (draggedObj && draggedObj.classList.contains('drag-section') && this.id !== 'cv-sections-container') return;
+          if (draggedObj && draggedObj.classList.contains('drag-item') && this.id === 'cv-sections-container') return;
+          
+          const afterEl = [...this.querySelectorAll(':scope > [draggable="true"]:not(.dragging)')].reduce((closest, child) => {
+              const box = child.getBoundingClientRect(); const offset = e.clientY - box.top - box.height / 2;
+              return (offset < 0 && offset > closest.offset) ? { offset: offset, element: child } : closest;
+          }, { offset: Number.NEGATIVE_INFINITY }).element;
+          
+          afterEl == null ? this.appendChild(draggedObj) : this.insertBefore(draggedObj, afterEl);
+      }
+
+      function attachDragEvents() {
+          document.querySelectorAll('.drag-section, .drag-item').forEach(el => { 
+              el.setAttribute('draggable', 'true'); 
+              el.removeEventListener('dragstart', handleDragStart);
+              el.removeEventListener('dragend', handleDragEnd);
+              el.addEventListener('dragstart', handleDragStart); 
+              el.addEventListener('dragend', handleDragEnd); 
+          });
+          document.querySelectorAll('.drag-container').forEach(container => {
+              container.removeEventListener('dragover', handleDragOver);
+              container.addEventListener('dragover', handleDragOver);
+          });
+      }
+
+      function syncDOM() {
+          document.querySelectorAll('#data-inputs-area input, #data-inputs-area textarea').forEach(el => {
+              if (el.type === 'checkbox' || el.type === 'radio') {
+                  if (el.checked) el.setAttribute('checked', 'checked');
+                  else el.removeAttribute('checked');
+              } else if (el.tagName === 'TEXTAREA') {
+                  el.innerHTML = el.value;
+              } else {
+                  el.setAttribute('value', el.value);
+              }
+          });
+      }
+
+      function saveCurrentProfileState() {
+          syncDOM();
+          profilesData[activeProfile] = {
+              inputs: document.getElementById('data-inputs-area').innerHTML,
+              paper: document.getElementById('cv-paper').innerHTML,
+              count: counter
+          };
+      }
+
+      function switchProfile(profileName) {
+          saveCurrentProfileState();
+          activeProfile = profileName;
+          
+          if (profilesData[profileName]) {
+              document.getElementById('data-inputs-area').innerHTML = profilesData[profileName].inputs;
+              document.getElementById('cv-paper').innerHTML = profilesData[profileName].paper;
+              counter = profilesData[profileName].count;
+              attachDragEvents();
+              showToast(`تم التبديل إلى شخصية: ${profileName}`);
+          }
+      }
+
+      function addProfile() {
+          const name = document.getElementById('new-profile-name').value;
+          if(!name) return showToast('يرجى إدخال اسم الشخصية أولاً');
+          saveCurrentProfileState();
+          
+          const select = document.getElementById('profile-select');
+          const opt = document.createElement('option'); opt.text = name; opt.value = name;
+          select.add(opt); select.value = name; document.getElementById('new-profile-name').value = '';
+          
+          activeProfile = name;
+          document.getElementById('data-inputs-area').innerHTML = blankInputsHTML;
+          document.getElementById('cv-paper').innerHTML = blankPaperHTML;
+          counter = 0;
+          
+          addEl('titles'); addEl('contact'); addEl('summary'); addEl('portfolio');
+          attachDragEvents();
+          saveCurrentProfileState();
+          showToast('تم إضافة وتفعيل شخصية: ' + name);
+      }
+
+      function exportProfileJSON() {
+          saveCurrentProfileState();
+          const dl = document.createElement('a');
+          dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profilesData));
+          dl.download = "ATS_CV_Profiles.json"; dl.click();
+          showToast('تم تصدير جميع الشخصيات بنجاح');
+      }
+
+      function importProfileJSON(e) {
+          if(!e.target.files[0]) return;
+          const r = new FileReader();
+          r.onload = function(ev) {
+              const data = JSON.parse(ev.target.result);
+              profilesData = data;
+              const select = document.getElementById('profile-select');
+              select.innerHTML = '';
+              for(let key in profilesData) {
+                  const opt = document.createElement('option'); opt.text = key; opt.value = key;
+                  select.add(opt);
+              }
+              const firstProfile = Object.keys(profilesData)[0];
+              if(firstProfile) { select.value = firstProfile; switchProfile(firstProfile); }
+              showToast('تم استيراد الشخصيات بنجاح');
+          };
+          r.readAsText(e.target.files[0]);
+      }
+
+      async function exportWord() {
+          showToast('جاري تحضير ملف الوورد وتضمين الصور (قد يستغرق ثوانٍ)...');
+          
+          // 1. استنساخ الورقة
+          const paperClone = document.getElementById('cv-paper').cloneNode(true);
+          
+          // 2. تعديل تخطيط الهيدر ليناسب Word 
+          const header = paperClone.querySelector('.cv-header-area');
+          if(header) {
+              header.style.display = 'block'; 
+              const imgBox = header.querySelector('#cv-img-box');
+              if(imgBox) {
+                  imgBox.style.float = 'right';
+                  imgBox.style.marginLeft = '20px';
+                  imgBox.style.marginBottom = '10px';
+              }
+              const clearDiv = document.createElement('div');
+              clearDiv.style.clear = 'both';
+              header.appendChild(clearDiv);
+          }
+
+          // 3. استخراج الصور وتحويلها إلى أجزاء MHTML مدعومة للوورد
+          const images = paperClone.querySelectorAll('img');
+          let imageParts = '';
+          let imgIndex = 0;
+          const boundary = "----=_NextPart_Boundary_" + Math.random().toString(36).substring(2);
+
+          for (let img of images) {
+              // ضبط الأبعاد خصيصاً للوورد
+              if(img.classList.contains('cv-profile-img')) {
+                  img.setAttribute('width', '110');
+                  img.setAttribute('height', '110');
+                  img.style.width = '110px';
+                  img.style.height = '110px';
+              } else {
+                  img.setAttribute('width', '150');
+                  img.setAttribute('height', '120');
+                  img.style.width = '150px';
+                  img.style.height = '120px';
+                  img.style.display = 'block';
+                  img.style.margin = '0 auto';
+              }
+
+              let src = img.src;
+              let mimeType = 'image/jpeg';
+              let base64Data = '';
+              let isProcessed = false;
+
+              // معالجة صور Base64 (المرفوعة من الجهاز)
+              if (src.startsWith('data:image')) {
+                  const match = src.match(/^data:(image\/\w+);base64,(.*)$/);
+                  if (match) {
+                      mimeType = match[1];
+                      base64Data = match[2];
+                      isProcessed = true;
+                  }
+              } else {
+                  // محاولة جلب الصور الخارجية (مثل الـ placeholder) لتحويلها
+                  try {
+                      const res = await fetch(src);
+                      const blob = await res.blob();
+                      const base64 = await new Promise((resolve) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => resolve(reader.result);
+                          reader.readAsDataURL(blob);
+                      });
+                      const match = base64.match(/^data:(image\/\w+);base64,(.*)$/);
+                      if (match) {
+                          mimeType = match[1];
+                          base64Data = match[2];
+                          isProcessed = true;
+                      }
+                  } catch(e) {
+                      console.warn('تعذر تحميل الصورة كملف محلي، سيتم ترك الرابط:', src);
+                  }
+              }
+
+              if (isProcessed) {
+                  const extension = mimeType.split('/')[1] || 'jpeg';
+                  const imageName = `image_${imgIndex}.${extension}`;
+                  
+                  // ربط الصورة داخل الـ HTML بالمرفق الذي سننشئه
+                  img.src = imageName; 
+
+                  imageParts += `\r\n--${boundary}\r\nContent-Location: ${imageName}\r\nContent-Type: ${mimeType}\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64Data}\r\n`;
+                  imgIndex++;
+              }
+          }
+
+          // 4. تنسيقات Word CSS
+          const cssStyles = `
+          <style>
+              body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; color: #222; }
+              .cv-header-area { border-bottom: 2pt solid #2c3e50; padding-bottom: 15pt; margin-bottom: 20pt; text-align: right; }
+              .cv-name { font-size: 28pt; font-weight: bold; color: #2c3e50; margin: 0 0 5pt 0; }
+              .cv-contact-list { display: block; font-size: 11pt; margin-top: 10pt; }
+              .cv-contact-list > span { display: inline-block; margin-left: 15pt; }
+              .sec-title { font-size: 18pt; color: #2c3e50; border-bottom: 1pt solid #ddd; margin-bottom: 10pt; padding-bottom: 5pt; font-weight: bold; }
+              .portfolio-grid { text-align: center; }
+              .drag-section { margin-bottom: 15pt; }
+          </style>`;
+
+          const htmlContent = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>CV</title>" + cssStyles + "</head><body>" + paperClone.innerHTML + "</body></html>";
+          
+          // دالة تحويل ترميز HTML آمنة لدعم الحروف العربية في ملفات MHTML
+          const utf8ToBase64 = (str) => window.btoa(unescape(encodeURIComponent(str)));
+          
+          // 5. بناء هيكل المستند النهائي (MHTML Document)
+          let mhtml = `MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Location: document.html\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n${utf8ToBase64(htmlContent)}\r\n`;
+          
+          if(imageParts) { mhtml += imageParts; }
+          mhtml += `\r\n--${boundary}--\r\n`;
+
+          const blob = new Blob([mhtml], { type: 'application/msword' });
+          const url = URL.createObjectURL(blob);
+          
+          const downloadLink = document.createElement("a");
+          document.body.appendChild(downloadLink); 
+          downloadLink.href = url; 
+          downloadLink.download = `${activeProfile}_CV.doc`;
+          downloadLink.click(); 
+          document.body.removeChild(downloadLink);
+          URL.revokeObjectURL(url);
+          
+          showToast('تم تصدير ملف الوورد مع الصور بنجاح! 🖼️📄');
+      }
+
+      let isEng = false;
+      const staticDict = {
+          "التعريف الشخصي": "Profile Summary", "الخبرات العملية": "Professional Experience", "التعليم والمؤهلات": "Education", "المهارات": "Key Skills", "معرض الأعمال": "Portfolio", "الدورات والشهادات": "Courses & Certifications",
+          "تليفون:": "Phone:", "إيميل:": "Email:", "العنوان:": "Address:", "النوع:": "Type:"
+      };
+      const revStaticDict = Object.fromEntries(Object.entries(staticDict).map(([k, v]) => [v, k]));
+
+      async function translateAPI(text, sourceLang, targetLang) {
+          if(!text || text.trim() === '') return text;
+          try {
+              const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+              const res = await fetch(url);
+              const data = await res.json();
+              return data[0].map(item => item[0]).join('');
+          } catch (e) {
+              return text; 
+          }
+      }
+
+      async function translateAll() {
+          isEng = !isEng;
+          const paper = document.getElementById('cv-paper');
+          const btn = document.getElementById('trans-btn');
+          const loader = document.getElementById('trans-loader');
+          
+          paper.style.direction = isEng ? 'ltr' : 'rtl';
+          paper.style.textAlign = isEng ? 'left' : 'right';
+          btn.innerText = isEng ? "ترجمة السيرة (English / عربي)" : "ترجمة السيرة (عربي / English)";
+          
+          const sl = isEng ? 'ar' : 'en';
+          const tl = isEng ? 'en' : 'ar';
+          
+          loader.style.display = 'flex';
+
+          try {
+              const staticElements = document.querySelectorAll('.cv-paper .sec-title, .cv-paper .lang-txt');
+              staticElements.forEach(el => {
+                  let text = el.innerText.trim();
+                  if(isEng && staticDict[text]) el.innerText = staticDict[text];
+                  else if(!isEng && revStaticDict[text]) el.innerText = revStaticDict[text];
+              });
+
+              const inputsToTranslate = document.querySelectorAll('.controls-panel .translatable-input');
+              for (let input of inputsToTranslate) {
+                  let originalText = input.value;
+                  if (originalText && originalText.trim() !== '') {
+                      let translatedText = await translateAPI(originalText, sl, tl);
+                      input.value = translatedText;
+                      input.dispatchEvent(new Event('input', { bubbles: true }));
+                  }
+              }
+              showToast(isEng ? 'Translation Completed!' : 'تمت الترجمة بنجاح!');
+        } catch(err) {
+            showToast('حدث خطأ أثناء الاتصال بخدمة الترجمة.');
+        } finally {
+            loader.style.display = 'none';
+        }
+    }
+
+    let autoSaveTimeout;
+    function triggerAutoSave() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            saveCurrentProfileState();
+            localStorage.setItem('ats_cv_profiles', JSON.stringify(profilesData));
+            localStorage.setItem('ats_cv_active', activeProfile);
+        }, 1000); 
+    }
+
+    function initDefaultState() {
+        addEl('titles'); 
+        addEl('contact'); 
+        addEl('summary'); 
+        addEl('portfolio'); 
+        attachDragEvents();
+        saveCurrentProfileState(); 
+        showToast('تم تحميل بيئة العمل بنجاح');
+    }
+
+    window.onload = () => { 
+        const savedProfiles = localStorage.getItem('ats_cv_profiles');
+        const savedActive = localStorage.getItem('ats_cv_active');
+
+        if (savedProfiles && savedActive) {
+            try {
+                profilesData = JSON.parse(savedProfiles);
+                const select = document.getElementById('profile-select');
+                select.innerHTML = '';
+                for(let key in profilesData) {
+                    const opt = document.createElement('option'); opt.text = key; opt.value = key;
+                    select.add(opt);
+                }
+                select.value = savedActive;
+                activeProfile = savedActive;
+                document.getElementById('data-inputs-area').innerHTML = profilesData[savedActive].inputs;
+                document.getElementById('cv-paper').innerHTML = profilesData[savedActive].paper;
+                counter = profilesData[savedActive].count;
+                attachDragEvents();
+                showToast('تم استعادة آخر نسخة محفوظة تلقائياً 🔄');
+            } catch(e) {
+                initDefaultState();
+            }
+        } else {
+            initDefaultState();
+        }
+
+        document.addEventListener('input', triggerAutoSave);
+        document.addEventListener('change', triggerAutoSave);
+        document.addEventListener('dragend', triggerAutoSave); 
+        document.addEventListener('click', (e) => {
+            if(e.target.tagName === 'BUTTON' || e.target.type === 'checkbox') triggerAutoSave();
+        });
+    };
+
+</script>
+</body>
+</html>
