@@ -1,0 +1,773 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر فضاء الكون 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+        
+        body { font-family: 'Cairo', sans-serif; margin: 0; overflow: hidden; background-color: #000; user-select: none; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        #toolbar {
+            position: absolute; top: 20px; right: 20px; width: 340px; z-index: 10;
+            border-radius: 16px; padding: 20px; color: white; max-height: 90vh; overflow-y: auto;
+        }
+
+        .btn-tool {
+            background: rgba(30, 41, 59, 0.8); border: 1px solid #475569;
+            padding: 10px; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s; color: white; font-weight: bold; width: 100%;
+            display: flex; justify-content: center; align-items: center; gap: 8px;
+        }
+        .btn-tool:hover { background: rgba(51, 65, 85, 0.9); }
+        .btn-action { background: linear-gradient(to right, #0ea5e9, #2563eb); border: none; }
+        .btn-action:hover { background: linear-gradient(to right, #38bdf8, #3b82f6); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.4); }
+
+        input[type="range"] { width: 100%; cursor: pointer; accent-color: #38bdf8; }
+        .color-picker { width: 30px; height: 30px; border: none; border-radius: 50%; cursor: pointer; padding: 0; }
+        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+        #selection-info {
+            background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981;
+            color: #34d399; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 0.9rem;
+        }
+
+        /* ستايلات مكتبة الصور (Gallery Modal) */
+        #gallery-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.9); z-index: 100; backdrop-filter: blur(10px);
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        #gallery-content {
+            width: 80%; height: 80%; overflow-y: auto; display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px;
+        }
+        .gallery-item {
+            background: #1e293b; border-radius: 12px; padding: 10px; text-align: center; border: 1px solid #475569;
+        }
+        .gallery-item img { width: 100%; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: 0.3s; }
+        .gallery-item img:hover { border-color: #38bdf8; }
+        .gallery-actions { display: flex; justify-content: space-between; margin-top: 10px; }
+        .gallery-btn { padding: 5px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; color: white; border: none;}
+
+        /* ستايلات مخصصة للتمرير */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="toolbar" class="glass-panel">
+        <h1 class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-1">
+            محرر فضاء الكون 🌌
+        </h1>
+        <p class="text-[11px] text-slate-400 mb-4 border-b border-slate-700 pb-4">ابنِ مجموعتك الشمسية بمدارات منظمة. (اضغط على أي عنصر في الفضاء لتحديده)</p>
+
+        <!-- أدوات المشروع (استيراد/تصدير/ميديا) -->
+        <div class="mb-5 grid grid-cols-2 gap-2 border-b border-slate-700 pb-4">
+            <button onclick="exportProject()" class="btn-tool bg-indigo-500/20 border-indigo-500/50 hover:bg-indigo-500/40 text-xs">
+                💾 حفظ المشروع
+            </button>
+            <button onclick="triggerImport()" class="btn-tool bg-indigo-500/20 border-indigo-500/50 hover:bg-indigo-500/40 text-xs">
+                📂 استيراد مشروع
+            </button>
+            <button onclick="takeScreenshot()" class="btn-tool bg-pink-500/20 border-pink-500/50 hover:bg-pink-500/40 text-xs">
+                📸 لقطة شاشة
+            </button>
+            <button onclick="openGallery()" class="btn-tool bg-pink-500/20 border-pink-500/50 hover:bg-pink-500/40 text-xs">
+                🖼️ مكتبة الصور
+            </button>
+            <button id="btn-record" onclick="toggleRecording()" class="btn-tool bg-red-500/20 border-red-500/50 hover:bg-red-500/40 text-xs col-span-2">
+                🎥 تسجيل فيديو
+            </button>
+        </div>
+
+        <!-- حالة التحديد -->
+        <div class="mb-5">
+            <div id="selection-info">لم يتم تحديد شيء (اضغط بالماوس)</div>
+            <button onclick="deleteSelected()" class="btn-tool btn-danger mt-2 text-sm" id="btn-delete" style="display: none;">
+                🗑️ حذف العنصر المحدد
+            </button>
+        </div>
+
+        <!-- أدوات بناء المراكز (النجوم) -->
+        <div class="mb-5 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            <h3 class="text-sm font-bold text-amber-400 mb-3">☀️ النظام المركزي:</h3>
+            <button onclick="addStar()" class="btn-tool bg-amber-500/20 border-amber-500/50 text-amber-300 hover:bg-amber-500/40 text-sm">
+                + إضافة نجم جديد (مركز)
+            </button>
+            <p class="text-[10px] text-slate-400 mt-2">يضاف في نقطة عشوائية، أو اضغط مع السحب لتحريكه في الفضاء.</p>
+        </div>
+
+        <!-- أدوات بناء المدارات -->
+        <div class="mb-5 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+            <h3 class="text-sm font-bold text-cyan-400 mb-3">⭕ المدارات (تحتاج لتحديد نجم):</h3>
+            <button onclick="addOrbitToSelectedStar()" class="btn-tool bg-cyan-500/20 border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/40 text-sm">
+                + رسم مدار حول النجم المحدد
+            </button>
+        </div>
+
+        <!-- أدوات الكواكب والخصائص -->
+        <div class="mb-5 bg-slate-800/50 p-4 rounded-xl border border-emerald-500/30">
+            <h3 class="text-sm font-bold text-emerald-400 mb-3">🪐 الكواكب (تحتاج لتحديد مدار):</h3>
+            
+            <div class="mb-3">
+                <div class="flex justify-between text-xs mb-1"><span>حجم الكوكب</span> <span id="val-size">3</span></div>
+                <input type="range" id="param-size" min="1" max="10" step="0.5" value="3" oninput="document.getElementById('val-size').innerText=this.value">
+            </div>
+
+            <div class="mb-3">
+                <div class="flex justify-between text-xs mb-1"><span>سرعة الدوران</span> <span id="val-speed">متوسطة</span></div>
+                <input type="range" id="param-speed" min="0.002" max="0.03" step="0.002" value="0.01" oninput="updateSpeedLabel(this.value)">
+            </div>
+
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-sm text-slate-300">لون الكوكب:</span>
+                <input type="color" id="param-color" class="color-picker" value="#38bdf8">
+            </div>
+
+            <label class="flex items-center gap-2 cursor-pointer text-sm text-slate-300 mb-4">
+                <input type="checkbox" id="param-rings" class="w-4 h-4 rounded accent-cyan-500">
+                <span>كوكب بحلقات (مثل زحل)</span>
+            </label>
+
+            <button onclick="addPlanetToSelectedOrbit()" class="btn-tool btn-action text-sm">
+                + وضع الكوكب في المدار المحدد
+            </button>
+        </div>
+    </div>
+
+    <!-- نافذة مكتبة الصور المخفية -->
+    <div id="gallery-modal">
+        <div class="w-4/5 flex justify-between items-center mb-4 mt-10">
+            <h2 class="text-3xl text-white font-bold">مكتبة اللقطات الفضائية</h2>
+            <button onclick="closeGallery()" class="text-white bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg font-bold">إغلاق X</button>
+        </div>
+        <div id="gallery-content"></div>
+    </div>
+    
+    <!-- زر الإدخال المخفي للملفات -->
+    <input type="file" id="file-import" accept=".json" style="display:none" onchange="importProject(event)">
+
+    <script>
+        let scene, camera, renderer, controls;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // هياكل البيانات المنظمة
+        let stars = []; // يحوي النجوم
+        let orbits = []; // يحوي المدارات (تتبع نجم معين)
+        let planets = []; // يحوي الكواكب (تتبع مدار معين)
+
+        // حالة اللعبة
+        let selectedObject = null; // العنصر المحدد حالياً
+        let draggedObject = null; // العنصر الذي يتم سحبه
+        const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+        window.onload = function() {
+            init();
+            setupInitialSystem();
+            animate();
+        };
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020205);
+            createBackgroundStars();
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera.position.set(0, 200, 300);
+            camera.lookAt(0, 0, 0);
+
+            // إضافة preserveDrawingBuffer لتمكين التقاط الصور من الـ Canvas
+            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x333344, 0.6);
+            scene.add(ambientLight);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 1500;
+
+            window.addEventListener('resize', onWindowResize);
+            
+            // أحداث التحديد والسحب
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            renderer.domElement.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        }
+
+        class Star {
+            constructor(position) {
+                this.type = 'star';
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.position = position.clone();
+                this.orbits = []; // المدارات التابعة له
+
+                const geometry = new THREE.SphereGeometry(15, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.position.copy(this.position);
+                this.mesh.userData = { ref: this };
+                scene.add(this.mesh);
+
+                // إضاءة النجم
+                this.light = new THREE.PointLight(0xffddaa, 2, 1000);
+                this.light.position.copy(this.position);
+                scene.add(this.light);
+
+                // هالة النجم
+                const glowGeo = new THREE.SphereGeometry(20, 32, 32);
+                const glowMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending });
+                this.glow = new THREE.Mesh(glowGeo, glowMat);
+                this.mesh.add(this.glow); // نربط الهالة بالشبكة لتتحرك معها
+
+                stars.push(this);
+            }
+
+            updatePosition(newPos) {
+                this.position.copy(newPos);
+                this.mesh.position.copy(newPos);
+                this.light.position.copy(newPos);
+                // تحديث أماكن مداراته
+                this.orbits.forEach(orbit => orbit.updateCenter(newPos));
+            }
+
+            destroy() {
+                // مسح المدارات التابعة له أولاً
+                [...this.orbits].forEach(orbit => orbit.destroy());
+                scene.remove(this.mesh);
+                scene.remove(this.light);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+                stars = stars.filter(s => s.id !== this.id);
+                if(selectedObject === this) clearSelection();
+            }
+        }
+
+        class Orbit {
+            constructor(star, radius) {
+                this.type = 'orbit';
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.star = star;
+                this.radius = radius;
+                this.planets = []; // الكواكب على هذا المدار
+
+                // رسم خط المدار
+                const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
+                const points = curve.getPoints(64);
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                // تدوير المدار ليكون أفقياً
+                geometry.rotateX(Math.PI / 2);
+                
+                // المادة التي تتفاعل مع التحديد
+                const material = new THREE.LineBasicMaterial({ color: 0x475569, linewidth: 2 });
+                this.mesh = new THREE.Line(geometry, material);
+                this.mesh.position.copy(star.position);
+                
+                // لتسهيل النقر على الخط، نضيف سطح شفاف عريض قليلاً
+                const hitGeo = new THREE.RingGeometry(radius - 2, radius + 2, 64);
+                const hitMat = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+                this.hitMesh = new THREE.Mesh(hitGeo, hitMat);
+                this.hitMesh.rotation.x = Math.PI / 2;
+                this.mesh.add(this.hitMesh);
+
+                this.mesh.userData = { ref: this };
+                this.hitMesh.userData = { ref: this };
+                
+                scene.add(this.mesh);
+                star.orbits.push(this);
+                orbits.push(this);
+            }
+
+            updateCenter(pos) {
+                this.mesh.position.copy(pos);
+            }
+
+            destroy() {
+                [...this.planets].forEach(planet => planet.destroy());
+                scene.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+                this.star.orbits = this.star.orbits.filter(o => o.id !== this.id);
+                orbits = orbits.filter(o => o.id !== this.id);
+                if(selectedObject === this) clearSelection();
+            }
+        }
+
+        class Planet {
+            constructor(orbit, size, speed, colorHex, hasRings) {
+                this.type = 'planet';
+                this.id = Math.random().toString(36).substr(2, 9);
+                this.orbit = orbit;
+                this.angle = Math.random() * Math.PI * 2; // نقطة البداية عشوائية
+                this.speed = speed;
+                this.size = size;
+                this.hasRings = hasRings;
+                this.colorHex = colorHex;
+
+                const geometry = new THREE.SphereGeometry(size, 24, 24);
+                const material = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.7 });
+                this.mesh = new THREE.Mesh(geometry, material);
+                this.mesh.castShadow = true;
+                this.mesh.receiveShadow = true;
+                
+                if (hasRings) {
+                    const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.5, 32);
+                    const ringMat = new THREE.MeshStandardMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+                    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+                    ringMesh.rotation.x = Math.PI / 2 + 0.2; 
+                    this.mesh.add(ringMesh);
+                }
+
+                this.mesh.userData = { ref: this };
+                scene.add(this.mesh);
+                
+                orbit.planets.push(this);
+                planets.push(this);
+                
+                this.updatePosition();
+            }
+
+            updatePosition() {
+                // تحديث الزاوية
+                this.angle += this.speed;
+                // حساب الموقع بالنسبة للنجم والمدار
+                const x = this.orbit.star.position.x + Math.cos(this.angle) * this.orbit.radius;
+                const z = this.orbit.star.position.z + Math.sin(this.angle) * this.orbit.radius;
+                this.mesh.position.set(x, 0, z);
+                this.mesh.rotation.y += 0.02; // دوران حول نفسه
+            }
+
+            destroy() {
+                scene.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+                this.orbit.planets = this.orbit.planets.filter(p => p.id !== this.id);
+                planets = planets.filter(p => p.id !== this.id);
+                if(selectedObject === this) clearSelection();
+            }
+        }
+
+        function setupInitialSystem() {
+            // إنشاء شمس ومدارات جاهزة
+            const sun = new Star(new THREE.Vector3(0, 0, 0));
+            const orbit1 = new Orbit(sun, 60);
+            const orbit2 = new Orbit(sun, 120);
+            const orbit3 = new Orbit(sun, 180);
+
+            new Planet(orbit1, 3, 0.02, '#cbd5e1', false);
+            new Planet(orbit2, 5, 0.01, '#38bdf8', false);
+            new Planet(orbit3, 8, 0.005, '#f59e0b', true);
+        }
+
+        function createBackgroundStars() {
+            const starGeo = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const posArray = new Float32Array(starCount * 3);
+            for(let i = 0; i < starCount * 3; i+=3) {
+                const r = 800 + Math.random() * 1000;
+                const theta = 2 * Math.PI * Math.random();
+                const phi = Math.acos(2 * Math.random() - 1);
+                posArray[i] = r * Math.sin(phi) * Math.cos(theta);
+                posArray[i+1] = r * Math.sin(phi) * Math.sin(theta);
+                posArray[i+2] = r * Math.cos(phi);
+            }
+            starGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, transparent: true, opacity: 0.6 });
+            scene.add(new THREE.Points(starGeo, starMat));
+        }
+
+        function getIntersectedObject(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // نجمع كل الشبكات القابلة للنقر
+            let interactables = [];
+            stars.forEach(s => interactables.push(s.mesh));
+            planets.forEach(p => interactables.push(p.mesh));
+            orbits.forEach(o => interactables.push(o.hitMesh)); // نستخدم السطح المخفي للمدار لسهولة النقر
+
+            const intersects = raycaster.intersectObjects(interactables);
+            if (intersects.length > 0) {
+                return intersects[0].object.userData.ref;
+            }
+            return null;
+        }
+
+        function onPointerDown(event) {
+            if(event.target.tagName !== 'CANVAS') return;
+
+            const clickedObj = getIntersectedObject(event);
+            
+            if (clickedObj) {
+                selectObject(clickedObj);
+                // إذا كان نجماً يمكننا سحبه
+                if (clickedObj.type === 'star') {
+                    draggedObject = clickedObj;
+                    controls.enabled = false;
+                }
+            } else {
+                clearSelection();
+            }
+        }
+
+        function onPointerMove(event) {
+            if (draggedObject && draggedObject.type === 'star') {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                
+                const target = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, target);
+                if (target) {
+                    draggedObject.updatePosition(target);
+                }
+            }
+        }
+
+        function onPointerUp(event) {
+            draggedObject = null;
+            controls.enabled = true;
+        }
+
+        function selectObject(obj) {
+            // تنظيف التحديد القديم
+            clearSelectionGlow();
+            
+            selectedObject = obj;
+            const infoDiv = document.getElementById('selection-info');
+            const btnDelete = document.getElementById('btn-delete');
+            
+            btnDelete.style.display = 'flex';
+
+            if (obj.type === 'star') {
+                infoDiv.innerHTML = "تم تحديد: ☀️ نجم (مركز)";
+                infoDiv.style.color = "#fbbf24";
+                infoDiv.style.borderColor = "#fbbf24";
+                infoDiv.style.background = "rgba(251, 191, 36, 0.15)";
+                // تأثير بصري للتحديد
+                obj.mesh.material.color.setHex(0xffffff);
+            } 
+            else if (obj.type === 'orbit') {
+                infoDiv.innerHTML = "تم تحديد: ⭕ مسار (مدار)";
+                infoDiv.style.color = "#22d3ee";
+                infoDiv.style.borderColor = "#22d3ee";
+                infoDiv.style.background = "rgba(34, 211, 238, 0.15)";
+                obj.mesh.material.color.setHex(0x10b981); // يضيء المدار بالأخضر
+            }
+            else if (obj.type === 'planet') {
+                infoDiv.innerHTML = "تم تحديد: 🪐 كوكب";
+                infoDiv.style.color = "#34d399";
+                infoDiv.style.borderColor = "#34d399";
+                infoDiv.style.background = "rgba(52, 211, 153, 0.15)";
+                obj.mesh.material.emissive.setHex(0x10b981); // الكوكب يضيء
+            }
+        }
+
+        function clearSelectionGlow() {
+            if (!selectedObject) return;
+            if (selectedObject.type === 'star') {
+                selectedObject.mesh.material.color.setHex(0xfbbf24);
+            } else if (selectedObject.type === 'orbit') {
+                selectedObject.mesh.material.color.setHex(0x475569);
+            } else if (selectedObject.type === 'planet') {
+                selectedObject.mesh.material.emissive.setHex(0x000000);
+            }
+        }
+
+        function clearSelection() {
+            clearSelectionGlow();
+            selectedObject = null;
+            const infoDiv = document.getElementById('selection-info');
+            infoDiv.innerHTML = "لم يتم تحديد شيء (اضغط بالماوس)";
+            infoDiv.style.color = "#34d399";
+            infoDiv.style.borderColor = "#10b981";
+            infoDiv.style.background = "rgba(16, 185, 129, 0.15)";
+            document.getElementById('btn-delete').style.display = 'none';
+        }
+
+        function deleteSelected() {
+            if (selectedObject) {
+                selectedObject.destroy();
+            }
+        }
+
+        function addStar() {
+            // وضع نجم في مكان عشوائي قريب لتجنب التداخل
+            const x = (Math.random() - 0.5) * 400;
+            const z = (Math.random() - 0.5) * 400;
+            const star = new Star(new THREE.Vector3(x, 0, z));
+            selectObject(star);
+        }
+
+        function addOrbitToSelectedStar() {
+            if (!selectedObject || selectedObject.type !== 'star') {
+                alertUser("يرجى تحديد 'نجم' أولاً من الشاشة لترسم المدار حوله.");
+                return;
+            }
+            
+            // حساب مسافة المدار الجديد بناءً على عدد المدارات الحالية
+            const currentOrbits = selectedObject.orbits.length;
+            const newRadius = 60 + (currentOrbits * 60);
+            
+            const orbit = new Orbit(selectedObject, newRadius);
+            selectObject(orbit);
+        }
+
+        function addPlanetToSelectedOrbit() {
+            if (!selectedObject || selectedObject.type !== 'orbit') {
+                alertUser("يرجى تحديد 'مدار (خط)' أولاً لتضع الكوكب عليه.");
+                return;
+            }
+
+            const size = parseFloat(document.getElementById('param-size').value);
+            const speed = parseFloat(document.getElementById('param-speed').value);
+            const color = document.getElementById('param-color').value;
+            const hasRings = document.getElementById('param-rings').checked;
+
+            new Planet(selectedObject, size, speed, color, hasRings);
+        }
+
+        function updateSpeedLabel(val) {
+            let label = "متوسطة";
+            if(val < 0.01) label = "بطيئة جداً";
+            else if(val > 0.02) label = "سريعة جداً";
+            document.getElementById('val-speed').innerText = label;
+        }
+
+        function alertUser(msg) {
+            const info = document.getElementById('selection-info');
+            const oldHtml = info.innerHTML;
+            const oldBg = info.style.background;
+            
+            info.innerHTML = msg;
+            info.style.background = "rgba(239, 68, 68, 0.3)";
+            info.style.color = "#fca5a5";
+            info.style.borderColor = "#ef4444";
+            
+            setTimeout(() => {
+                if(selectedObject) selectObject(selectedObject);
+                else clearSelection();
+            }, 2500);
+        }
+
+        // ==========================================
+        // أدوات المحرر الاحترافية (حفظ/استيراد/تصوير)
+        // ==========================================
+
+        // 1. نظام حفظ واستيراد المشروع
+        function exportProject() {
+            const data = {
+                stars: stars.map(s => ({ id: s.id, x: s.position.x, y: s.position.y, z: s.position.z })),
+                orbits: orbits.map(o => ({ id: o.id, starId: o.star.id, radius: o.radius })),
+                planets: planets.map(p => ({ 
+                    id: p.id, orbitId: p.orbit.id, size: p.size, speed: p.speed, 
+                    color: p.colorHex, hasRings: p.hasRings, angle: p.angle 
+                }))
+            };
+            
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "universe_project.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+            
+            alertUser("تم تحميل ملف المشروع!");
+        }
+
+        function triggerImport() { document.getElementById('file-import').click(); }
+
+        function importProject(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    // مسح الكون الحالي
+                    [...planets].forEach(p => p.destroy());
+                    [...orbits].forEach(o => o.destroy());
+                    [...stars].forEach(s => s.destroy());
+                    clearSelection();
+                    
+                    // بناء الكون الجديد من الملف
+                    const starMap = {};
+                    const orbitMap = {};
+                    
+                    data.stars.forEach(sData => {
+                        const s = new Star(new THREE.Vector3(sData.x, sData.y, sData.z));
+                        starMap[sData.id] = s;
+                    });
+                    data.orbits.forEach(oData => {
+                        const s = starMap[oData.starId];
+                        if (s) {
+                            const o = new Orbit(s, oData.radius);
+                            orbitMap[oData.id] = o;
+                        }
+                    });
+                    data.planets.forEach(pData => {
+                        const o = orbitMap[pData.orbitId];
+                        if (o) {
+                            const p = new Planet(o, pData.size, pData.speed, pData.color, pData.hasRings);
+                            p.angle = pData.angle || 0;
+                            p.updatePosition();
+                        }
+                    });
+                    alertUser("تم استيراد الكون بنجاح! 🌌");
+                } catch (err) {
+                    alertUser("ملف غير صالح أو تالف!");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // تصفير الـ input
+        }
+
+        // 2. نظام لقطات الشاشة والمكتبة
+        let galleryImages = [];
+
+        function takeScreenshot() {
+            // نأخذ اللقطة من الكانفاس مباشرة
+            const dataURL = renderer.domElement.toDataURL('image/png');
+            galleryImages.push({ id: Date.now(), src: dataURL });
+            alertUser("📸 تم التقاط الصورة! (افتح مكتبة الصور)");
+        }
+
+        function openGallery() {
+            const modal = document.getElementById('gallery-modal');
+            const content = document.getElementById('gallery-content');
+            content.innerHTML = '';
+            
+            if (galleryImages.length === 0) {
+                content.innerHTML = '<p class="text-white text-xl text-center w-full mt-20">المكتبة فارغة. التقط بعض الصور أولاً!</p>';
+            } else {
+                galleryImages.forEach((img, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-item';
+                    item.innerHTML = `
+                        <img src="${img.src}" onclick="viewFullscreen('${img.src}')">
+                        <div class="gallery-actions">
+                            <button onclick="downloadImage('${img.src}')" class="gallery-btn bg-blue-500 hover:bg-blue-600">📥 تحميل</button>
+                            <button onclick="deleteImage(${index})" class="gallery-btn bg-red-500 hover:bg-red-600">🗑️ مسح</button>
+                        </div>
+                    `;
+                    content.appendChild(item);
+                });
+            }
+            modal.style.display = 'flex';
+        }
+
+        function closeGallery() { document.getElementById('gallery-modal').style.display = 'none'; }
+        
+        function deleteImage(index) {
+            galleryImages.splice(index, 1);
+            openGallery(); // تحديث العرض
+        }
+
+        function downloadImage(src) {
+            const a = document.createElement('a');
+            a.href = src;
+            a.download = `space_shot_${Date.now()}.png`;
+            a.click();
+        }
+
+        function viewFullscreen(src) {
+            // فتح الصورة في نافذة أو تبويب جديد بحجم كامل
+            const w = window.open("");
+            w.document.write(`<img src="${src}" style="width: 100%; height: 100%; object-fit: contain; background: #000;">`);
+        }
+
+        // 3. نظام تسجيل الفيديو
+        let mediaRecorder;
+        let recordedChunks = [];
+        let isRecording = false;
+
+        function toggleRecording() {
+            const btn = document.getElementById('btn-record');
+            
+            if (isRecording) {
+                // إيقاف التسجيل
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.innerHTML = "🎥 تسجيل فيديو";
+                btn.classList.remove('bg-red-600', 'animate-pulse');
+                btn.classList.add('bg-red-500/20');
+            } else {
+                // بدء التسجيل
+                try {
+                    const stream = renderer.domElement.captureStream(30); // 30 إطار في الثانية
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                    
+                    mediaRecorder.ondataavailable = function(e) {
+                        if (e.data.size > 0) recordedChunks.push(e.data);
+                    };
+                    
+                    mediaRecorder.onstop = function() {
+                        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `space_video_${Date.now()}.webm`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        recordedChunks = [];
+                        alertUser("تم حفظ الفيديو بنجاح! 🎥");
+                    };
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.innerHTML = "⏹️ إيقاف وحفظ الفيديو...";
+                    btn.classList.remove('bg-red-500/20');
+                    btn.classList.add('bg-red-600', 'animate-pulse');
+                } catch (e) {
+                    alertUser("متصفحك لا يدعم تسجيل الفيديو من الشاشة.");
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            // تحريك الكواكب في مداراتها
+            planets.forEach(p => p.updatePosition());
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
