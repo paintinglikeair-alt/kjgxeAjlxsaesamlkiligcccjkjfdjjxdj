@@ -1,0 +1,1717 @@
+<meta charset="UTF-8">
+    <title>استوديو العقل المميز الشامل V28 - دمج الكاريكاتير والفيكتور</title>
+    <script src="https://cdn.jsdelivr.net/npm/gif.js/dist/gif.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* ==========================================
+           CSS الاستوديو الكبير الأساسي
+           ========================================== */
+        body { margin: 0; padding: 0; background-color: #1a1a1a; }
+        .studio-wrapper { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a1a; color: #fff; margin: 0; display: flex; height: calc(100vh - 80px); min-height: 600px; width: 100%; overflow: hidden; direction: rtl; position: relative; }
+        .studio-wrapper * { box-sizing: border-box; }
+        
+        .sidebar { width: 480px; background-color: #252525; padding: 15px; box-shadow: -2px 0 10px rgba(0,0,0,0.8); display: flex; flex-direction: column; gap: 10px; z-index: 10; overflow-y: auto; border-left: 1px solid #444; }
+        h2.main-title { margin: 0; font-size: 1.1rem; color: #4da6ff; text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .tool-box { background: #333; padding: 12px; border-radius: 8px; border-right: 4px solid #4da6ff; margin-bottom: 5px; }
+        label.main-label { font-size: 0.75rem; color: #bbb; display: block; margin-bottom: 4px; }
+        .flex-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+        button.main-btn { background-color: #444; color: #fff; border: none; padding: 6px; cursor: pointer; border-radius: 4px; transition: 0.2s; font-size: 0.75rem; }
+        button.main-btn:hover { background-color: #666; }
+        button.add-btn { background-color: #28a745; font-weight: bold; width: 100%; margin-top: 5px; }
+        button.active-tool { background-color: #dc3545 !important; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .list-container { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; background: #111; padding: 8px; border-radius: 5px; border: 1px solid #444; }
+        .list-item { background: #3a3a3a; padding: 8px; border-radius: 4px; border-bottom: 2px solid #555; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+        .item-ctrls { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; border-top: 1px solid #555; padding-top: 5px; margin-top: 5px; width: 100%;}
+        input[type="text"].edit-input { background: #111; color: #fff; border: 1px solid #666; padding: 4px; border-radius: 3px; font-size: 0.8rem; width: 85%; }
+        input[type="number"].main-inp, select.main-sel { background: #111; color: #fff; border: 1px solid #555; font-size: 0.75rem; padding: 2px; }
+        
+        .main-area { flex-grow: 1; display: flex; flex-direction: column; background-color: #121212; position: relative; }
+        .workspace { flex-grow: 1; display: flex; justify-content: center; align-items: center; overflow: auto; background-image: radial-gradient(#333 1px, transparent 1px); background-size: 25px 25px; }
+        #canvas { box-shadow: 0 0 25px rgba(0,0,0,0.9); background-color: transparent; cursor: crosshair; }
+        .del-btn { background: #c0392b; font-size: 10px; padding: 2px 6px; border-radius: 3px; width: auto; color: white; border:none; cursor:pointer;}
+        .dup-btn { background: #2980b9; font-size: 10px; padding: 2px 6px; border-radius: 3px; width: auto; color: white; border:none; cursor:pointer;}
+        
+        .timeline-bar { background: #222; border-top: 2px solid #4da6ff; display: flex; flex-direction: column; padding: 10px 15px; gap: 10px; z-index: 10;}
+        .timeline-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .frames-container { display: flex; gap: 10px; overflow-x: auto; padding: 5px; background: #111; border-radius: 5px; min-height: 120px; align-items: center; }
+        .frame-thumb { min-width: 140px; background: #333; border: 2px solid #444; border-radius: 6px; display: flex; flex-direction: column; padding: 5px; font-size: 10px; position: relative; transition: 0.2s; gap:4px; cursor: grab;}
+        .frame-thumb:active { cursor: grabbing; }
+        .frame-thumb.drag-over { border-color: #f39c12; transform: scale(1.02); }
+        .frame-thumb:hover { border-color: #2ecc71; }
+        .frame-thumb img { width: 100%; height: 60px; object-fit: contain; border-radius: 4px; background: #111; pointer-events: none; }
+        .frame-thumb-header { display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 11px; }
+        .frame-thumb-ctrls { display: flex; gap: 4px; justify-content: center; align-items: center; }
+        .frame-thumb-ctrls button { padding: 2px 5px; font-size: 9px; border:none; cursor:pointer; color:white; border-radius:3px;}
+        .layer-btn { padding: 4px 8px; font-size: 0.8rem; border-radius: 3px; color: white; border:none; cursor:pointer;}
+        .hidden-file { display: none; }
+
+        .left-panel-btn { position: absolute; left: 15px; top: 15px; z-index: 30; background: #e67e22; padding: 10px 15px; border-radius: 5px; font-weight: bold; font-size: 1rem; border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; transition: 0.3s; color:white;}
+        .left-panel-btn:hover { background: #d35400; transform: scale(1.05); }
+        
+        .layers-panel { position: absolute; left: -320px; top: 0; width: 330px; height: 100vh; background: rgba(30, 30, 30, 0.95); backdrop-filter: blur(5px); border-right: 3px solid #e67e22; z-index: 25; transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; padding: 70px 15px 15px 15px; box-shadow: 5px 0 20px rgba(0,0,0,0.8); }
+        .layers-panel.open { left: 0; }
+        .layers-panel h3 { margin: 0 0 15px 0; color: #e67e22; border-bottom: 2px solid #555; padding-bottom: 10px; }
+        .layers-list { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px; }
+        .layer-item { background: #333; padding: 10px; border-radius: 6px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-right: 4px solid #555; cursor: grab; transition: background 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .layer-item:active { cursor: grabbing; }
+        .layer-item.dragging { opacity: 0.5; background: #444; border-right-color: #e67e22; }
+        .layer-info { display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden; }
+        .layer-drag-handle { cursor: grab; color: #888; font-size: 1.2rem; }
+        .layer-name { font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .layer-tools { display: flex; gap: 4px; }
+        .layer-tools button { padding: 4px; font-size: 0.8rem; border-radius: 4px; border:none; cursor:pointer; color:white;}
+        .btn-grab.active { background-color: #2ecc71 !important; color: #000; box-shadow: 0 0 8px #2ecc71; animation: pulse 1s infinite; }
+        
+        .wand-btn { background: #9b59b6; border: 1px solid #8e44ad; color:white; padding:6px; cursor:pointer; border-radius:4px;}
+        .wand-btn:hover { background: #8e44ad; }
+
+        /* ==========================================
+           CSS استوديو الكاريكاتير المدمج 
+           (مغلف بـ cari-wrapper لتجنب التعارض)
+           ========================================== */
+        .cari-wrapper {
+            --primary: #6c5ce7; --secondary: #00cec9; --dark: #2d3436; 
+            --light: #f5f6fa; --border: #dfe6e9; --danger: #ff7675; --warning: #fdcb6e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--dark);
+            color: #333;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column; padding: 10px; box-sizing: border-box;
+        }
+        
+        .cari-wrapper .top-bar { display: flex; justify-content: space-between; background: white; padding: 10px 20px; border-radius: 10px; margin-bottom: 10px; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .cari-wrapper .top-bar h2 { margin: 0; color: var(--primary); font-size:1.5rem;}
+        .cari-wrapper .project-btns { display: flex; gap: 10px; }
+        .cari-wrapper .btn-project { padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s;}
+        .cari-wrapper .btn-save-proj { background: #27ae60; } .cari-wrapper .btn-load-proj { background: #2980b9; }
+        
+        /* أزرار التصدير للاستوديو الكبير */
+        .btn-export-main { padding: 8px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; background: #e84393; box-shadow: 0 0 8px rgba(232, 67, 147, 0.5);}
+        .btn-export-main:hover { filter: brightness(1.1); transform: scale(1.05);}
+
+        .cari-wrapper .main-layout { display: grid; grid-template-columns: 280px 1fr 280px; gap: 15px; height: calc(100% - 70px); }
+        .cari-wrapper .panel { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); overflow-y: auto; }
+        .cari-wrapper h3 { margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; font-size: 16px;}
+
+        .cari-wrapper .form-group { margin-bottom: 15px; }
+        .cari-wrapper label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color:#333;}
+        .cari-wrapper select, .cari-wrapper input[type="text"], .cari-wrapper input[type="file"] { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 5px; box-sizing: border-box; color:#333; background:white;}
+        .cari-wrapper .btn-upload { width: 100%; background: var(--secondary); color: white; padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .cari-wrapper .btn-upload:hover { background: #00b8b5; }
+        .cari-wrapper .btn-empty { background: #a29bfe; } .cari-wrapper .btn-empty:hover { background: #8174ff; }
+
+        .cari-wrapper .preview-header { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; flex-wrap: wrap; gap: 5px;}
+        .cari-wrapper .view-btn, .cari-wrapper .tool-btn, .cari-wrapper .export-btn { padding: 6px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .cari-wrapper .view-btn { background: #34495e; color: white; } .cari-wrapper .view-btn.active { background: var(--primary); }
+        .cari-wrapper .tool-btn { background: #eee; border: 2px solid var(--border); color:#333;} .cari-wrapper .tool-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
+        .cari-wrapper .export-btn { background: #e84393; color: white; } .cari-wrapper .export-btn:hover { background: #d63031; }
+        
+        .cari-wrapper .canvas-container { background: var(--light); height: 500px; border-radius: 10px; position: relative; border: 2px dashed #b2bec3; overflow: hidden; display: flex; justify-content: center; user-select: none; }
+        .cari-wrapper #mannequin { position: relative; width: 400px; height: 100%; }
+        
+        .cari-wrapper .part { position: absolute; background: rgba(255, 234, 167, 0.4); border: 1px dashed #fab1a0; display: flex; justify-content: center; align-items: center; font-size: 10px; color: #d63031; cursor: move; transition: outline 0.2s; background-size: contain; background-repeat: no-repeat; background-position: center; transform-origin: 50% 15%; box-sizing:border-box;}
+        .cari-wrapper .part:hover { outline: 2px solid var(--primary); z-index: 100 !important; }
+        .cari-wrapper .part.selected { outline: 3px solid var(--secondary); box-shadow: 0 0 10px var(--secondary); z-index: 100 !important; }
+        
+        .cari-wrapper .accessory-part { background: rgba(155, 89, 182, 0.2); border-color: #9b59b6; color: #9b59b6; width: 80px; height: 80px; left: 160px; top: 100px; z-index: 50 !important; transform-origin: 50% 50%; }
+
+        .cari-wrapper .part-label { pointer-events: none; }
+        .cari-wrapper .part img { width: 100%; height: 100%; object-fit: contain; position: absolute; top:0; left:0; pointer-events: none; }
+        
+        .cari-wrapper .front-view .part > img[data-view="side"] { display: none !important; }
+        .cari-wrapper .side-view .part > img[data-view="front"] { display: none !important; }
+        .cari-wrapper .front-view .part.has-front-img { background: transparent; border: none; }
+        .cari-wrapper .front-view .part.has-front-img > .part-label { display: none; }
+        .cari-wrapper .side-view .part.has-side-img { background: transparent; border: none; }
+        .cari-wrapper .side-view .part.has-side-img > .part-label { display: none; }
+        .cari-wrapper .front-view .accessory-part[data-acc-view="side"] { display: none !important; }
+        .cari-wrapper .side-view .accessory-part[data-acc-view="front"] { display: none !important; }
+
+        .cari-wrapper .export-mode .part { background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; }
+        .cari-wrapper .export-mode .part-label { display: none !important; }
+
+        /* إحداثيات المانيكان */
+        .cari-wrapper .front-view .chest { width: 120px; height: 90px; left: 140px; top: 145px; border-radius: 20px 20px 10px 10px; z-index: 6; }
+        .cari-wrapper .front-view .neck { width: 30px; height: 30px; left: 45px; top: -25px; border-radius: 5px; z-index: 5; }
+        .cari-wrapper .front-view .head { width: 90px; height: 110px; left: -30px; top: -100px; border-radius: 40% 40% 50% 50%; z-index: 10; }
+        .cari-wrapper .front-view .ear_r { width: 15px; height: 35px; left: -15px; top: 40px; border-radius: 10px 0 0 10px; z-index: -1; }
+        .cari-wrapper .front-view .ear_l { width: 15px; height: 35px; left: 90px; top: 40px; border-radius: 0 10px 10px 0; z-index: -1; }
+        .cari-wrapper .front-view .eyes { width: 60px; height: 30px; left: 15px; top: 40px; border: none; z-index: 11; }
+        .cari-wrapper .front-view .nose { width: 20px; height: 30px; left: 35px; top: 60px; border: none; z-index: 11; }
+        .cari-wrapper .front-view .mouth { width: 40px; height: 20px; left: 25px; top: 85px; border: none; z-index: 11; }
+        .cari-wrapper .front-view .hair { width: 110px; height: 60px; left: -10px; top: -10px; border: none; z-index: 12; transform-origin: 50% 50%;}
+        .cari-wrapper .front-view .pelvis { width: 110px; height: 60px; left: 5px; top: 85px; border-radius: 10px 10px 30px 30px; z-index: 6; }
+        .cari-wrapper .front-view .arm_upper_r { width: 35px; height: 80px; left: -40px; top: 5px; border-radius: 15px; z-index: 4; }
+        .cari-wrapper .front-view .arm_lower_r { width: 30px; height: 80px; left: 2px; top: 70px; border-radius: 15px; z-index: 4; }
+        .cari-wrapper .front-view .hand_r { width: 25px; height: 35px; left: 3px; top: 75px; border-radius: 10px; z-index: 4; }
+        .cari-wrapper .front-view .arm_upper_l { width: 35px; height: 80px; left: 125px; top: 5px; border-radius: 15px; z-index: 4; }
+        .cari-wrapper .front-view .arm_lower_l { width: 30px; height: 80px; left: 2px; top: 70px; border-radius: 15px; z-index: 4; }
+        .cari-wrapper .front-view .hand_l { width: 25px; height: 35px; left: 3px; top: 75px; border-radius: 10px; z-index: 4; }
+        .cari-wrapper .front-view .leg_upper_r { width: 45px; height: 100px; left: 0px; top: 50px; border-radius: 20px; z-index: 5; }
+        .cari-wrapper .front-view .leg_lower_r { width: 35px; height: 100px; left: 5px; top: 90px; border-radius: 15px; z-index: 5; }
+        .cari-wrapper .front-view .foot_r { width: 45px; height: 25px; left: -5px; top: 95px; border-radius: 10px 15px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+        .cari-wrapper .front-view .leg_upper_l { width: 45px; height: 100px; left: 65px; top: 50px; border-radius: 20px; z-index: 5; }
+        .cari-wrapper .front-view .leg_lower_l { width: 35px; height: 100px; left: 5px; top: 90px; border-radius: 15px; z-index: 5; }
+        .cari-wrapper .front-view .foot_l { width: 45px; height: 25px; left: -5px; top: 95px; border-radius: 15px 10px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+
+        .cari-wrapper .side-view .chest { width: 80px; height: 95px; left: 165px; top: 145px; border-radius: 20px; z-index: 6; }
+        .cari-wrapper .side-view .neck { width: 25px; height: 35px; left: 20px; top: -25px; z-index: 5; }
+        .cari-wrapper .side-view .head { width: 100px; height: 110px; left: -35px; top: -100px; border-radius: 40% 60% 60% 40%; z-index: 10; }
+        .cari-wrapper .side-view .ear_r { display: none; }
+        .cari-wrapper .side-view .ear_l { width: 20px; height: 35px; left: 45px; top: 45px; border-radius: 10px; z-index: 12; }
+        .cari-wrapper .side-view .eyes { width: 30px; height: 30px; left: 60px; top: 40px; border: none; z-index: 11; }
+        .cari-wrapper .side-view .nose { width: 25px; height: 30px; left: 85px; top: 60px; border: none; z-index: 11; }
+        .cari-wrapper .side-view .mouth { width: 25px; height: 20px; left: 75px; top: 85px; border: none; z-index: 11; }
+        .cari-wrapper .side-view .hair { width: 110px; height: 70px; left: 0px; top: -10px; border: none; z-index: 12; transform-origin: 50% 50%;}
+        .cari-wrapper .side-view .pelvis { width: 85px; height: 65px; left: -5px; top: 85px; border-radius: 20px; z-index: 6; }
+        .cari-wrapper .side-view .arm_upper_r, .cari-wrapper .side-view .leg_upper_r { display: none; }
+        .cari-wrapper .side-view .arm_upper_l { width: 40px; height: 85px; left: 20px; top: 5px; border-radius: 20px; z-index: 7; }
+        .cari-wrapper .side-view .arm_lower_l { width: 35px; height: 85px; left: 2px; top: 75px; border-radius: 15px; z-index: 7; }
+        .cari-wrapper .side-view .hand_l { width: 30px; height: 40px; left: 3px; top: 75px; border-radius: 10px; z-index: 7; }
+        .cari-wrapper .side-view .leg_upper_l { width: 55px; height: 105px; left: 15px; top: 50px; border-radius: 25px; z-index: 5; }
+        .cari-wrapper .side-view .leg_lower_l { width: 40px; height: 105px; left: 5px; top: 95px; border-radius: 20px; z-index: 5; }
+        .cari-wrapper .side-view .foot_l { width: 60px; height: 30px; left: -10px; top: 95px; border-radius: 20px 5px 5px 5px; z-index: 5; transform-origin: 50% 50%;}
+
+        .cari-wrapper .transform-controls { margin-top: 10px; background: #eee; padding: 10px; border-radius: 10px; display: none; color:#333;}
+        .cari-wrapper .slider-group { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+        .cari-wrapper .slider-group label { width: 50px; margin: 0; font-size: 11px; font-weight: bold;}
+        .cari-wrapper .slider-group input { flex: 1; }
+        .cari-wrapper .btn-unequip { background: var(--danger); color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; margin-top: 5px; font-size: 12px; font-weight: bold; width: 100%; transition: 0.2s;}
+        .cari-wrapper .btn-unequip:hover { background: #d63031; }
+
+        .cari-wrapper .library-filters { margin-bottom: 10px; display: flex; gap: 5px; }
+        .cari-wrapper .library-filters select { flex: 1; padding: 5px; border-radius: 5px; }
+        .cari-wrapper .library-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .cari-wrapper .library-item { position: relative; border: 2px solid var(--border); border-radius: 8px; padding: 25px 5px 5px 5px; text-align: center; cursor: pointer; background: var(--light); transition: 0.2s; }
+        .cari-wrapper .library-item:hover { border-color: var(--primary); }
+        .cari-wrapper .library-item img { width: 100%; height: 60px; object-fit: contain; background: repeating-conic-gradient(#eee 0% 25%, transparent 0% 50%) 50% / 20px 20px; border-radius: 5px;}
+        .cari-wrapper .library-item p { margin: 5px 0 0 0; font-size: 11px; font-weight: bold; color:#333;}
+        
+        .cari-wrapper .item-actions { position: absolute; top: 2px; right: 2px; left: 2px; display: flex; justify-content: flex-end; gap: 2px; z-index: 10; }
+        .cari-wrapper .icon-btn { width: 22px; height: 22px; border: none; border-radius: 50%; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; }
+        .cari-wrapper .icon-btn.delete { background: var(--danger); }
+        .cari-wrapper .icon-btn.edit { background: var(--warning); }
+        .cari-wrapper .icon-btn.draw { background: var(--primary); }
+        .cari-wrapper .icon-btn.download { background: #27ae60; }
+        .cari-wrapper .icon-btn:hover { transform: scale(1.1); }
+
+        /* ==========================================
+           النوافذ المنبثقة (Modals) المشتركة والمطورة
+           ========================================== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 9999 !important; overflow-y:auto;}
+        .modal-content { background: white; padding: 20px; border-radius: 15px; max-width: 95%; color:#333;}
+        .full-modal { width: 95%; height: 95%; display: flex; flex-direction: column; padding: 0;}
+        
+        .vector-editor-modal { width: 950px; display: flex; flex-direction: column; gap: 15px; }
+        .editor-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .editor-header h3 { margin: 0; border: none; padding: 0; color:#6c5ce7;}
+        .editor-body { display: flex; gap: 15px; }
+        
+        .vector-tools { width: 280px; background: #f8f9fa; padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; max-height: 550px; overflow-y: auto;}
+        .tool-section { border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+        .tool-section h4 { margin: 0 0 10px 0; font-size: 13px; color: #6c5ce7; }
+        
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        .v-btn { padding: 8px; font-size: 11px; font-weight: bold; border: 1px solid #ccc; background: white; border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; color:#333;}
+        .v-btn:hover { background: #eee; }
+        .v-btn.active { background: #00cec9; color: white; border-color: #00cec9; }
+        
+        .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; font-size: 12px; color:#333;}
+        .prop-row input[type="color"] { width: 30px; height: 30px; padding: 0; border: none; cursor: pointer; }
+        .prop-row input[type="range"], .prop-row input[type="number"] { width: 110px; }
+        .prop-row input[type="number"] { padding:4px; border:1px solid #ccc; border-radius:4px;}
+
+        .vector-canvas-wrapper { flex: 1; border: 2px dashed #b2bec3; background: repeating-conic-gradient(#eee 0% 25%, transparent 0% 50%) 50% / 20px 20px; display: flex; justify-content: center; align-items: center; min-height: 500px;}
+        
+        .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top:10px;}
+        .btn-save-edit { background: #27ae60 !important; color: white !important; padding: 10px 25px; border: 2px solid #2ecc71; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }
+        .btn-save-edit:hover { background: #219ca1 !important; transform: scale(1.05); }
+        .btn-cancel { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; background: #b2bec3; color: white;}
+    </style>
+
+
+    <div class="studio-wrapper">
+        <div class="sidebar">
+            <h2 class="main-title">🎨 استوديو العقل المميز الشامل V28</h2>
+            
+            <div class="tool-box" style="border-right-color: #bdc3c7;">
+                <label class="main-label" style="color:#bdc3c7; font-weight:bold;">🔲 إعدادات اللوحة والخلفية</label>
+                <div class="flex-row">
+                    <label class="main-label">صورة:</label><input type="file" id="imageUpload" accept="image/*" style="width:120px; font-size: 0.7rem;">
+                    <label class="main-label">الشفافية:</label><input type="range" id="opacitySlider" min="0" max="1" step="0.1" value="1" style="width:50px">
+                </div>
+                <div class="flex-row" style="background: #2a2a2a; padding: 5px; border-radius: 5px; border: 1px dashed #888;">
+                    <button id="btnWand" class="wand-btn" onclick="setTool('wand')" title="إضغط هنا ثم إضغط على لون في الخلفية لحذفه">🪄 تفريغ الخلفية (عصا سحرية)</button>
+                    <label class="main-label" style="margin:0;">قوة الحذف:</label><input type="number" id="wandTolerance" class="main-inp" value="30" min="0" max="255" style="width:40px" title="تفاوت الألوان">
+                    <button class="main-btn" onclick="resetBgImage()" style="background:#e74c3c; padding:4px;" title="استعادة الصورة الأصلية">↩️ استعادة</button>
+                </div>
+                <div class="item-ctrls">
+                    <label class="main-label">عرض:</label><input type="number" id="bgWidth" class="main-inp" value="800" style="width:50px">
+                    <label class="main-label">طول:</label><input type="number" id="bgHeight" class="main-inp" value="600" style="width:50px">
+                    <button class="main-btn" onclick="applyBgSize()" style="background:#007bff; flex-grow:1; font-weight:bold;">تطبيق الأبعاد</button>
+                </div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #ff9f43;">
+                <label class="main-label" style="color:#ff9f43; font-weight:bold;">🎙️ نظام الصوت المصاحب للمشروع</label>
+                <div class="flex-row">
+                    <button class="main-btn" id="btnVoiceRecord" onclick="toggleVoiceRecord()" style="background:#e67e22; flex-grow:1; font-weight:bold;">🎤 تسجيل صوتي مباشر</button>
+                    <input type="file" id="audioUpload" accept="audio/*" style="width:120px; font-size: 0.7rem;">
+                </div>
+                <audio id="bgAudio" controls="" style="width: 100%; margin-top: 5px; height: 30px; display:none;"></audio>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #1abc9c;">
+                <label class="main-label" style="color:#1abc9c; font-weight:bold;">📊 رسوم توضيحية ومخططات</label>
+                <div class="flex-row">
+                    <select id="diagramType" class="main-sel" style="flex-grow:1">
+                        <option value="pie">دائرة نسب (Pie)</option> <option value="bar">أعمدة بيانية (Bar)</option> <option value="fishbone">مخطط السمكة (Fishbone)</option>
+                    </select>
+                </div>
+                <div class="flex-row">
+                    <label class="main-label">عدد الخانات:</label><input type="number" id="diagramFields" class="main-inp" value="4" min="1" style="width:40px">
+                    <input type="color" id="diagramDefColor" value="#1abc9c">
+                </div>
+                <button class="main-btn add-btn" id="btnDiagram" onclick="setTool('diagram')">+ وضع رسم توضيحي للوحة</button>
+                <div id="diagramsCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #e67e22;">
+                <label class="main-label" style="color:#e67e22; font-weight:bold;">📝 نصوص تحليلية</label>
+                <input type="text" id="txtInput" class="edit-input" placeholder="اكتب ملاحظتك هنا..." style="width:90%; padding:5px; margin-bottom:5px;">
+                <div class="flex-row">
+                    <select id="txtDefFont" class="main-sel" style="flex-grow:1">
+                        <option value="Segoe UI">Segoe UI</option><option value="Arial">Arial</option><option value="Tahoma">Tahoma</option><option value="Impact">Impact</option>
+                    </select>
+                    <input type="color" id="txtDefColor" value="#ffffff">
+                    <input type="number" id="txtDefSize" class="main-inp" value="24" style="width:40px">
+                </div>
+                <button class="main-btn add-btn" id="btnText" onclick="setTool('text')">+ إضافة الكلمة</button>
+                <div id="textsCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #e74c3c;">
+                <label class="main-label" style="color:#e74c3c; font-weight:bold;">🖋️ قلم الرسم الحر</label>
+                <div class="flex-row">
+                    <input type="color" id="penDefColor" value="#ff0000">
+                    <label class="main-label">السمك:</label><input type="number" id="penDefWidth" class="main-inp" value="3" style="width:40px">
+                </div>
+                <button class="main-btn add-btn" id="btnPen" onclick="setTool('pen')">+ تفعيل قلم الرسم</button>
+                <div id="drawingsCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #9b59b6;">
+                <label class="main-label" style="color:#9b59b6; font-weight:bold;">⭐ أشكال توضيحية</label>
+                <div class="flex-row">
+                    <select id="shapeType" class="main-sel"><option value="circle">دائرة</option><option value="square">مربع</option><option value="triangle">مثلث</option><option value="star">نجمة</option><option value="diamond">معين</option></select>
+                    <input type="color" id="shapeDefColor" value="#9b59b6">
+                </div>
+                <button class="main-btn add-btn" id="btnShape" onclick="setTool('shape')">+ وضع شكل جديد</button>
+                <div id="shapesCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #3498db;">
+                <label class="main-label" style="color:#3498db; font-weight:bold;">↗️ السهم الحر</label>
+                <div class="flex-row">
+                    <input type="color" id="faDefColor" value="#3498db">
+                    <label class="main-label">السمك:</label><input type="number" id="faDefWidth" class="main-inp" value="4" style="width:40px">
+                    <label class="main-label">الشفافية:</label><input type="range" id="faDefAlpha" min="0.1" max="1" step="0.1" value="1" style="width:50px">
+                </div>
+                <div class="flex-row">
+                    <select id="faLineStyle" class="main-sel" style="flex-grow:1"><option value="solid">عادي</option><option value="dashed">شُرط</option><option value="dotted">منقط</option></select>
+                    <select id="faHeadShape" class="main-sel" style="flex-grow:1"><option value="normal">رأس عادي</option><option value="steep">رأس حاد</option></select>
+                </div>
+                <button class="main-btn add-btn" id="btnFreeRay" onclick="setTool('freeRay')">+ وضع سهم حر</button>
+                <div id="freeRaysCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #f1c40f; background:#3d3d3d;">
+                <label class="main-label" style="color:#f1c40f; font-weight:bold;">✒️ أدوات الفيكتور المتقدمة</label>
+                <button class="main-btn add-btn" style="background:#f39c12; color:#000;" onclick="openMainVectorEditor()">+ فتح محرر الفيكتور الاحترافي</button>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #f39c12;">
+                <label class="main-label" style="color:#f39c12; font-weight:bold;">🖼️ صور خارجية (ستيكرز)</label>
+                <input type="file" id="stickerUpload" accept="image/*">
+                <div id="stickersCont" class="list-container"></div>
+            </div>
+
+            <div class="tool-box" style="border-right-color: #ff4d4d;">
+                <div class="flex-row">
+                    <label class="main-label" style="color:#ff4d4d; font-weight:bold;">🔴 المنظور المقيد</label>
+                    <select id="perspType" class="main-sel" style="flex-grow:1"><option value="1">نقطة 1</option><option value="2">نقطتين</option><option value="3">3 نقاط</option></select>
+                </div>
+                <div class="flex-row">
+                    <select id="rayOriginVP" class="main-sel" style="flex-grow:1"><option value="0">من النقطة 1</option><option value="1">من النقطة 2</option><option value="2">من النقطة 3</option></select>
+                    <button class="main-btn" onclick="addPerspRay()" style="background:#dc143c; font-weight:bold;">+ شعاع منظور</button>
+                </div>
+                <div id="raysCont" class="list-container"></div>
+            </div>
+
+            <button class="main-btn add-btn" style="background:#007bff; padding:12px; margin-top:10px;" onclick="downloadCanvasPNG()">⬇️ تحميل الصورة الثابتة (PNG مفرغ)</button>
+        </div>
+
+        <div class="main-area">
+            <div style="position: absolute; left: 15px; top: 15px; z-index: 40; display: flex; gap: 10px;">
+                <div style="position: relative;">
+                    <button class="left-panel-btn" style="position:relative; left:0; top:0; background: #8e44ad;" onclick="document.getElementById('cari-dropdown').style.display = document.getElementById('cari-dropdown').style.display === 'none' ? 'block' : 'none'">👤 تكوين تصميم شخصية ▼</button>
+                    <div id="cari-dropdown" style="display:none; position: absolute; top: 100%; left: 0; background: #222; padding: 10px; border-radius: 5px; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); width: 100%; margin-top:5px;">
+                        <button class="main-btn" onclick="openCariStudioModal()" style="background: #2ecc71; color: white; padding: 8px; width: 100%; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">✨ إنشاء</button>
+                    </div>
+                </div>
+                <button class="left-panel-btn" style="position:relative; left:0; top:0;" onclick="toggleLayersPanel()">🗂️ مدير الطبقات والتحديد الحر</button>
+            </div>
+            
+            <div class="layers-panel" id="layersPanel">
+                <h3>ترتيب طبقات المشروع</h3>
+                <div style="font-size: 0.75rem; color: #aaa; margin-bottom: 10px;">إسحب وأفلت لترتيب الطبقات. لدمج العناصر حددها واضغط على الزر أدناه.</div>
+                
+                <div style="display:flex; gap:5px; margin-bottom:10px; width: 100%;">
+                    <button class="main-btn" onclick="groupSelectedLayers()" style="background:#2980b9; flex-grow:1; font-weight:bold; padding:8px; color:#fff; border:none; border-radius:4px; cursor:pointer;">🔗 تجميع العناصر المحددة</button>
+                </div>
+                <div class="layers-list" id="layersList"></div>
+            </div>
+
+            <div class="workspace"><canvas id="canvas"></canvas></div>
+            
+            <div class="timeline-bar">
+                <div class="timeline-controls">
+                    <button class="main-btn" id="btnRecord" style="background:#e74c3c; font-weight:bold; padding: 8px 15px;" onclick="toggleRecord()">⏺️ تسجيل الحركة (التايم لاين)</button>
+                    <button class="main-btn" id="btnPlay" style="background:#2ecc71; font-weight:bold; padding: 8px 15px;" onclick="togglePlay()">▶️ تشغيل الموشن</button>
+                    <button class="main-btn" id="btnStop" style="background:#f39c12; font-weight:bold; padding: 8px 15px;" onclick="stopAnim()">⏹️ إيقاف</button>
+                    <input type="range" id="timeSlider" min="0" max="600" value="0" style="flex-grow: 1;" oninput="scrubTime()">
+                    <span id="timeDisplay" style="font-size:0.9rem; font-weight:bold; color:#4da6ff; width: 60px; text-align: left;">0 / 600</span>
+                    
+                    <button class="main-btn" id="btnExportVid" style="background:#2980b9; font-weight:bold; padding: 8px 15px;" onclick="downloadTimelineVideo(false)">🎬 تصدير موشن (عادي)</button>
+                    <button class="main-btn" id="btnExportVidTrans" style="background:#9b59b6; font-weight:bold; padding: 8px 15px;" onclick="downloadTimelineVideo(true)">🎬 تصدير موشن (شفاف)</button>
+                    <button class="main-btn" id="btnExportGifTrans" style="background:#8e44ad; font-weight:bold; padding: 8px 15px; box-shadow: 0 0 5px rgba(255,255,255,0.5);" onclick="downloadTimelineGIF()">🌟 تصدير موشن (GIF شفاف)</button>
+                </div>
+
+                <div class="tool-box" style="background: #111; margin: 0; padding: 8px; border-right: 4px solid #2ecc71; display:flex; align-items:center; gap:10px; flex-wrap: wrap;">
+                    <label class="main-label" style="color:#2ecc71; font-weight:bold; margin:0;">🎞️ مشاهد الستوري بورد:</label>
+                    <button class="main-btn" onclick="addManualFrame()" style="background:#2ecc71; font-weight:bold;">+ إضافة مشهد للوحة الحالية</button>
+                    <button class="main-btn" onclick="playManualFrames()" style="background:#3498db; font-weight:bold;">▶️ عرض مسبق للمشاهد</button>
+                    
+                    <button class="main-btn" onclick="exportStoryboardVideo(false)" style="background:#d35400; font-weight:bold;">🎬 تصدير المشاهد (عادي)</button>
+                    <button class="main-btn" onclick="exportStoryboardVideo(true)" style="background:#e67e22; font-weight:bold;">🎬 تصدير المشاهد (شفاف)</button>
+                    <button class="main-btn" onclick="exportStoryboardGIF()" style="background:#f39c12; font-weight:bold; box-shadow: 0 0 5px rgba(255,255,255,0.5);">🌟 تصدير المشاهد (GIF شفاف)</button>
+
+                    <button class="main-btn" onclick="clearFrames()" style="background:#c0392b;">🗑️ مسح الكل</button>
+                </div>
+                
+                <div id="framesCont" class="frames-container"></div>
+            </div>
+            <audio id="frameAudioPlayer" style="display:none;"></audio>
+        </div>
+
+        <div class="modal-overlay" id="cari-app-modal">
+            <div class="modal-content full-modal">
+                <div class="cari-wrapper">
+                    <div class="top-bar">
+                        <h2>🎨 استوديو الكاريكاتير الاحترافي</h2>
+                        <div class="project-btns">
+                            <button class="btn-export-main" onclick="exportCariToMain('front')">تصدير للاستديو الكبير امامي ⬇️</button>
+                            <button class="btn-export-main" style="background:#6c5ce7;" onclick="exportCariToMain('side')">تصدير للاستديو الكبير جانبي ⬇️</button>
+                            <input type="file" id="cari-load-project-input" style="display: none;" accept=".json" onchange="cariLoadProject(event)">
+                            <button class="btn-project btn-load-proj" onclick="document.getElementById('cari-load-project-input').click()">📂 استيراد مشروع</button>
+                            <button class="btn-project btn-save-proj" onclick="cariSaveProject()">💾 حفظ المشروع</button>
+                            <button class="btn-project" style="background:#e74c3c;" onclick="closeModal('cari-app-modal')">❌ إغلاق</button>
+                        </div>
+                    </div>
+
+                    <div class="main-layout">
+                        <div class="panel">
+                            <h3>🎨 المكتبة</h3>
+                            <div class="library-filters">
+                                <select id="cari-filter-category" onchange="cariRenderLibrary()"><option value="all">كل الأجزاء</option></select>
+                                <select id="cari-filter-view" onchange="cariRenderLibrary()">
+                                    <option value="front">أمامي</option>
+                                    <option value="side">جانبي</option>
+                                </select>
+                            </div>
+                            <div class="library-grid" id="cari-library-container"></div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="preview-header">
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="view-btn active" id="cari-btn-front" onclick="cariSwitchView('front')">أمامي</button>
+                                    <button class="view-btn" id="cari-btn-side" onclick="cariSwitchView('side')">جانبي</button>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="export-btn" onclick="cariExportCharacter('front')">📸 تصدير أمامي (صورة)</button>
+                                    <button class="export-btn" onclick="cariExportCharacter('side')">📸 تصدير جانبي (صورة)</button>
+                                </div>
+                            </div>
+                            <div class="preview-header" style="justify-content: center; gap: 10px; background: #eee; padding: 5px; border-radius: 5px;">
+                                <button class="tool-btn active" id="cari-tool-move" onclick="cariSetCanvasTool('move')" title="تحريك العنصر">✋ تحريك</button>
+                                <button class="tool-btn" id="cari-tool-rotate" onclick="cariSetCanvasTool('rotate')" title="تدوير العنصر 360 درجة من المفصل">🔄 تدوير</button>
+                            </div>
+                            
+                            <div class="canvas-container" id="cari-main-canvas-container" onclick="cariDeselectPart(event)">
+                                <div id="mannequin" class="front-view">
+                                    <div class="part chest" id="part-chest" onclick="cariSelectPart(event, 'part-chest')"><span class="part-label">صدر</span>
+                                        <div class="part neck" id="part-neck" onclick="cariSelectPart(event, 'part-neck')"><span class="part-label">رقبة</span>
+                                            <div class="part head" id="part-head" onclick="cariSelectPart(event, 'part-head')"><span class="part-label">رأس</span>
+                                                <div class="part ear_r" id="part-ear_r" onclick="cariSelectPart(event, 'part-ear_r')"><span class="part-label">أذن ي</span></div>
+                                                <div class="part ear_l" id="part-ear_l" onclick="cariSelectPart(event, 'part-ear_l')"><span class="part-label">أذن س</span></div>
+                                                <div class="part eyes" id="part-eyes" onclick="cariSelectPart(event, 'part-eyes')"><span class="part-label">عيون</span></div>
+                                                <div class="part nose" id="part-nose" onclick="cariSelectPart(event, 'part-nose')"><span class="part-label">أنف</span></div>
+                                                <div class="part mouth" id="part-mouth" onclick="cariSelectPart(event, 'part-mouth')"><span class="part-label">فم</span></div>
+                                                <div class="part hair" id="part-hair" onclick="cariSelectPart(event, 'part-hair')"><span class="part-label">شعر</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="part arm_upper_r" id="part-arm_upper_r" onclick="cariSelectPart(event, 'part-arm_upper_r')"><span class="part-label">زند ي</span>
+                                            <div class="part arm_lower_r" id="part-arm_lower_r" onclick="cariSelectPart(event, 'part-arm_lower_r')"><span class="part-label">ساعد ي</span>
+                                                <div class="part hand_r" id="part-hand_r" onclick="cariSelectPart(event, 'part-hand_r')"><span class="part-label">كف ي</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="part arm_upper_l" id="part-arm_upper_l" onclick="cariSelectPart(event, 'part-arm_upper_l')"><span class="part-label">زند س</span>
+                                            <div class="part arm_lower_l" id="part-arm_lower_l" onclick="cariSelectPart(event, 'part-arm_lower_l')"><span class="part-label">ساعد س</span>
+                                                <div class="part hand_l" id="part-hand_l" onclick="cariSelectPart(event, 'part-hand_l')"><span class="part-label">كف س</span></div>
+                                            </div>
+                                        </div>
+                                        <div class="part pelvis" id="part-pelvis" onclick="cariSelectPart(event, 'part-pelvis')"><span class="part-label">حوض</span>
+                                            <div class="part leg_upper_r" id="part-leg_upper_r" onclick="cariSelectPart(event, 'part-leg_upper_r')"><span class="part-label">فخذ ي</span>
+                                                <div class="part leg_lower_r" id="part-leg_lower_r" onclick="cariSelectPart(event, 'part-leg_lower_r')"><span class="part-label">ساق ي</span>
+                                                    <div class="part foot_r" id="part-foot_r" onclick="cariSelectPart(event, 'part-foot_r')"><span class="part-label">قدم ي</span></div>
+                                                </div>
+                                            </div>
+                                            <div class="part leg_upper_l" id="part-leg_upper_l" onclick="cariSelectPart(event, 'part-leg_upper_l')"><span class="part-label">فخذ س</span>
+                                                <div class="part leg_lower_l" id="part-leg_lower_l" onclick="cariSelectPart(event, 'part-leg_lower_l')"><span class="part-label">ساق س</span>
+                                                    <div class="part foot_l" id="part-foot_l" onclick="cariSelectPart(event, 'part-foot_l')"><span class="part-label">قدم س</span></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="transform-controls" id="cari-transform-panel">
+                                <h4 style="margin-top:0; color: #d63031;">تعديل: <span id="cari-selected-part-name">...</span></h4>
+                                <div class="slider-group">
+                                    <label>العرض:</label><input type="range" id="cari-scale-x" min="0.5" max="3" step="0.1" value="1" oninput="cariApplyTransform()">
+                                </div>
+                                <div class="slider-group">
+                                    <label>الطول:</label><input type="range" id="cari-scale-y" min="0.5" max="3" step="0.1" value="1" oninput="cariApplyTransform()">
+                                </div>
+                                <div class="slider-group">
+                                    <label>الكلي:</label><input type="range" id="cari-scale-all" min="0.5" max="3" step="0.1" value="1" oninput="cariApplyTransformAll()">
+                                </div>
+                                <div class="slider-group" style="background: #eccc68; padding: 5px; border-radius: 5px; margin-top: 5px;">
+                                    <label>التدوير:</label><input type="range" id="cari-rotate-deg" min="-180" max="180" step="1" value="0" oninput="cariApplyTransform()">
+                                </div>
+                                <button class="btn-unequip" id="cari-btn-unequip" onclick="cariUnequipCurrentPart()">↩️ إزالة الصورة واسترجاع المركز</button>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <h3>📥 إضافة عنصر جديد</h3>
+                            <div class="form-group">
+                                <label>الجزء الأساسي:</label>
+                                <select id="cari-upload-category">
+                                    <option value="head">الرأس</option> <option value="ear_r">أذن يمنى</option> <option value="ear_l">أذن يسرى</option>
+                                    <option value="eyes">العيون</option> <option value="nose">الأنف</option> <option value="mouth">الفم</option> <option value="hair">الشعر</option>
+                                    <option value="neck">الرقبة</option> <option value="chest">الصدر</option> <option value="pelvis">الحوض / الوسط</option>
+                                    <option value="arm_upper_r">الزند الأيمن</option> <option value="arm_lower_r">الساعد الأيمن</option> <option value="hand_r">كف يمنى</option>
+                                    <option value="arm_upper_l">الزند الأيسر</option> <option value="arm_lower_l">الساعد الأيسر</option> <option value="hand_l">كف يسرى</option>
+                                    <option value="leg_upper_r">الفخذ الأيمن</option> <option value="leg_lower_r">الساق اليمنى</option> <option value="foot_r">قدم يمنى</option>
+                                    <option value="leg_upper_l">الفخذ الأيسر</option> <option value="leg_lower_l">الساق اليسرى</option> <option value="foot_l">قدم يسرى</option>
+                                    <option value="accessory" style="background: #e1b12c; color: white; font-weight: bold;">💎 إكسسوارات وملابس (حُر)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>زاوية الرؤية:</label>
+                                <select id="cari-upload-view"><option value="front">أمامي</option><option value="side">جانبي</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>اسم أو وصف العنصر:</label>
+                                <input type="text" id="cari-upload-name" placeholder="مثال: نظارة، سيف، قبعة...">
+                            </div>
+                            <div class="form-group">
+                                <label>صورة العنصر (PNG شفافة):</label>
+                                <input type="file" id="cari-upload-file" accept="image/png">
+                            </div>
+                            <button class="btn-upload" onclick="cariHandleUpload()">⬆️ رفع للمكتبة</button>
+                            <button class="btn-upload btn-empty" onclick="cariCreateEmptyItem()">✨ إنشاء عنصر فيكتور فارغ</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="cari-vector-editor-modal" style="z-index: 10000 !important;">
+            <div class="modal-content vector-editor-modal">
+                <div class="editor-header">
+                    <h3>✒️ محرر الفيكتور (مكتبة الشخصية)</h3>
+                    <button class="btn-cancel" onclick="closeModal('cari-vector-editor-modal')" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+                </div>
+                <div class="editor-body">
+                    <div class="vector-tools">
+                        <div class="tool-section">
+                            <h4>أدوات الإضافة</h4>
+                            <div class="action-grid">
+                                <button class="v-btn active" id="cari-vtool-select" onclick="cariFabSetMode('select')">👆 تحديد</button>
+                                <button class="v-btn" id="cari-vtool-draw" onclick="cariFabSetMode('draw')">🖌️ رسم حر</button>
+                                <button class="v-btn" onclick="cariFabAddShape('rect')">⬛ مربع</button>
+                                <button class="v-btn" onclick="cariFabAddShape('circle')">⭕ دائرة</button>
+                                <button class="v-btn" onclick="cariFabAddShape('triangle')">🔺 مثلث</button>
+                                <button class="v-btn" onclick="cariFabAddShape('star')">⭐ نجمة</button>
+                                <button class="v-btn" onclick="cariFabAddShape('polygon')">⬟ مضلع</button>
+                                <button class="v-btn" onclick="cariFabAddShape('heart')">❤️ قلب</button>
+                                <button class="v-btn" onclick="cariFabAddShape('bubble')">💬 فقاعة</button>
+                                <button class="v-btn" onclick="cariFabAddShape('arrow')">➡️ سهم</button>
+                                <button class="v-btn" onclick="cariFabAddShape('line')">➖ خط</button>
+                            </div>
+                            <input type="file" id="cari-sticker-upload" accept="image/*" style="display:none;" onchange="cariFabAddSticker(event)">
+                            <button class="add-btn" style="background:#27ae60; margin-top: 10px; font-size:12px; padding:8px;" onclick="document.getElementById('cari-sticker-upload').click()">🖼️ ملصق (من الجهاز)</button>
+                        </div>
+                        <div class="tool-section">
+                            <h4>الخصائص</h4>
+                            <div class="prop-row"><span>لون التعبئة:</span><input type="color" id="cari-v-fill" value="#ffffff" onchange="cariUpdateProp('fill', this.value)"></div>
+                            <div class="prop-row"><span>لون الإطار/الفرشاة:</span><input type="color" id="cari-v-stroke" value="#000000" onchange="cariUpdateProp('stroke', this.value)"></div>
+                            <div class="prop-row"><span>سمك الإطار: <span id="cari-val-stroke">2</span></span><input type="range" id="cari-v-stroke-width" min="0" max="20" value="2" oninput="cariUpdateProp('strokeWidth', parseInt(this.value)); document.getElementById('cari-val-stroke').innerText=this.value;"></div>
+                            <div class="prop-row"><span>الشفافية: <span id="cari-val-opacity">1</span></span><input type="range" id="cari-v-opacity" min="0.1" max="1" step="0.1" value="1" oninput="cariUpdateProp('opacity', parseFloat(this.value)); document.getElementById('cari-val-opacity').innerText=this.value;"></div>
+                        </div>
+                        <div class="tool-section">
+                            <h4>التحكم</h4>
+                            <div class="action-grid">
+                                <button class="v-btn" onclick="cariFabAction('front')">⏫ للمقدمة</button> <button class="v-btn" onclick="cariFabAction('back')">⏬ للخلفية</button>
+                                <button class="v-btn" onclick="cariFabAction('forward')">🔼 للأمام</button> <button class="v-btn" onclick="cariFabAction('backward')">🔽 للخلف</button>
+                                <button class="v-btn" onclick="cariFabAction('group')">🔗 تجميع</button> <button class="v-btn" onclick="cariFabAction('ungroup')">✂️ تفكيك</button>
+                                <button class="v-btn" onclick="cariFabAction('clone')">👯 تكرار</button> <button class="v-btn" style="color:#d63031; border-color:#d63031;" onclick="cariFabAction('delete')">🗑️ حذف</button>
+                                <button class="v-btn" onclick="cariFabAction('flipX')">↔️ عكس أفقي</button> <button class="v-btn" onclick="cariFabAction('flipY')">↕️ عكس رأسي</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="vector-canvas-wrapper"><canvas id="cari-fab-canvas"></canvas></div>
+                </div>
+                <div class="modal-btns">
+                    <button class="btn-cancel" onclick="closeModal('cari-vector-editor-modal')">إلغاء</button>
+                    <button class="btn-save-edit" onclick="cariSaveVectorDrawing()">💾 حفظ الرسمة للمكتبة</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="main-vector-editor-modal" style="z-index: 10000 !important;">
+            <div class="modal-content vector-editor-modal">
+                <div class="editor-header">
+                    <h3>✒️ محرر الفيكتور المتقدم (الاستوديو الشامل)</h3>
+                    <button class="btn-cancel" onclick="closeModal('main-vector-editor-modal')" style="background:none; border:none; font-size:20px; cursor:pointer; color:#333;">❌</button>
+                </div>
+                <div class="editor-body">
+                    <div class="vector-tools">
+                        <div class="tool-section">
+                            <h4>أدوات الإضافة</h4>
+                            <div class="action-grid">
+                                <button class="v-btn active" id="main-vtool-select" onclick="mainFabSetMode('select')">👆 تحديد</button>
+                                <button class="v-btn" id="main-vtool-draw" onclick="mainFabSetMode('draw')">🖌️ رسم حر</button>
+                                <button class="v-btn" onclick="mainFabAddShape('rect')">⬛ مربع</button>
+                                <button class="v-btn" onclick="mainFabAddShape('circle')">⭕ دائرة</button>
+                                <button class="v-btn" onclick="mainFabAddShape('triangle')">🔺 مثلث</button>
+                                <button class="v-btn" onclick="mainFabAddShape('star')">⭐ نجمة</button>
+                                <button class="v-btn" onclick="mainFabAddShape('polygon')">⬟ مضلع</button>
+                                <button class="v-btn" onclick="mainFabAddShape('heart')">❤️ قلب</button>
+                                <button class="v-btn" onclick="mainFabAddShape('bubble')">💬 فقاعة</button>
+                                <button class="v-btn" onclick="mainFabAddShape('arrow')">➡️ سهم</button>
+                                <button class="v-btn" onclick="mainFabAddShape('line')">➖ خط</button>
+                            </div>
+                            <input type="file" id="main-sticker-upload" accept="image/*" style="display:none;" onchange="mainFabAddSticker(event)">
+                            <button class="add-btn" style="background:#27ae60; margin-top: 10px; font-size:12px; padding:8px;" onclick="document.getElementById('main-sticker-upload').click()">🖼️ إدراج صورة للجلسة</button>
+                        </div>
+                        <div class="tool-section">
+                            <h4>الخصائص والأبعاد</h4>
+                            <div class="prop-row"><span>لون التعبئة:</span><input type="color" id="main-v-fill" value="#ffffff" onchange="mainUpdateProp('fill', this.value)"></div>
+                            <div class="prop-row"><span>لون الإطار/الفرشاة:</span><input type="color" id="main-v-stroke" value="#000000" onchange="mainUpdateProp('stroke', this.value)"></div>
+                            <div class="prop-row"><span>سمك الإطار: <span id="main-val-stroke">2</span></span><input type="range" id="main-v-stroke-width" min="0" max="20" value="2" oninput="mainUpdateProp('strokeWidth', parseInt(this.value)); document.getElementById('main-val-stroke').innerText=this.value;"></div>
+                            <div class="prop-row"><span>الشفافية: <span id="main-val-opacity">1</span></span><input type="range" id="main-v-opacity" min="0.1" max="1" step="0.1" value="1" oninput="mainUpdateProp('opacity', parseFloat(this.value)); document.getElementById('main-val-opacity').innerText=this.value;"></div>
+                            
+                            <div class="prop-row"><span>العرض (W):</span><input type="number" id="main-v-width" value="100" onchange="mainUpdateDimension('width', this.value)"></div>
+                            <div class="prop-row"><span>الطول (H):</span><input type="number" id="main-v-height" value="100" onchange="mainUpdateDimension('height', this.value)"></div>
+                            <div class="prop-row"><span>زاوية التدوير:</span><input type="number" id="main-v-angle" value="0" onchange="mainUpdateProp('angle', parseFloat(this.value))"></div>
+                        </div>
+                        <div class="tool-section">
+                            <h4>التحكم والتعديل</h4>
+                            <div class="action-grid">
+                                <button class="v-btn" onclick="mainFabAction('front')">⏫ للمقدمة</button> <button class="v-btn" onclick="mainFabAction('back')">⏬ للخلفية</button>
+                                <button class="v-btn" onclick="mainFabAction('forward')">🔼 للأمام</button> <button class="v-btn" onclick="mainFabAction('backward')">🔽 للخلف</button>
+                                <button class="v-btn" onclick="mainFabAction('group')">🔗 تجميع</button> <button class="v-btn" onclick="mainFabAction('ungroup')">✂️ تفكيك</button>
+                                <button class="v-btn" onclick="mainFabAction('clone')">👯 تكرار</button> <button class="v-btn" style="color:#d63031; border-color:#d63031;" onclick="mainFabAction('delete')">🗑️ حذف</button>
+                                <button class="v-btn" onclick="mainFabAction('flipX')">↔️ عكس أفقي</button> <button class="v-btn" onclick="mainFabAction('flipY')">↕️ عكس رأسي</button>
+                            </div>
+                            <button class="add-btn" style="background:#e74c3c; margin-top:5px;" onclick="if(confirm('مسح اللوحة بالكامل؟')) mainFabCanvas.clear();">مسح اللوحة بالكامل</button>
+                        </div>
+                    </div>
+                    <div class="vector-canvas-wrapper"><canvas id="main-fab-canvas"></canvas></div>
+                </div>
+                <div class="modal-btns">
+                    <button class="btn-cancel" onclick="closeModal('main-vector-editor-modal')">إلغاء</button>
+                    <button class="btn-save-edit" onclick="mainSaveVectorToStudio()">💾 تصدير الرسم كطبقة للاستوديو الكبير</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="cari-edit-cat-modal" style="z-index: 10000 !important;">
+            <div class="modal-content">
+                <h3 style="color:#6c5ce7; margin-top:0;">تعديل تصنيف العنصر</h3>
+                <input type="hidden" id="cari-edit-item-id">
+                <div class="form-group"><label>الجزء الأساسي:</label><select id="cari-edit-category" style="width:100%; padding:8px; border:1px solid #ccc;"></select></div>
+                <div class="form-group"><label>زاوية الرؤية:</label><select id="cari-edit-view" style="width:100%; padding:8px; border:1px solid #ccc;"><option value="front">أمامي</option><option value="side">جانبي</option></select></div>
+                <div class="modal-btns"><button class="btn-cancel" onclick="closeModal('cari-edit-cat-modal')">إلغاء</button><button class="btn-save" onclick="cariSaveCategory()" style="background:#27ae60; color:white; border:none; padding:8px 15px; border-radius:5px; cursor:pointer;">حفظ</button></div>
+            </div>
+        </div>
+    </div> <script>
+    // =========================================================================
+    // الجزء الأول: سكربت الاستوديو الكبير الأساسي (Main Studio)
+    // =========================================================================
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    canvas.width = 800; canvas.height = 600;
+    
+    let currentTool = 'pointer', activeDrag = null;
+    let vps = [{x: 400, y: 300}, {x: 200, y: 300}, {x: 400, y: 100}];
+    let perspRays = [], freeRays = [], shapes = [], texts = [], drawings = [], stickers = [], diagrams = [], groups = [];
+    let isDrawing = false, currentPath = [];
+
+    let originalBgImg = null; 
+    let bgCanvas = document.createElement('canvas');
+    let bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
+    window.isTransparentExportActive = false;
+
+    let layers = []; 
+    layers.push({ id: 'bg-color', type: 'bgColor', name: 'لون اللوحة (اختياري)', visible: true, locked: true, color: '#ffffff', alpha: 1.0 });
+    layers.push({ id: 'bg-image', type: 'bgImage', name: 'صورة الخلفية الأساسية', visible: true, locked: true, alpha: 1.0 });
+    layers.push({ id: 'grid', type: 'grid', name: 'شبكة الأثلاث', visible: false, locked: true, color: '#000000', gridParams: { x: 50, y: 50, w: 400, h: 300 } });
+    layers.push({ id: 'persp', type: 'persp', name: 'نقاط المنظور الأساسية', visible: false, locked: true });
+
+    let activeGrabLayerId = null;
+    let globalVoiceStream = null, globalVoiceRecorder = null, globalAudioChunks = [], isGlobalVoiceRecording = false, globalUploadedAudioUrl = null;
+    let manualFrames = [];
+
+    const ui = {
+        raysCont: document.getElementById('raysCont'), shapesCont: document.getElementById('shapesCont'), 
+        textsCont: document.getElementById('textsCont'), drawingsCont: document.getElementById('drawingsCont'), 
+        stickersCont: document.getElementById('stickersCont'), diagramsCont: document.getElementById('diagramsCont'), 
+        freeRaysCont: document.getElementById('freeRaysCont')
+    };
+
+    function generateId() { return 'obj_' + Date.now() + '_' + Math.floor(Math.random() * 1000); }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function toggleLayersPanel() { document.getElementById('layersPanel').classList.toggle('open'); }
+    function openCariStudioModal() { document.getElementById('cari-dropdown').style.display = 'none'; document.getElementById('cari-app-modal').style.display = 'flex'; }
+
+    window.setTool = function(t) {
+        currentTool = (currentTool === t) ? 'pointer' : t;
+        activeGrabLayerId = null; 
+        renderLayersPanel(); 
+        ['btnShape', 'btnText', 'btnPen', 'btnDiagram', 'btnFreeRay', 'btnWand'].forEach(id => {
+            let b = document.getElementById(id);
+            if(b) b.className = (currentTool === id.replace('btn','').toLowerCase()) ? (id==='btnWand'?'wand-btn active-tool':'main-btn add-btn active-tool') : (id==='btnWand'?'wand-btn':'main-btn add-btn');
+        });
+    }
+
+    window.applyBgSize = function() {
+        canvas.width = parseInt(document.getElementById('bgWidth').value);
+        canvas.height = parseInt(document.getElementById('bgHeight').value);
+        vps[0]={x:canvas.width/2, y:canvas.height/2}; vps[1]={x:20, y:canvas.height/2}; vps[2]={x:canvas.width/2, y:20};
+        draw();
+    }
+
+    document.getElementById('imageUpload').addEventListener('change', e => {
+        const reader = new FileReader(); 
+        reader.onload = ev => { 
+            originalBgImg = new Image(); 
+            originalBgImg.onload = () => { 
+                const ratio = Math.min((window.innerWidth-500)/originalBgImg.width, (window.innerHeight-100)/originalBgImg.height); 
+                canvas.width = originalBgImg.width * ratio; 
+                canvas.height = originalBgImg.height * ratio; 
+                document.getElementById('bgWidth').value = Math.round(canvas.width); 
+                document.getElementById('bgHeight').value = Math.round(canvas.height);
+                vps[0]={x:canvas.width/2, y:canvas.height/2}; vps[1]={x:20, y:canvas.height/2}; vps[2]={x:canvas.width/2, y:20}; 
+                resetBgImage();
+            }; 
+            originalBgImg.src = ev.target.result; 
+        }; 
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    window.resetBgImage = function() {
+        if(!originalBgImg) return;
+        bgCanvas.width = originalBgImg.width; bgCanvas.height = originalBgImg.height;
+        bgCtx.clearRect(0,0, bgCanvas.width, bgCanvas.height);
+        bgCtx.drawImage(originalBgImg, 0, 0); draw();
+    }
+
+    function applyMagicWand(mx, my) {
+        if (!bgCanvas.width || !originalBgImg) return;
+        let scaleX = bgCanvas.width / canvas.width; let scaleY = bgCanvas.height / canvas.height;
+        let startX = Math.floor(mx * scaleX); let startY = Math.floor(my * scaleY);
+        if(startX < 0 || startY < 0 || startX >= bgCanvas.width || startY >= bgCanvas.height) return;
+        let imgData = bgCtx.getImageData(0, 0, bgCanvas.width, bgCanvas.height);
+        let data = imgData.data, w = bgCanvas.width, h = bgCanvas.height;
+        let startPos = (startY * w + startX) * 4;
+        let startR = data[startPos], startG = data[startPos + 1], startB = data[startPos + 2], startA = data[startPos + 3];
+        if (startA === 0) return; 
+        let tolerance = parseInt(document.getElementById('wandTolerance').value);
+        function matchStartColor(pos) {
+            let r = data[pos], g = data[pos + 1], b = data[pos + 2], a = data[pos + 3];
+            if (a === 0) return false;
+            let diff = Math.abs(r - startR) + Math.abs(g - startG) + Math.abs(b - startB);
+            return diff <= (tolerance * 3); 
+        }
+        let pixelStack = [[startX, startY]], visited = new Uint8Array(w * h);
+        while(pixelStack.length > 0) {
+            let newPos = pixelStack.pop(), x = newPos[0], y = newPos[1];
+            let pixelPos = (y * w + x) * 4;
+            while(y-- >= 0 && matchStartColor(pixelPos)) { pixelPos -= w * 4; }
+            pixelPos += w * 4; ++y;
+            let reachLeft = false, reachRight = false;
+            while(y++ < h - 1 && matchStartColor(pixelPos)) {
+                data[pixelPos + 3] = 0; visited[y * w + x] = 1;
+                if(x > 0) { if(matchStartColor(pixelPos - 4) && !visited[y * w + x - 1]) { if(!reachLeft) { pixelStack.push([x - 1, y]); reachLeft = true; } } else if(reachLeft) { reachLeft = false; } }
+                if(x < w - 1) { if(matchStartColor(pixelPos + 4) && !visited[y * w + x + 1]) { if(!reachRight) { pixelStack.push([x + 1, y]); reachRight = true; } } else if(reachRight) { reachRight = false; } }
+                pixelPos += w * 4;
+            }
+        }
+        bgCtx.putImageData(imgData, 0, 0); draw();
+    }
+
+    document.getElementById('opacitySlider').addEventListener('input', e => { let l = layers.find(x => x.id === 'bg-image'); if(l) { l.alpha = parseFloat(e.target.value); draw(); } });
+
+    function getObjectById(type, id) {
+        let list = getListByType(type); if(!list) return null; return list.find(obj => obj.id === id);
+    }
+    function getListByType(type) {
+        if(type==='diagram') return diagrams; if(type==='text') return texts; if(type==='shape') return shapes;
+        if(type==='drawing') return drawings; if(type==='freeRay') return freeRays; if(type==='sticker') return stickers;
+        if(type==='perspRay') return perspRays; if(type==='group') return groups; return null;
+    }
+
+    function renderLayersPanel() {
+        const cont = document.getElementById('layersList'); cont.innerHTML = '';
+        let reversedLayers = [...layers].reverse(); 
+        
+        reversedLayers.forEach((layer, revIdx) => {
+            let actualIdx = layers.length - 1 - revIdx;
+            let isStatic = ['bgColor','bgImage','grid','persp','perspRay'].includes(layer.type);
+            
+            let html = `<div class="layer-item" draggable="true" data-index="${actualIdx}" style="flex-wrap: wrap;">
+                <div style="display:flex; width:100%; justify-content:space-between; align-items:center;">
+                    <div class="layer-info">
+                        <input type="checkbox" class="layer-select-chk" data-id="${layer.id}" data-type="${layer.type}" style="margin:0; cursor:pointer;" ${isStatic ? 'disabled style="opacity:0;"' : ''}>
+                        <span class="layer-drag-handle">☰</span>
+                        <span class="layer-name" title="${layer.name}">${layer.name}</span>
+                    </div>
+                    <div class="layer-tools">
+                        <button style="background:${layer.visible?'#555':'#e74c3c'}" onclick="toggleLayerVisibility('${layer.id}')" title="إخفاء/إظهار">👁️</button>`;
+            
+            if (!['bgColor','bgImage','grid','persp'].includes(layer.type)) {
+                let grabClass = (activeGrabLayerId === layer.id && currentTool === 'grab') ? 'btn-grab active' : 'btn-grab';
+                html += `<button class="${grabClass}" onclick="activateGrabTool('${layer.id}')" title="إمساك وتحريك حر">🖐️</button>
+                         <button style="background:#c0392b;" onclick="deleteLayer('${layer.id}')" title="حذف">🗑️</button>`;
+            } else if(layer.type === 'bgColor') {
+                html += `<input type="color" value="${layer.color}" oninput="updateBgColor(this.value)" style="width:25px; height:20px; padding:0; cursor:pointer;" title="تغيير اللون">
+                         <input type="range" min="0" max="1" step="0.1" value="${layer.alpha}" style="width:40px;" oninput="updateBgAlpha(this.value)" title="شفافية اللوحة">`;
+            } else if(layer.type === 'persp' || layer.type === 'grid' || layer.type === 'bgImage') {
+                html += `<button onclick="toggleLayerVisibility('${layer.id}')" title="تفعيل">${layer.visible?'مفعل':'معطل'}</button>`;
+            }
+            html += `</div></div>`;
+
+            if (layer.type === 'group') {
+                let grp = getObjectById('group', layer.id);
+                if(grp) {
+                    html += `<div style="width:100%; margin-top:8px; display:flex; flex-wrap:wrap; gap:4px; align-items:center; justify-content:center; background:#222; padding:6px; border-radius:4px; font-size:0.75rem;">
+                        <label style="margin:0;">دوران:</label><input type="range" min="0" max="360" value="${grp.rotation}" oninput="updateGroupAttr('${layer.id}','rotation',this.value)" style="width:50px">
+                        <label style="margin:0;">شفافية:</label><input type="range" min="0.1" max="1" step="0.1" value="${grp.alpha}" oninput="updateGroupAttr('${layer.id}','alpha',this.value)" style="width:40px">
+                        <button class="main-btn" onclick="updateGroupAttr('${layer.id}','flip',null)" style="padding:2px 6px; font-size:0.75rem; background:#8e44ad;">عكس ↔️</button>
+                        <button class="main-btn" onclick="duplicateItemById('group','${layer.id}')" style="padding:2px 6px; font-size:0.75rem; background:#2980b9;">تكرار 📑</button>
+                        <button class="main-btn" onclick="ungroupLayers('${layer.id}')" style="padding:2px 6px; font-size:0.75rem; background:#c0392b; color:white;">فك 🔗</button>
+                    </div>`;
+                }
+            }
+            html += `</div>`;
+            
+            let tempDiv = document.createElement('div'); tempDiv.innerHTML = html; let el = tempDiv.firstElementChild;
+            el.addEventListener('dragstart', handleDragStart); el.addEventListener('dragover', handleDragOver);
+            el.addEventListener('drop', handleDrop); el.addEventListener('dragend', handleDragEnd);
+            cont.appendChild(el);
+        });
+    }
+
+    function toggleLayerVisibility(id) { let l = layers.find(x => x.id === id); if(l) { l.visible = !l.visible; let obj = getObjectById(l.type, id); if(obj) obj.visible = l.visible; } renderLayersPanel(); updateUI(); draw(); }
+    function activateGrabTool(id) { if(activeGrabLayerId === id && currentTool === 'grab') setTool('pointer'); else { currentTool = 'grab'; activeGrabLayerId = id; } renderLayersPanel(); }
+
+    window.duplicateItemById = function(type, id) {
+        let l = layers.find(x => x.id === id); let list = getListByType(type);
+        if(list && l) {
+            let origObj = list.find(o => o.id === id);
+            if(origObj) {
+                let newId = generateId(); let copy = JSON.parse(JSON.stringify(origObj));
+                copy.id = newId; copy.x = (copy.x || 0) + 20; copy.y = (copy.y || 0) + 20;
+                if(type === 'group') {
+                    let newChildren = [];
+                    origObj.children.forEach(child => {
+                        let cList = getListByType(child.type); let origChild = cList.find(c => c.id === child.id);
+                        let newChildId = generateId(); let copyChild = JSON.parse(JSON.stringify(origChild));
+                        copyChild.id = newChildId; if(child.type === 'sticker') copyChild.img = origChild.img;
+                        cList.push(copyChild); newChildren.push({ id: newChildId, type: child.type });
+                    });
+                    copy.children = newChildren;
+                } else if(type === 'sticker') { copy.img = origObj.img; }
+                
+                list.push(copy);
+                let idx = layers.findIndex(x => x.id === id);
+                layers.splice(idx + 1, 0, { id: newId, type: l.type, name: l.name + ' (نسخة)', visible: true, locked: false });
+                renderLayersPanel(); updateUI(); draw();
+            }
+        }
+    }
+
+    function deleteLayer(id) {
+        let idx = layers.findIndex(x => x.id === id);
+        if(idx > -1) {
+            let l = layers[idx]; layers.splice(idx, 1);
+            if (l.type === 'group') {
+                let grp = groups.find(g => g.id === id);
+                if(grp) {
+                    grp.children.forEach(child => {
+                        let cList = getListByType(child.type); let cIdx = cList.findIndex(c => c.id === child.id);
+                        if(cIdx > -1) cList.splice(cIdx, 1);
+                    });
+                }
+            }
+            let list = getListByType(l.type);
+            if(list) { let objIdx = list.findIndex(o => o.id === id); if(objIdx > -1) list.splice(objIdx, 1); }
+            if(activeGrabLayerId === id) setTool('pointer');
+            renderLayersPanel(); updateUI(); draw();
+        }
+    }
+
+    function updateBgColor(val) { let l = layers.find(x => x.id === 'bg-color'); if(l) l.color = val; draw(); }
+    function updateBgAlpha(val) { let l = layers.find(x => x.id === 'bg-color'); if(l) l.alpha = parseFloat(val); draw(); }
+
+    let dragLayerStartIndex;
+    function handleDragStart(e) { dragLayerStartIndex = parseInt(this.getAttribute('data-index')); e.dataTransfer.effectAllowed = 'move'; this.classList.add('dragging'); }
+    function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; return false; }
+    function handleDrop(e) {
+        e.stopPropagation(); let dragEndIndex = parseInt(this.getAttribute('data-index'));
+        if (dragLayerStartIndex !== dragEndIndex) { let movedLayer = layers.splice(dragLayerStartIndex, 1)[0]; layers.splice(dragEndIndex, 0, movedLayer); renderLayersPanel(); draw(); }
+        return false;
+    }
+    function handleDragEnd(e) { this.classList.remove('dragging'); }
+
+    window.groupSelectedLayers = function() {
+        let selected = []; let sumX = 0, sumY = 0, count = 0;
+        document.querySelectorAll('.layer-select-chk:checked').forEach(chk => {
+            let id = chk.getAttribute('data-id'); let type = chk.getAttribute('data-type');
+            let l = layers.find(x => x.id === id); let obj = getObjectById(type, id);
+            if(obj && !['bgColor','bgImage','grid','persp','perspRay'].includes(type)) {
+                let ox = obj.x + (obj.offX || 0); let oy = obj.y + (obj.offY || 0);
+                sumX += ox; sumY += oy; count++; selected.push({layer: l, obj: obj});
+            }
+        });
+        if(count < 2) return alert('يرجى تحديد عنصرين أو أكثر للتجميع.');
+        let cx = sumX / count, cy = sumY / count; 
+        let newId = generateId(); let children = [];
+
+        selected.forEach(item => {
+            let obj = item.obj;
+            if (item.layer.type === 'drawing') { if (obj.baseX === undefined) obj.baseX = obj.x; if (obj.baseY === undefined) obj.baseY = obj.y; }
+            obj.relX = (obj.x + (obj.offX || 0)) - cx; obj.relY = (obj.y + (obj.offY || 0)) - cy;
+            if(obj.offX !== undefined) { obj.x = obj.relX; obj.y = obj.relY; obj.offX = 0; obj.offY = 0; }
+            children.push({ id: obj.id, type: item.layer.type });
+            layers = layers.filter(x => x.id !== item.layer.id);
+        });
+        groups.push({ id: newId, x: cx, y: cy, rotation: 0, alpha: 1, flipped: false, visible: true, locked: false, children: children });
+        layers.push({ id: newId, type: 'group', name: 'مجموعة عناصر', visible: true, locked: false }); 
+        renderLayersPanel(); updateUI(); draw();
+    }
+
+    window.ungroupLayers = function(grpId) {
+        let grpIdx = groups.findIndex(g => g.id === grpId); if(grpIdx === -1) return;
+        let grp = groups[grpIdx]; let rad = grp.rotation * Math.PI / 180;
+        grp.children.forEach(child => {
+            let obj = getObjectById(child.type, child.id);
+            if(obj) {
+                let rx = obj.relX * (grp.flipped ? -1 : 1); let ry = obj.relY;
+                obj.x = grp.x + rx * Math.cos(rad) - ry * Math.sin(rad);
+                obj.y = grp.y + rx * Math.sin(rad) + ry * Math.cos(rad);
+                obj.rotation = (parseFloat(obj.rotation || 0) + parseFloat(grp.rotation || 0)) % 360;
+                obj.alpha = (obj.alpha || 1) * grp.alpha;
+                obj.flipped = grp.flipped ? !obj.flipped : obj.flipped;
+                layers.push({ id: child.id, type: child.type, name: 'عنصر مفكك', visible: true, locked: false });
+            }
+        });
+        groups.splice(grpIdx, 1); layers = layers.filter(x => x.id !== grpId);
+        if(activeGrabLayerId === grpId) setTool('pointer');
+        renderLayersPanel(); updateUI(); draw();
+    }
+
+    window.updateGroupAttr = function(id, attr, val) {
+        let grp = getObjectById('group', id);
+        if(grp) { if(attr === 'rotation') grp.rotation = val; if(attr === 'alpha') grp.alpha = val; if(attr === 'flip') grp.flipped = !grp.flipped; draw(); }
+    }
+
+    function updateUI() {
+        ui.diagramsCont.innerHTML = '';
+        diagrams.forEach(diag => {
+            ui.diagramsCont.innerHTML += `<div class="list-item">مخطط ${diag.diagramType}
+                <div class="item-ctrls">خانات: <input type="number" class="main-inp" value="${diag.fields}" style="width:35px" oninput="let o=getObjectById('diagram','${diag.id}'); if(o) o.fields=parseInt(this.value); draw();">
+                حجم: <input type="number" class="main-inp" value="${diag.size}" style="width:40px" oninput="let o=getObjectById('diagram','${diag.id}'); if(o) o.size=parseInt(this.value); draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${diag.alpha}" style="width:50px" oninput="let o=getObjectById('diagram','${diag.id}'); if(o) o.alpha=this.value; draw();"></div>
+                <div class="item-ctrls">تدوير: <input type="range" min="0" max="360" value="${diag.rotation}" oninput="let o=getObjectById('diagram','${diag.id}'); if(o) o.rotation=this.value; draw();">
+                <input type="color" value="${diag.color}" oninput="let o=getObjectById('diagram','${diag.id}'); if(o) o.color=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('diagram','${diag.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('diagram', '${diag.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${diag.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('diagram','${diag.id}'); if(o) o.locked=!o.locked; updateUI();">${diag.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.textsCont.innerHTML = '';
+        texts.forEach(t => {
+            ui.textsCont.innerHTML += `<div class="list-item"><input type="text" class="edit-input" value="${t.content}" oninput="let o=getObjectById('text','${t.id}'); if(o) o.content=this.value; draw();">
+                <div class="item-ctrls">تدوير: <input type="range" min="0" max="360" value="${t.rotation}" oninput="let o=getObjectById('text','${t.id}'); if(o) o.rotation=this.value; draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${t.alpha}" oninput="let o=getObjectById('text','${t.id}'); if(o) o.alpha=this.value; draw();"></div>
+                <div class="item-ctrls"><select class="main-sel" onchange="let o=getObjectById('text','${t.id}'); if(o) o.fontFamily=this.value; draw();"><option value="Segoe UI" ${t.fontFamily==='Segoe UI'?'selected':''}>Segoe UI</option><option value="Arial" ${t.fontFamily==='Arial'?'selected':''}>Arial</option><option value="Impact" ${t.fontFamily==='Impact'?'selected':''}>Impact</option></select>
+                حجم: <input type="number" class="main-inp" value="${t.size}" style="width:35px" oninput="let o=getObjectById('text','${t.id}'); if(o) o.size=parseInt(this.value); draw();">
+                <input type="color" value="${t.color}" oninput="let o=getObjectById('text','${t.id}'); if(o) o.color=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('text','${t.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('text', '${t.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${t.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('text','${t.id}'); if(o) o.locked=!o.locked; updateUI();">${t.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.drawingsCont.innerHTML = '';
+        drawings.forEach(d => {
+            ui.drawingsCont.innerHTML += `<div class="list-item">رسم حر
+                <div class="item-ctrls">تدوير: <input type="range" min="0" max="360" value="${d.rotation}" oninput="let o=getObjectById('drawing','${d.id}'); if(o) o.rotation=this.value; draw();">
+                حجم: <input type="range" min="0.1" max="3" step="0.1" value="${d.scale}" oninput="let o=getObjectById('drawing','${d.id}'); if(o) o.scale=parseFloat(this.value); draw();"></div>
+                <div class="item-ctrls">سمك: <input type="number" class="main-inp" value="${d.width}" style="width:35px" oninput="let o=getObjectById('drawing','${d.id}'); if(o) o.width=parseInt(this.value); draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${d.alpha}" oninput="let o=getObjectById('drawing','${d.id}'); if(o) o.alpha=this.value; draw();">
+                <input type="color" value="${d.color}" oninput="let o=getObjectById('drawing','${d.id}'); if(o) o.color=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('drawing','${d.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('drawing', '${d.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${d.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('drawing','${d.id}'); if(o) o.locked=!o.locked; updateUI();">${d.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.shapesCont.innerHTML = '';
+        shapes.forEach(s => {
+            ui.shapesCont.innerHTML += `<div class="list-item">شكل ${s.shapeType}
+                <div class="item-ctrls">حجم: <input type="number" class="main-inp" value="${s.size}" style="width:40px" oninput="let o=getObjectById('shape','${s.id}'); if(o) o.size=parseInt(this.value); draw();">
+                تدوير: <input type="range" min="0" max="360" value="${s.rotation}" oninput="let o=getObjectById('shape','${s.id}'); if(o) o.rotation=this.value; draw();"></div>
+                <div class="item-ctrls">لون: <input type="color" value="${s.color}" oninput="let o=getObjectById('shape','${s.id}'); if(o) o.color=this.value; draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${s.alpha}" oninput="let o=getObjectById('shape','${s.id}'); if(o) o.alpha=this.value; draw();"></div>
+                <div class="item-ctrls">إطار: <input type="checkbox" ${s.hasStroke?'checked':''} onchange="let o=getObjectById('shape','${s.id}'); if(o) o.hasStroke=this.checked; draw();">
+                إطار: <input type="color" value="${s.strokeColor}" oninput="let o=getObjectById('shape','${s.id}'); if(o) o.strokeColor=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('shape','${s.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('shape', '${s.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${s.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('shape','${s.id}'); if(o) o.locked=!o.locked; updateUI();">${s.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.freeRaysCont.innerHTML = '';
+        freeRays.forEach(fr => {
+            ui.freeRaysCont.innerHTML += `<div class="list-item">سهم حر
+                <div class="item-ctrls">تدوير: <input type="range" min="0" max="360" value="${fr.rotation}" oninput="let o=getObjectById('freeRay','${fr.id}'); if(o) o.rotation=this.value; draw();">
+                طول: <input type="number" class="main-inp" value="${fr.length}" style="width:45px" oninput="let o=getObjectById('freeRay','${fr.id}'); if(o) o.length=parseInt(this.value); draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${fr.alpha}" style="width:50px" oninput="let o=getObjectById('freeRay','${fr.id}'); if(o) o.alpha=this.value; draw();"></div>
+                <div class="item-ctrls">سمك: <input type="number" class="main-inp" value="${fr.width}" style="width:35px" oninput="let o=getObjectById('freeRay','${fr.id}'); if(o) o.width=parseInt(this.value); draw();">
+                <select class="main-sel" onchange="let o=getObjectById('freeRay','${fr.id}'); if(o) o.lineStyle=this.value; draw();"><option value="solid" ${fr.lineStyle==='solid'?'selected':''}>عادي</option><option value="dashed" ${fr.lineStyle==='dashed'?'selected':''}>شُرط</option><option value="dotted" ${fr.lineStyle==='dotted'?'selected':''}>منقط</option></select>
+                <select class="main-sel" onchange="let o=getObjectById('freeRay','${fr.id}'); if(o) o.headShape=this.value; draw();"><option value="normal" ${fr.headShape==='normal'?'selected':''}>عادي</option><option value="steep" ${fr.headShape==='steep'?'selected':''}>حاد</option></select></div>
+                <div class="item-ctrls"><input type="color" value="${fr.color}" oninput="let o=getObjectById('freeRay','${fr.id}'); if(o) o.color=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('freeRay','${fr.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('freeRay', '${fr.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${fr.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('freeRay','${fr.id}'); if(o) o.locked=!o.locked; updateUI();">${fr.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.stickersCont.innerHTML = '';
+        stickers.forEach(s => {
+            ui.stickersCont.innerHTML += `<div class="list-item">صورة / عنصر
+                <div class="item-ctrls">تدوير: <input type="range" min="0" max="360" value="${s.rotation}" oninput="let o=getObjectById('sticker','${s.id}'); if(o) o.rotation=this.value; draw();">
+                شفافية: <input type="range" min="0.1" max="1" step="0.1" value="${s.alpha}" oninput="let o=getObjectById('sticker','${s.id}'); if(o) o.alpha=this.value; draw();">
+                <button class="main-btn" onclick="let o=getObjectById('sticker','${s.id}'); if(o) o.flipped=!o.flipped; draw();">عكس ↔️</button>
+                <button class="dup-btn" onclick="duplicateItemById('sticker', '${s.id}')">تكرار 📑</button>
+                <button class="layer-btn" style="background:${s.locked?'#e74c3c':'#555'};" onclick="let o=getObjectById('sticker','${s.id}'); if(o) o.locked=!o.locked; updateUI();">${s.locked?'🔒':'🔓'}</button></div></div>`;
+        });
+        ui.raysCont.innerHTML = '';
+        perspRays.forEach(r => { ui.raysCont.innerHTML += `<div class="list-item">شعاع منظور من ${r.vpIdx+1} <div class="item-ctrls"><input type="range" min="0" max="360" value="${r.angle}" oninput="let o=getObjectById('perspRay','${r.id}'); if(o) o.angle=this.value; draw();"><button class="del-btn" onclick="deleteLayer('${r.id}')">X</button></div></div>`; });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+        layers.forEach(layer => {
+            if (window.isTransparentExportActive && (layer.type === 'bgColor' || layer.type === 'bgImage')) return;
+            if (!layer.visible) return;
+
+            if (layer.type === 'bgColor') { ctx.save(); ctx.globalAlpha = layer.alpha; ctx.fillStyle = layer.color; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); }
+            else if (layer.type === 'bgImage' && bgCanvas.width > 0) { ctx.save(); ctx.globalAlpha = layer.alpha; ctx.drawImage(bgCanvas, 0, 0, canvas.width, canvas.height); ctx.restore(); }
+            else if (layer.type === 'grid') {
+                let g = layer.gridParams; ctx.save(); ctx.strokeStyle = layer.color; ctx.lineWidth = 2; ctx.strokeRect(g.x, g.y, g.w, g.h);
+                ctx.lineWidth = 1; ctx.beginPath(); for(let i=1; i<3; i++) { ctx.moveTo(g.x+(g.w/3)*i, g.y); ctx.lineTo(g.x+(g.w/3)*i, g.y+g.h); ctx.moveTo(g.x, g.y+(g.h/3)*i); ctx.lineTo(g.x+g.w, g.y+(g.h/3)*i); } ctx.stroke();
+                ctx.lineWidth = 0.3; ctx.beginPath(); for(let i=1; i<=8; i++) { if(i%3===0) continue; ctx.moveTo(g.x+i*g.w/9, g.y); ctx.lineTo(g.x+i*g.w/9, g.y+g.h); ctx.moveTo(g.x, g.y+i*g.h/9); ctx.lineTo(g.x+g.w, g.y+i*g.h/9); } ctx.stroke();
+                ctx.fillStyle="#ffcc00"; ctx.fillRect(g.x+g.w-12, g.y+g.h-12, 12, 12); ctx.restore();
+            }
+            else if (layer.type === 'persp') {
+                let pNum = parseInt(document.getElementById('perspType').value); ctx.save();
+                for(let i=0; i<pNum; i++){ ctx.strokeStyle="rgba(255,0,0,0.3)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(vps[i].x,vps[i].y); ctx.moveTo(canvas.width,0); ctx.lineTo(vps[i].x,vps[i].y); ctx.moveTo(0,canvas.height); ctx.lineTo(vps[i].x,vps[i].y); ctx.moveTo(canvas.width,canvas.height); ctx.lineTo(vps[i].x,vps[i].y); ctx.stroke(); ctx.fillStyle="#ff4d4d"; ctx.beginPath(); ctx.arc(vps[i].x, vps[i].y, 8, 0, Math.PI*2); ctx.fill(); }
+                ctx.restore();
+            }
+            else if (layer.type === 'perspRay') {
+                let r = getObjectById('perspRay', layer.id);
+                if(r) { let p = vps[r.vpIdx]; ctx.save(); ctx.strokeStyle = r.color; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 2000*Math.cos(r.angle*Math.PI/180), p.y + 2000*Math.sin(r.angle*Math.PI/180)); ctx.stroke(); ctx.restore(); }
+            }
+            else if (layer.type === 'group') {
+                let grp = getObjectById('group', layer.id);
+                if(grp && grp.visible !== false) {
+                    ctx.save(); ctx.translate(grp.x, grp.y); ctx.rotate((grp.rotation || 0) * Math.PI / 180); if(grp.flipped) ctx.scale(-1, 1);
+                    grp.children.forEach(child => {
+                        let obj = getObjectById(child.type, child.id);
+                        if(obj && obj.visible !== false) { let oldX = obj.x, oldY = obj.y; obj.x = obj.relX; obj.y = obj.relY; drawObjectByType(child.type, obj, grp.alpha); obj.x = oldX; obj.y = oldY; }
+                    });
+                    if(currentTool === 'grab' && activeGrabLayerId === grp.id) { ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 2; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]); }
+                    ctx.restore();
+                }
+            }
+            else { let obj = getObjectById(layer.type, layer.id); if(obj && obj.visible !== false) drawObjectByType(layer.type, obj, 1); }
+        });
+
+        if(isDrawing) { ctx.strokeStyle = document.getElementById('penDefColor').value; ctx.lineWidth = document.getElementById('penDefWidth').value; ctx.beginPath(); currentPath.forEach((p, idx) => { if(idx===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); }); ctx.stroke(); }
+    }
+
+    function drawObjectByType(type, obj, groupAlpha = 1) {
+        ctx.save();
+        if(type === 'sticker') {
+            ctx.translate(obj.x + obj.w/2, obj.y + obj.h/2); ctx.rotate(obj.rotation * Math.PI / 180);
+            if(obj.flipped) ctx.scale(-1, 1); ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.drawImage(obj.img, -obj.w/2, -obj.h/2, obj.w, obj.h);
+        }
+        else if(type === 'diagram') {
+            ctx.translate(obj.x, obj.y); ctx.rotate(obj.rotation * Math.PI / 180); if (obj.flipped) ctx.scale(-1, 1);
+            ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.fillStyle = obj.color; ctx.strokeStyle = obj.color; ctx.lineWidth = 2;
+            let sz = obj.size; let fields = Math.max(1, obj.fields);
+            if (obj.diagramType === 'pie') { let angle = (Math.PI * 2) / fields; for (let i = 0; i < fields; i++) { ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, sz, i * angle, (i + 1) * angle); ctx.globalAlpha = Math.max(0.2, ((obj.alpha || 1) * groupAlpha) - (i * (0.6 / fields))); ctx.fill(); ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.stroke(); } }
+            else if (obj.diagramType === 'bar') { ctx.beginPath(); ctx.moveTo(-sz, -sz); ctx.lineTo(-sz, sz); ctx.lineTo(sz, sz); ctx.stroke(); let barW = (sz * 1.8) / fields; for (let i = 0; i < fields; i++) { let h = sz + Math.sin(i + 1) * sz * 0.5; ctx.fillRect(-sz + 10 + i * barW, sz - h, barW * 0.8, h); } }
+            else if (obj.diagramType === 'fishbone') { ctx.beginPath(); ctx.moveTo(-sz, 0); ctx.lineTo(sz, 0); ctx.moveTo(sz, 0); ctx.lineTo(sz - 20, -15); ctx.moveTo(sz, 0); ctx.lineTo(sz - 20, 15); ctx.stroke(); let space = (sz * 1.6) / fields; for (let i = 0; i < fields; i++) { let rx = -sz + 20 + i * space; ctx.beginPath(); if (i % 2 === 0) { ctx.moveTo(rx, 0); ctx.lineTo(rx - 20, -sz * 0.6); } else { ctx.moveTo(rx, 0); ctx.lineTo(rx - 20, sz * 0.6); } ctx.stroke(); } }
+        }
+        else if(type === 'freeRay') {
+            ctx.translate(obj.x, obj.y); ctx.rotate(obj.rotation * Math.PI / 180); if (obj.flipped) ctx.scale(-1, 1);
+            ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.strokeStyle = obj.color; ctx.lineWidth = obj.width; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            if (obj.lineStyle === 'dashed') ctx.setLineDash([15, 10]); else if (obj.lineStyle === 'dotted') ctx.setLineDash([5, 5]); else ctx.setLineDash([]);
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(obj.length, 0); ctx.stroke();
+            let headLen = obj.width * 3 + 6; let headAngle = obj.headShape === 'steep' ? Math.PI / 8 : Math.PI / 5;
+            ctx.setLineDash([]); 
+            ctx.beginPath(); ctx.moveTo(obj.length, 0); ctx.lineTo(obj.length - headLen * Math.cos(headAngle), -headLen * Math.sin(headAngle)); ctx.moveTo(obj.length, 0); ctx.lineTo(obj.length - headLen * Math.cos(headAngle), headLen * Math.sin(headAngle)); ctx.stroke();
+        }
+        else if(type === 'drawing') {
+            ctx.translate(obj.x + (obj.offX||0), obj.y + (obj.offY||0)); ctx.rotate(obj.rotation * Math.PI / 180); ctx.scale(obj.scale * (obj.flipped ? -1 : 1), obj.scale);
+            ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.strokeStyle = obj.color; ctx.lineWidth = obj.width; ctx.lineCap = 'round'; ctx.beginPath(); 
+            let bx = obj.baseX !== undefined ? obj.baseX : obj.x; let by = obj.baseY !== undefined ? obj.baseY : obj.y;
+            obj.points.forEach((p, idx) => { if(idx === 0) ctx.moveTo(p.x - bx, p.y - by); else ctx.lineTo(p.x - bx, p.y - by); }); ctx.stroke();
+        }
+        else if(type === 'shape') {
+            ctx.translate(obj.x, obj.y); ctx.rotate(obj.rotation * Math.PI / 180); if(obj.flipped) ctx.scale(-1, 1);
+            ctx.globalAlpha = (obj.alpha || 1) * groupAlpha; ctx.fillStyle = obj.color; ctx.strokeStyle = obj.strokeColor; ctx.lineWidth = 2; ctx.beginPath();
+            let sz = obj.size; if(obj.shapeType==='circle') ctx.arc(0, 0, sz, 0, Math.PI*2); else if(obj.shapeType==='square') ctx.rect(-sz, -sz, sz*2, sz*2); else if(obj.shapeType==='triangle'){ ctx.moveTo(0, -sz); ctx.lineTo(sz, sz); ctx.lineTo(-sz, sz); ctx.closePath(); } else if(obj.shapeType==='diamond'){ ctx.moveTo(0, -sz); ctx.lineTo(sz, 0); ctx.lineTo(0, sz); ctx.lineTo(-sz, 0); ctx.closePath(); } else if(obj.shapeType==='star'){ for(let i=0;i<10;i++){ let a=i*Math.PI/5, rad=(i%2===0)?sz:sz/2; ctx.lineTo(Math.cos(a)*rad, Math.sin(a)*rad); } ctx.closePath(); }
+            ctx.fill(); if(obj.hasStroke) ctx.stroke();
+        }
+        else if(type === 'text') {
+            ctx.translate(obj.x, obj.y); ctx.rotate((obj.rotation || 0) * Math.PI / 180); if(obj.flipped) ctx.scale(-1, 1);
+            ctx.globalAlpha = (obj.alpha || 1.0) * groupAlpha; ctx.font = `bold ${obj.size}px "${obj.fontFamily || 'Segoe UI'}"`; ctx.fillStyle = obj.color; ctx.strokeStyle="black"; ctx.lineWidth=2; ctx.strokeText(obj.content,0,0); ctx.fillText(obj.content, 0, 0);
+        }
+        ctx.restore();
+    }
+
+    canvas.addEventListener('mousedown', e => {
+        const r = canvas.getBoundingClientRect(), mx = e.clientX-r.left, my = e.clientY-r.top;
+        if (currentTool === 'wand') { applyMagicWand(mx, my); return; }
+        if(currentTool === 'grab' && activeGrabLayerId) {
+            let l = layers.find(x => x.id === activeGrabLayerId);
+            if(l) { let obj = getObjectById(l.type, l.id); if(obj && !obj.locked) {
+                activeDrag = { t: l.type, id: l.id, dx: mx - (obj.x||0), dy: my - (obj.y||0), objRef: obj };
+                if(l.type === 'drawing') { activeDrag.oldOffX = obj.offX || 0; activeDrag.oldOffY = obj.offY || 0; activeDrag.dx = mx; activeDrag.dy = my; }
+                if(l.type === 'grid') { let gp = layers.find(x=>x.id==='grid').gridParams; activeDrag = {t:'grid', dx:mx-gp.x, dy:my-gp.y}; }
+                return;
+            }}
+        }
+        if(currentTool === 'pen') { isDrawing = true; currentPath = [{x: mx, y: my}]; return; }
+        
+        let newId = generateId(), newName = '', added = false;
+        if(currentTool === 'diagram'){ diagrams.push({ id: newId, x: mx, y: my, diagramType: document.getElementById('diagramType').value, fields: parseInt(document.getElementById('diagramFields').value), size: 80, color: document.getElementById('diagramDefColor').value, alpha: 1.0, rotation: 0, flipped: false, visible: true, locked: false }); newName = 'مخطط ' + document.getElementById('diagramType').value; added = true; }
+        else if(currentTool==='shape'){ shapes.push({id: newId, x:mx, y:my, shapeType:document.getElementById('shapeType').value, size:40, color:document.getElementById('shapeDefColor').value, alpha:1.0, rotation:0, hasStroke: true, strokeColor: '#ffffff', flipped: false, visible: true, locked: false}); newName = 'شكل ' + document.getElementById('shapeType').value; added = true; }
+        else if(currentTool==='text'){ let val = document.getElementById('txtInput').value; if(val) { texts.push({id: newId, x:mx, y:my, content:val, size:parseInt(document.getElementById('txtDefSize').value), color:document.getElementById('txtDefColor').value, alpha: 1.0, rotation:0, fontFamily: document.getElementById('txtDefFont').value, flipped: false, visible: true, locked: false}); newName = 'نص: ' + val; added = true; } }
+        else if(currentTool === 'freeRay') { freeRays.push({ id: newId, x: mx, y: my, length: 120, color: document.getElementById('faDefColor').value, width: parseInt(document.getElementById('faDefWidth').value), alpha: parseFloat(document.getElementById('faDefAlpha').value), lineStyle: document.getElementById('faLineStyle').value, headShape: document.getElementById('faHeadShape').value, rotation: 0, flipped: false, visible: true, locked: false }); newName = 'سهم حر'; added = true; }
+        
+        if(added) { layers.push({ id: newId, type: currentTool, name: newName, visible: true, locked: false }); setTool('pointer'); renderLayersPanel(); updateUI(); draw(); return; }
+
+        for(let i = layers.length-1; i>=0; i--) {
+            let l = layers[i]; if(!l.visible) continue;
+            if(l.type === 'persp') { for(let v=0; v<3; v++) if(Math.hypot(mx-vps[v].x, my-vps[v].y)<15) { activeDrag={t:'vp', i:v}; return; } }
+            if(l.type === 'grid') { let gp = l.gridParams; if(mx>=gp.x+gp.w-12 && my>=gp.y+gp.h-12) { activeDrag={t:'gR'}; return; } if(mx>=gp.x && mx<=gp.x+gp.w && my>=gp.y && my<=gp.y+gp.h) { activeDrag={t:'grid', dx:mx-gp.x, dy:my-gp.y}; return; } }
+            let obj = getObjectById(l.type, l.id); if(!obj || obj.locked) continue;
+            if(l.type === 'group' && Math.hypot(mx-obj.x, my-obj.y) < 50) { activeDrag={t:l.type, id: l.id, dx:mx-obj.x, dy:my-obj.y, objRef: obj}; return; }
+            if(l.type === 'diagram' && Math.hypot(mx-obj.x, my-obj.y)<obj.size+20) { activeDrag={t:l.type, id: l.id, dx:mx-obj.x, dy:my-obj.y, objRef: obj}; return; }
+            if(l.type === 'sticker' && mx >= obj.x+obj.w-15 && my >= obj.y+obj.h-15) { activeDrag={t:'stR', id: l.id, objRef: obj}; return; }
+            if(l.type === 'sticker' && mx >= obj.x && mx <= obj.x+obj.w && my >= obj.y && my <= obj.y+obj.h) { activeDrag={t:l.type, id: l.id, dx:mx-obj.x, dy:my-obj.y, objRef: obj}; return; }
+            if(l.type === 'drawing' && Math.hypot(mx-(obj.x+(obj.offX||0)), my-(obj.y+(obj.offY||0))) < 40) { activeDrag={t:l.type, id: l.id, dx:mx, dy:my, oldOffX:obj.offX||0, oldOffY:obj.offY||0, objRef: obj}; return; }
+            if((l.type === 'shape' || l.type === 'text' || l.type === 'freeRay') && Math.hypot(mx-obj.x, my-obj.y)<40) { activeDrag={t:l.type, id: l.id, dx:mx-obj.x, dy:my-obj.y, objRef: obj}; return; }
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        const r = canvas.getBoundingClientRect(), mx = e.clientX-r.left, my = e.clientY-r.top;
+        if(isDrawing) { currentPath.push({x: mx, y: my}); draw(); return; }
+        if(!activeDrag) return;
+        if(activeDrag.t==='vp'){ vps[activeDrag.i].x=Math.max(0,Math.min(canvas.width,mx)); vps[activeDrag.i].y=Math.max(0,Math.min(canvas.height,my)); }
+        else if(activeDrag.t==='grid'){ let gp = layers.find(x=>x.id==='grid').gridParams; gp.x=mx-activeDrag.dx; gp.y=my-activeDrag.dy; }
+        else if(activeDrag.t==='gR'){ let gp = layers.find(x=>x.id==='grid').gridParams; gp.w=Math.max(50,mx-gp.x); gp.h=Math.max(50,my-gp.y); }
+        else if(activeDrag.t==='stR'){ activeDrag.objRef.w=Math.max(20,mx-activeDrag.objRef.x); activeDrag.objRef.h=Math.max(20,my-activeDrag.objRef.y); }
+        else if(activeDrag.t==='drawing'){ activeDrag.objRef.offX = activeDrag.oldOffX + (mx - activeDrag.dx); activeDrag.objRef.offY = activeDrag.oldOffY + (my - activeDrag.dy); }
+        else if(activeDrag.objRef) { activeDrag.objRef.x = mx - (activeDrag.dx || 0); activeDrag.objRef.y = my - (activeDrag.dy || 0); }
+        draw();
+    });
+
+    window.addEventListener('mouseup', () => {
+        if(isDrawing && currentPath.length > 2) { 
+            let avgX = currentPath[0].x, avgY = currentPath[0].y; let newId = generateId();
+            drawings.push({id: newId, points: currentPath, x: avgX, y: avgY, baseX: avgX, baseY: avgY, color: document.getElementById('penDefColor').value, width: parseInt(document.getElementById('penDefWidth').value), alpha: 1.0, scale:1.0, rotation:0, flipped:false, visible: true, locked: false, offX: 0, offY: 0}); 
+            layers.push({id: newId, type: 'drawing', name: 'رسم حر', visible: true, locked: false}); renderLayersPanel(); updateUI(); 
+        }
+        isDrawing = false; currentPath = []; activeDrag = null; draw();
+    });
+
+    document.getElementById('stickerUpload').addEventListener('change', e => {
+        if (e.target.files[0]) {
+            const reader = new FileReader(); reader.onload = ev => {
+                const sImg = new Image(); sImg.onload = () => { 
+                    let newId = generateId();
+                    stickers.push({ id: newId, img: sImg, x: 50, y: 50, w: sImg.width * 0.2, h: sImg.height * 0.2, alpha: 1.0, rotation: 0, flipped: false, visible: true, locked: false }); 
+                    layers.push({id: newId, type: 'sticker', name: 'صورة خارجية', visible: true, locked: false});
+                    renderLayersPanel(); updateUI(); draw(); 
+                }; sImg.src = ev.target.result;
+            }; reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+
+    window.addPerspRay = function() {
+        let newId = generateId(); perspRays.push({ id: newId, angle: 45, vpIdx: parseInt(document.getElementById('rayOriginVP').value), color: '#ff4d4d' });
+        layers.push({id: newId, type: 'perspRay', name: 'شعاع منظور', visible: true, locked: false}); renderLayersPanel(); updateUI(); draw();
+    }
+    function downloadCanvasPNG() { const l = document.createElement('a'); l.download = 'Master_Image_Transparent.png'; l.href = canvas.toDataURL("image/png"); l.click(); }
+
+    async function toggleVoiceRecord() {
+        if (!isGlobalVoiceRecording) {
+            try {
+                globalVoiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                globalVoiceRecorder = new MediaRecorder(globalVoiceStream); globalAudioChunks = [];
+                globalVoiceRecorder.ondataavailable = e => globalAudioChunks.push(e.data);
+                globalVoiceRecorder.onstop = () => {
+                    const blob = new Blob(globalAudioChunks, { type: 'audio/webm' }); globalUploadedAudioUrl = URL.createObjectURL(blob);
+                    document.getElementById('bgAudio').src = globalUploadedAudioUrl; document.getElementById('bgAudio').style.display = 'block';
+                };
+                globalVoiceRecorder.start(); isGlobalVoiceRecording = true;
+                document.getElementById('btnVoiceRecord').innerText = '🛑 إيقاف التسجيل'; document.getElementById('btnVoiceRecord').style.background = '#c0392b';
+            } catch (err) { alert("لا يمكن الوصول للميكروفون."); }
+        } else {
+            globalVoiceRecorder.stop(); globalVoiceStream.getTracks().forEach(t => t.stop()); isGlobalVoiceRecording = false;
+            document.getElementById('btnVoiceRecord').innerText = '🎤 تسجيل صوتي مباشر'; document.getElementById('btnVoiceRecord').style.background = '#e67e22';
+        }
+    }
+    document.getElementById('audioUpload').addEventListener('change', e => { if(e.target.files[0]) { globalUploadedAudioUrl = URL.createObjectURL(e.target.files[0]); document.getElementById('bgAudio').src = globalUploadedAudioUrl; document.getElementById('bgAudio').style.display = 'block'; } });
+
+    // Timeline logic
+    function getStateSnapshot() {
+        return { layersOrder: JSON.parse(JSON.stringify(layers)), diagrams: JSON.parse(JSON.stringify(diagrams)), texts: JSON.parse(JSON.stringify(texts)), shapes: JSON.parse(JSON.stringify(shapes)), drawings: JSON.parse(JSON.stringify(drawings)), freeRays: JSON.parse(JSON.stringify(freeRays)), perspRays: JSON.parse(JSON.stringify(perspRays)), stickers: stickers.map(s => ({...s, img: s.img})), vps: JSON.parse(JSON.stringify(vps)), groups: JSON.parse(JSON.stringify(groups)), thumb: canvas.toDataURL('image/png', 0.5) };
+    }
+    function applyStateSnapshot(state) {
+        layers = JSON.parse(JSON.stringify(state.layersOrder)); diagrams = JSON.parse(JSON.stringify(state.diagrams)); texts = JSON.parse(JSON.stringify(state.texts)); shapes = JSON.parse(JSON.stringify(state.shapes)); drawings = JSON.parse(JSON.stringify(state.drawings)); freeRays = JSON.parse(JSON.stringify(state.freeRays)); perspRays = JSON.parse(JSON.stringify(state.perspRays)); stickers = state.stickers.map(s => ({...s, img: s.img})); vps = JSON.parse(JSON.stringify(state.vps)); groups = state.groups ? JSON.parse(JSON.stringify(state.groups)) : [];
+        renderLayersPanel(); updateUI(); draw();
+    }
+
+    let dragStoryboardIdx = -1;
+    window.frameDragStart = function(e, idx) { dragStoryboardIdx = idx; e.dataTransfer.effectAllowed = 'move'; }
+    window.frameDrop = function(e, targetIdx) { e.preventDefault(); if(dragStoryboardIdx !== -1 && dragStoryboardIdx !== targetIdx) { let moved = manualFrames.splice(dragStoryboardIdx, 1)[0]; manualFrames.splice(targetIdx, 0, moved); renderFramesThumbs(); } dragStoryboardIdx = -1; }
+    function addManualFrame() { let state = getStateSnapshot(); state.id = Date.now(); state.duration = 2.0; state.audioUrl = null; state.isRecording = false; manualFrames.push(state); renderFramesThumbs(); }
+    window.duplicateManualFrame = function(index) { let copy = JSON.parse(JSON.stringify(manualFrames[index])); copy.id = Date.now(); copy.stickers = manualFrames[index].stickers.map(s => ({...s, img: s.img})); copy.thumb = manualFrames[index].thumb; copy.audioUrl = manualFrames[index].audioUrl; copy.isRecording = false; manualFrames.splice(index + 1, 0, copy); renderFramesThumbs(); }
+    async function toggleFrameAudioRecord(index) {
+        let frame = manualFrames[index];
+        if (!frame.isRecording) {
+            try { frame.stream = await navigator.mediaDevices.getUserMedia({ audio: true }); frame.recorder = new MediaRecorder(frame.stream); frame.chunks = []; frame.recorder.ondataavailable = e => frame.chunks.push(e.data); frame.recorder.onstop = () => { const blob = new Blob(frame.chunks, { type: 'audio/webm' }); frame.audioUrl = URL.createObjectURL(blob); renderFramesThumbs(); }; frame.recorder.start(); frame.isRecording = true; renderFramesThumbs(); } catch (err) { alert("خطأ مايكروفون."); }
+        } else { frame.recorder.stop(); frame.stream.getTracks().forEach(t => t.stop()); frame.isRecording = false; renderFramesThumbs(); }
+    }
+    window.uploadFrameAudio = function(event, index) { if(event.target.files[0]) { manualFrames[index].audioUrl = URL.createObjectURL(event.target.files[0]); renderFramesThumbs(); } }
+    window.deleteFrameAudio = function(index) { manualFrames[index].audioUrl = null; renderFramesThumbs(); }
+    window.updateFrameDuration = function(index, value) { manualFrames[index].duration = parseFloat(value) || 1.0; }
+    function clearFrames() { manualFrames = []; renderFramesThumbs(); }
+    function renderFramesThumbs() {
+        const cont = document.getElementById('framesCont'); cont.innerHTML = '';
+        manualFrames.forEach((f, i) => {
+            cont.innerHTML += `<div class="frame-thumb" draggable="true" ondragstart="frameDragStart(event, ${i})" ondragover="event.preventDefault(); this.classList.add('drag-over');" ondragleave="this.classList.remove('drag-over');" ondrop="this.classList.remove('drag-over'); frameDrop(event, ${i})" onclick="applyStateSnapshot(manualFrames[${i}])">
+                <img src="${f.thumb}" alt="thumb"><div class="frame-thumb-header"><span>مشهد ${i+1} ${f.audioUrl ? '🎵' : ''}</span><button class="del-btn" style="padding:1px 4px; font-size:8px;" onclick="event.stopPropagation(); manualFrames.splice(${i},1); renderFramesThumbs();">X</button></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;"><label style="margin:0; font-size:9px;">الزمن (ث):</label><input type="number" value="${f.duration}" step="0.5" style="width:35px; font-size:9px; padding:1px;" onchange="updateFrameDuration(${i}, this.value)" onclick="event.stopPropagation();"></div>
+                <div class="frame-thumb-ctrls"><button style="background:#2980b9;" onclick="event.stopPropagation(); duplicateManualFrame(${i})">📑</button><button style="background:${f.isRecording ? '#e74c3c' : '#555'};" onclick="event.stopPropagation(); toggleFrameAudioRecord(${i})">🎤</button><button style="background:#8e44ad;" onclick="event.stopPropagation(); document.getElementById('file-frame-${i}').click();">📁</button><input type="file" id="file-frame-${i}" class="hidden-file" accept="audio/*" onchange="uploadFrameAudio(event, ${i})">${f.audioUrl ? `<button style="background:#c0392b;" onclick="event.stopPropagation(); deleteFrameAudio(${i})">🗑️</button>` : ''}</div></div>`;
+        });
+    }
+    async function playManualFrames() {
+        if(manualFrames.length === 0) return alert("الرجاء إضافة مشاهد أولاً."); let audioPlayer = document.getElementById('frameAudioPlayer');
+        for(let i=0; i<manualFrames.length; i++) { applyStateSnapshot(manualFrames[i]); if(manualFrames[i].audioUrl) { audioPlayer.src = manualFrames[i].audioUrl; audioPlayer.play().catch(e=>{}); } else { audioPlayer.pause(); } await new Promise(r => setTimeout(r, manualFrames[i].duration * 1000)); }
+        audioPlayer.pause();
+    }
+    async function exportStoryboardVideo(isTransparent) {
+        if (!canvas.captureStream) return alert("لا يدعم المتصفح."); if(manualFrames.length === 0) return;
+        window.isTransparentExportActive = isTransparent; 
+        const videoStream = canvas.captureStream(30); let tracks = [...videoStream.getVideoTracks()]; const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const dest = audioCtx.createMediaStreamDestination();
+        const bgAudio = document.getElementById('bgAudio'); if (globalUploadedAudioUrl || (!isGlobalVoiceRecording && bgAudio.src && bgAudio.src !== "")) { try { let bgSource = audioCtx.createMediaElementSource(bgAudio); bgSource.connect(dest); bgSource.connect(audioCtx.destination); bgAudio.currentTime = 0; bgAudio.play(); } catch(e) {} }
+        const frameAudioPlayer = document.getElementById('frameAudioPlayer'); try { let frameSource = audioCtx.createMediaElementSource(frameAudioPlayer); frameSource.connect(dest); frameSource.connect(audioCtx.destination); } catch(e) {}
+        tracks.push(...dest.stream.getAudioTracks()); const combinedStream = new MediaStream(tracks);
+        let options = isTransparent ? { mimeType: 'video/webm; codecs=vp9' } : { mimeType: 'video/webm; codecs=vp8', videoBitsPerSecond: 8000000 }; if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
+        const mediaRecorder = new MediaRecorder(combinedStream, options); const chunks = []; mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = isTransparent ? 'Storyboard_Trans.webm' : 'Storyboard_HQ.webm'; a.click(); bgAudio.pause(); frameAudioPlayer.pause(); window.isTransparentExportActive = false; draw(); };
+        mediaRecorder.start();
+        for(let i=0; i<manualFrames.length; i++) { applyStateSnapshot(manualFrames[i]); if(manualFrames[i].audioUrl) { frameAudioPlayer.src = manualFrames[i].audioUrl; frameAudioPlayer.play().catch(e=>{}); } else { frameAudioPlayer.pause(); } await new Promise(resolve => { let start = performance.now(); function holdFrame() { draw(); if(performance.now() - start < manualFrames[i].duration * 1000) requestAnimationFrame(holdFrame); else resolve(); } holdFrame(); }); }
+        mediaRecorder.stop();
+    }
+    window.exportStoryboardGIF = async function() {
+        if(manualFrames.length === 0) return; window.isTransparentExportActive = true;
+        fetch('https://cdn.jsdelivr.net/npm/gif.js/dist/gif.worker.js').then(res => res.text()).then(workerText => {
+            const gif = new GIF({ workers: 2, quality: 10, width: canvas.width, height: canvas.height, transparent: 0xFF00FF, workerScript: URL.createObjectURL(new Blob([workerText], { type: 'application/javascript' })) });
+            for(let i=0; i<manualFrames.length; i++) { applyStateSnapshot(manualFrames[i]); ctx.save(); ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#FF00FF'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); gif.addFrame(canvas, {delay: manualFrames[i].duration * 1000, copy: true}); }
+            gif.on('finished', function(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Storyboard.gif'; a.click(); window.isTransparentExportActive = false; draw(); }); gif.render();
+        });
+    };
+    let isRecordingAnim = false, isPlayingAnim = false, currentAnimFrame = 0, timelineFrames = []; const MAX_FRAMES = 600;
+    function toggleRecord() { if(isPlayingAnim) stopAnim(); isRecordingAnim = !isRecordingAnim; document.getElementById('btnRecord').style.background = isRecordingAnim ? '#c0392b' : '#e74c3c'; document.getElementById('btnRecord').innerText = isRecordingAnim ? '🔴 جاري...' : '⏺️ تسجيل'; if(isRecordingAnim) requestAnimationFrame(animLoop); }
+    function togglePlay() { if(isRecordingAnim) toggleRecord(); isPlayingAnim = !isPlayingAnim; document.getElementById('btnPlay').innerText = isPlayingAnim ? '⏸️ إيقاف مؤقت' : '▶️ تشغيل الموشن'; if(isPlayingAnim) requestAnimationFrame(animLoop); }
+    function stopAnim() { isRecordingAnim = false; isPlayingAnim = false; currentAnimFrame = 0; document.getElementById('btnRecord').style.background = '#e74c3c'; document.getElementById('btnRecord').innerText = '⏺️ تسجيل'; document.getElementById('btnPlay').innerText = '▶️ تشغيل'; document.getElementById('timeSlider').value = 0; if(timelineFrames[0]) applyStateSnapshot(timelineFrames[0]); }
+    function scrubTime() { currentAnimFrame = parseInt(document.getElementById('timeSlider').value); if(timelineFrames[currentAnimFrame]) applyStateSnapshot(timelineFrames[currentAnimFrame]); document.getElementById('timeDisplay').innerText = `${currentAnimFrame} / ${MAX_FRAMES}`; }
+    function animLoop() { if(isRecordingAnim) { timelineFrames[currentAnimFrame] = getStateSnapshot(); currentAnimFrame++; if(currentAnimFrame >= MAX_FRAMES) { toggleRecord(); return; } } else if(isPlayingAnim) { if(timelineFrames[currentAnimFrame]) applyStateSnapshot(timelineFrames[currentAnimFrame]); currentAnimFrame++; if(currentAnimFrame >= MAX_FRAMES) { togglePlay(); currentAnimFrame=0; return; } } else return; document.getElementById('timeSlider').value = currentAnimFrame; document.getElementById('timeDisplay').innerText = `${currentAnimFrame} / ${MAX_FRAMES}`; requestAnimationFrame(animLoop); }
+    window.downloadTimelineVideo = function(isTransparent) {
+        if (!canvas.captureStream) return; window.isTransparentExportActive = isTransparent; stopAnim();
+        const stream = canvas.captureStream(60); let tracks = [...stream.getVideoTracks()]; const bgAudio = document.getElementById('bgAudio');
+        if (globalUploadedAudioUrl || (!isGlobalVoiceRecording && bgAudio.src)) { try { const audioCtx = new (window.AudioContext || window.webkitAudioContext)(); const dest = audioCtx.createMediaStreamDestination(); const source = audioCtx.createMediaElementSource(bgAudio); source.connect(dest); source.connect(audioCtx.destination); tracks.push(...dest.stream.getAudioTracks()); bgAudio.currentTime = 0; bgAudio.play(); } catch(e) {} }
+        let options = isTransparent ? { mimeType: 'video/webm; codecs=vp9' } : { mimeType: 'video/webm; codecs=vp8', videoBitsPerSecond: 8000000 }; if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
+        const mediaRecorder = new MediaRecorder(new MediaStream(tracks), options); const chunks = []; mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(chunks, { type: 'video/webm' })); a.download = 'Timeline.webm'; a.click(); bgAudio.pause(); window.isTransparentExportActive = false; draw(); };
+        mediaRecorder.start(); isPlayingAnim = true; currentAnimFrame = 0;
+        function recordDrawLoop() { if(currentAnimFrame >= MAX_FRAMES || !timelineFrames[currentAnimFrame]) { mediaRecorder.stop(); isPlayingAnim = false; return; } applyStateSnapshot(timelineFrames[currentAnimFrame]); currentAnimFrame++; requestAnimationFrame(recordDrawLoop); } requestAnimationFrame(recordDrawLoop);
+    }
+    window.downloadTimelineGIF = async function() {
+        if(timelineFrames.length === 0) return; window.isTransparentExportActive = true; stopAnim();
+        fetch('https://cdn.jsdelivr.net/npm/gif.js/dist/gif.worker.js').then(res => res.text()).then(workerText => {
+            const gif = new GIF({ workers: 2, quality: 10, width: canvas.width, height: canvas.height, transparent: 0xFF00FF, workerScript: URL.createObjectURL(new Blob([workerText], { type: 'application/javascript' })) });
+            for(let i=0; i<MAX_FRAMES; i++) { if(!timelineFrames[i]) break; applyStateSnapshot(timelineFrames[i]); ctx.save(); ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#FF00FF'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore(); gif.addFrame(canvas, {delay: 1000/60, copy: true}); }
+            gif.on('finished', function(blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Timeline.gif'; a.click(); window.isTransparentExportActive = false; draw(); }); gif.render();
+        });
+    };
+
+    renderLayersPanel(); updateUI(); draw();
+
+
+    // =========================================================================
+    // الجزء الثاني: محرر الفيكتور للاستوديو الكبير (Main Vector Studio)
+    // =========================================================================
+    let mainFabCanvas = new fabric.Canvas('main-fab-canvas', { width: 630, height: 500, isDrawingMode: false });
+    mainFabCanvas.freeDrawingBrush = new fabric.PencilBrush(mainFabCanvas);
+    mainFabCanvas.freeDrawingBrush.color = '#000000'; mainFabCanvas.freeDrawingBrush.width = 2;
+    mainFabCanvas.on('selection:created', mainUpdatePropsFromSelection); mainFabCanvas.on('selection:updated', mainUpdatePropsFromSelection);
+
+    function openMainVectorEditor() { document.getElementById('main-vector-editor-modal').style.display = 'flex'; mainFabCanvas.renderAll(); }
+    
+    function mainFabSetMode(mode) {
+        mainFabCanvas.isDrawingMode = (mode === 'draw');
+        document.getElementById('main-vtool-select').classList.toggle('active', mode === 'select');
+        document.getElementById('main-vtool-draw').classList.toggle('active', mode === 'draw');
+    }
+    
+    function mainFabAddShape(type) {
+        mainFabSetMode('select');
+        let shape, fill = document.getElementById('main-v-fill').value, stroke = document.getElementById('main-v-stroke').value, sw = parseInt(document.getElementById('main-v-stroke-width').value);
+        const opts = { left: 250, top: 200, fill: fill, stroke: stroke, strokeWidth: sw };
+        if(type === 'rect') shape = new fabric.Rect({ ...opts, width: 100, height: 100 });
+        else if(type === 'circle') shape = new fabric.Circle({ ...opts, radius: 50 });
+        else if(type === 'triangle') shape = new fabric.Triangle({ ...opts, width: 100, height: 100 });
+        else if(type === 'line') shape = new fabric.Line([50, 50, 200, 50], { ...opts, stroke: fill, strokeWidth: Math.max(sw, 5) });
+        else if(type === 'star') { shape = new fabric.Path('M 50 0 L 61 35 L 98 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 2 35 L 39 35 Z', opts); shape.scale(1.5); }
+        else if(type === 'arrow') { shape = new fabric.Path('M 0 15 L 40 15 L 40 0 L 70 25 L 40 50 L 40 35 L 0 35 Z', opts); shape.scale(1.5); }
+        else if(type === 'polygon') { shape = new fabric.Polygon([{x: 25, y: 0}, {x: 75, y: 0}, {x: 100, y: 43}, {x: 75, y: 86}, {x: 25, y: 86}, {x: 0, y: 43}], { ...opts, width: 100, height: 86 }); }
+        else if(type === 'heart') { shape = new fabric.Path('M 27.27 10.45 C 27.27 5.75 22.36 2.45 17.5 2.45 C 13.55 2.45 10 5.45 10 9 C 10 5.45 6.45 2.45 2.5 2.45 C -2.36 2.45 -7.27 5.75 -7.27 10.45 C -7.27 17.27 10 28.55 10 28.55 C 10 28.55 27.27 17.27 27.27 10.45 Z', opts); shape.scale(2.5); }
+        else if(type === 'bubble') { shape = new fabric.Path('M 0 0 L 100 0 L 100 70 L 60 70 L 40 100 L 40 70 L 0 70 Z', opts); }
+        mainFabCanvas.add(shape); mainFabCanvas.setActiveObject(shape);
+    }
+
+    function mainFabAddSticker(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onload = function(f) {
+            fabric.Image.fromURL(f.target.result, function(img) {
+                img.scaleToWidth(150); img.set({ left: 200, top: 150 });
+                mainFabCanvas.add(img); mainFabCanvas.setActiveObject(img); mainFabSetMode('select');
+            });
+        }; reader.readAsDataURL(file); event.target.value = '';
+    }
+
+    function mainUpdateProp(prop, value) {
+        if (mainFabCanvas.isDrawingMode) { if (prop === 'stroke') mainFabCanvas.freeDrawingBrush.color = value; if (prop === 'strokeWidth') mainFabCanvas.freeDrawingBrush.width = value; return; }
+        const obj = mainFabCanvas.getActiveObject();
+        if (obj) { if(obj.type === 'group' && prop === 'fill') { obj._objects.forEach(o => o.set(prop, value)); } else { obj.set(prop, value); } mainFabCanvas.renderAll(); }
+    }
+
+    function mainUpdateDimension(type, val) {
+        const obj = mainFabCanvas.getActiveObject();
+        if (obj) {
+            let num = parseFloat(val); if(isNaN(num) || num <= 0) return;
+            if(type === 'width') obj.set({ scaleX: num / obj.width });
+            if(type === 'height') obj.set({ scaleY: num / obj.height });
+            mainFabCanvas.renderAll();
+        }
+    }
+
+    function mainUpdatePropsFromSelection() {
+        const obj = mainFabCanvas.getActiveObject(); if(!obj) return;
+        if(obj.fill) document.getElementById('main-v-fill').value = obj.fill;
+        if(obj.stroke) document.getElementById('main-v-stroke').value = obj.stroke;
+        if(obj.strokeWidth !== undefined) { document.getElementById('main-v-stroke-width').value = obj.strokeWidth; document.getElementById('main-val-stroke').innerText = obj.strokeWidth; }
+        if(obj.opacity !== undefined) { document.getElementById('main-v-opacity').value = obj.opacity; document.getElementById('main-val-opacity').innerText = obj.opacity; }
+        document.getElementById('main-v-width').value = Math.round(obj.width * obj.scaleX);
+        document.getElementById('main-v-height').value = Math.round(obj.height * obj.scaleY);
+        document.getElementById('main-v-angle').value = Math.round(obj.angle || 0);
+    }
+
+    function mainFabAction(action) {
+        const activeObj = mainFabCanvas.getActiveObject(); if (!activeObj && action !== 'clear') return;
+        switch(action) {
+            case 'front': activeObj.bringToFront(); break; case 'back': activeObj.sendToBack(); break;
+            case 'forward': activeObj.bringForward(); break; case 'backward': activeObj.sendBackwards(); break;
+            case 'flipX': activeObj.set('flipX', !activeObj.flipX); break; case 'flipY': activeObj.set('flipY', !activeObj.flipY); break;
+            case 'delete': const objs = mainFabCanvas.getActiveObjects(); if (objs.length) { mainFabCanvas.discardActiveObject(); objs.forEach(o => mainFabCanvas.remove(o)); } break;
+            case 'clone': activeObj.clone(function(c) { c.set({ left: c.left + 20, top: c.top + 20 }); mainFabCanvas.add(c); mainFabCanvas.setActiveObject(c); }); break;
+            case 'group': if (activeObj.type === 'activeSelection') { activeObj.toGroup(); mainFabCanvas.requestRenderAll(); } break;
+            case 'ungroup': if (activeObj.type === 'group') { activeObj.toActiveSelection(); mainFabCanvas.requestRenderAll(); } break;
+        } mainFabCanvas.renderAll();
+    }
+
+    function mainSaveVectorToStudio() {
+        // حفظ الفيكتور كستيكر في الاستوديو الكبير
+        let dataUrl = mainFabCanvas.toDataURL({ format: 'png', multiplier: 1 });
+        let sImg = new Image();
+        sImg.onload = () => {
+            let newId = generateId();
+            stickers.push({ id: newId, img: sImg, x: canvas.width/2 - sImg.width/2, y: canvas.height/2 - sImg.height/2, w: sImg.width, h: sImg.height, alpha: 1.0, rotation: 0, flipped: false, visible: true, locked: false }); 
+            layers.push({id: newId, type: 'sticker', name: 'رسمة فيكتور مخصصة', visible: true, locked: false});
+            renderLayersPanel(); updateUI(); draw();
+            closeModal('main-vector-editor-modal');
+        };
+        sImg.src = dataUrl;
+    }
+
+
+    // =========================================================================
+    // الجزء الثالث: سكربت استوديو الكاريكاتير المدمج (Caricature Studio)
+    // =========================================================================
+    let cariLibraryData = []; let cariIdCounter = 1;
+    let currentActiveView = 'front'; let currentSelectedPartId = null;
+    let partsState = {}; let currentCanvasTool = 'move';
+
+    // Cari Fabric Setup
+    let cariFabCanvas = new fabric.Canvas('cari-fab-canvas', { width: 630, height: 500, isDrawingMode: false });
+    let cariEditingItemId = null;
+    cariFabCanvas.freeDrawingBrush = new fabric.PencilBrush(cariFabCanvas); cariFabCanvas.freeDrawingBrush.color = '#000000'; cariFabCanvas.freeDrawingBrush.width = 2;
+    cariFabCanvas.on('selection:created', cariUpdatePropsFromSelection); cariFabCanvas.on('selection:updated', cariUpdatePropsFromSelection);
+
+    function cariCreateProfessionalSVG(category, view, color) {
+        let svgContent = ''; const isSide = view === 'side';
+        switch(category) {
+            case 'head': svgContent = isSide ? `<path d="M50,10 Q80,10 90,40 Q100,70 80,90 Q50,100 20,80 Q0,50 50,10 Z" fill="${color}" stroke="#333" stroke-width="2"/>` : `<path d="M20,40 Q50,-10 80,40 Q90,90 50,100 Q10,90 20,40 Z" fill="${color}" stroke="#333" stroke-width="2"/>`; break;
+            case 'eyes': svgContent = isSide ? `<path d="M30,50 Q60,30 90,50 Q60,70 30,50 Z" fill="white" stroke="#333" stroke-width="3"/><circle cx="50" cy="50" r="10" fill="#2d3436"/><circle cx="53" cy="47" r="3" fill="white"/>` : `<path d="M10,50 Q30,30 50,50 Q30,70 10,50 Z M50,50 Q70,30 90,50 Q70,70 50,50 Z" fill="white" stroke="#333" stroke-width="3"/><circle cx="30" cy="50" r="8" fill="#2d3436"/><circle cx="70" cy="50" r="8" fill="#2d3436"/><circle cx="32" cy="48" r="2" fill="white"/><circle cx="72" cy="48" r="2" fill="white"/>`; break;
+            case 'mouth': svgContent = isSide ? `<path d="M30,40 Q50,60 80,40" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"/>` : `<path d="M20,40 Q50,70 80,40 Q50,80 20,40 Z" fill="${color}" stroke="#333" stroke-width="2"/><path d="M25,45 Q50,50 75,45" stroke="#fff" stroke-width="2" fill="none"/>`; break;
+            case 'nose': svgContent = isSide ? `<path d="M40,20 L80,70 L50,80 Z" fill="${color}" stroke="#333" stroke-width="2"/>` : `<path d="M50,20 Q60,60 70,70 Q50,80 30,70 Q40,60 50,20 Z" fill="${color}" stroke="#333" stroke-width="2"/>`; break;
+            case 'hair': svgContent = `<path d="M10,60 Q50,-20 90,60 Q100,20 50,0 Q0,20 10,60 Z" fill="${color}" stroke="#111" stroke-width="2"/>`; break;
+            default: svgContent = `<rect x="20" y="10" width="60" height="80" rx="20" fill="${color}" stroke="#333" stroke-width="2"/>`;
+        }
+        return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">${svgContent}</svg>`)}`;
+    }
+
+    const cariPartsConfig = {
+        'head': { color: '#ffeaa7', name: 'رأس' }, 'hair': { color: '#2d3436', name: 'شعر' },
+        'eyes': { color: '#0984e3', name: 'عيون' }, 'nose': { color: '#e1b12c', name: 'أنف' },
+        'mouth': { color: '#d63031', name: 'فم' }, 'ear_r': { color: '#ffeaa7', name: 'أذن ي' }, 'ear_l': { color: '#ffeaa7', name: 'أذن س' },
+        'neck': { color: '#ffeaa7', name: 'رقبة' }, 'chest': { color: '#00cec9', name: 'صدر' }, 'pelvis': { color: '#6c5ce7', name: 'حوض' },
+        'arm_upper_r': { color: '#00b894', name: 'زند ي' }, 'arm_lower_r': { color: '#55efc4', name: 'ساعد ي' }, 'hand_r': { color: '#ffeaa7', name: 'كف ي' },
+        'arm_upper_l': { color: '#00b894', name: 'زند س' }, 'arm_lower_l': { color: '#55efc4', name: 'ساعد س' }, 'hand_l': { color: '#ffeaa7', name: 'كف س' },
+        'leg_upper_r': { color: '#0984e3', name: 'فخذ ي' }, 'leg_lower_r': { color: '#74b9ff', name: 'ساق ي' }, 'foot_r': { color: '#2d3436', name: 'قدم ي' },
+        'leg_upper_l': { color: '#0984e3', name: 'فخذ س' }, 'leg_lower_l': { color: '#74b9ff', name: 'ساق س' }, 'foot_l': { color: '#2d3436', name: 'قدم س' }
+    };
+
+    function cariInitLibrary() {
+        document.getElementById('cari-edit-category').innerHTML = document.getElementById('cari-upload-category').innerHTML;
+        cariLibraryData = [];
+        for (const [key, val] of Object.entries(cariPartsConfig)) {
+            cariLibraryData.push({ id: cariIdCounter++, category: key, view: 'front', name: val.name + ' أمامي', src: cariCreateProfessionalSVG(key, 'front', val.color) });
+            if(!key.endsWith('_r')) cariLibraryData.push({ id: cariIdCounter++, category: key, view: 'side', name: val.name + ' جانبي', src: cariCreateProfessionalSVG(key, 'side', val.color) });
+        }
+        cariRenderLibrary();
+    }
+    // Initialize Caricature
+    cariInitLibrary();
+
+    function cariRenderLibrary() {
+        const container = document.getElementById('cari-library-container');
+        const filterCat = document.getElementById('cari-filter-category').value;
+        const filterView = document.getElementById('cari-filter-view').value;
+        container.innerHTML = '';
+        const filtered = cariLibraryData.filter(item => (filterCat === 'all' || item.category === filterCat) && item.view === filterView);
+        filtered.forEach(item => {
+            const div = document.createElement('div'); div.className = 'library-item'; div.onclick = () => cariEquipItem(item);
+            div.innerHTML = `<div class="item-actions"><button class="icon-btn download" onclick="cariDownloadItem(event, '${item.src}', '${item.name}')">💾</button>
+                <button class="icon-btn edit" onclick="openCariEditCat(event, ${item.id})">✏️</button>
+                <button class="icon-btn draw" onclick="openCariEditor(event, ${item.id})">✒️</button>
+                <button class="icon-btn delete" onclick="cariDeleteItem(event, ${item.id})">✖</button></div>
+                <img src="${item.src}" alt="${item.name}"><p>${item.name}</p>`;
+            container.appendChild(div);
+        });
+        const dropdown = document.getElementById('cari-filter-category'); dropdown.innerHTML = '<option value="all">كل الأجزاء</option>';
+        [...new Set(cariLibraryData.map(item => item.category))].forEach(cat => dropdown.innerHTML += `<option value="${cat}">${cat}</option>`);
+    }
+
+    function cariDownloadItem(e, src, name) { e.stopPropagation(); const a = document.createElement('a'); a.href = src; a.download = name + '.png'; a.click(); }
+    
+    function cariExportCharacter(view) {
+        if(currentActiveView !== view) cariSwitchView(view);
+        cariDeselectPart({target: document.getElementById('mannequin')}); 
+        const mannequin = document.getElementById('mannequin'); mannequin.classList.add('export-mode');
+        setTimeout(() => { html2canvas(mannequin, { backgroundColor: null, scale: 3 }).then(cvs => { mannequin.classList.remove('export-mode'); const a = document.createElement('a'); a.href = cvs.toDataURL('image/png'); a.download = `Char_${view}_HD.png`; a.click(); }); }, 100);
+    }
+
+    function cariSaveProject() {
+        cariSwitchView(currentActiveView); 
+        let equippedItems = {};
+        document.querySelectorAll('.cari-wrapper .part').forEach(part => {
+            let frontImg = part.querySelector(':scope > img[data-view="front"]');
+            let sideImg = part.querySelector(':scope > img[data-view="side"]');
+            if(frontImg || sideImg || part.classList.contains('accessory-part')) {
+                equippedItems[part.id] = { front: frontImg ? frontImg.src : null, side: sideImg ? sideImg.src : null, isAccessory: part.classList.contains('accessory-part'), accView: part.dataset.accView || null };
+            }
+        });
+        const projectData = { version: "1.3", libraryData: cariLibraryData, partsState: partsState, idCounter: cariIdCounter, equippedItems: equippedItems };
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(projectData)], { type: "application/json" })); a.download = "Caricature_Project.json"; a.click();
+    }
+
+    function cariLoadProject(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader(); reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if(data.libraryData) {
+                    cariLibraryData = data.libraryData; partsState = data.partsState || {}; cariIdCounter = data.idCounter || Date.now();
+                    document.querySelectorAll('.cari-wrapper .part img').forEach(img => img.remove());
+                    document.querySelectorAll('.cari-wrapper .part').forEach(p => { p.classList.remove('has-front-img', 'has-side-img'); });
+                    document.querySelectorAll('.cari-wrapper .accessory-part').forEach(acc => acc.remove());
+                    if(data.equippedItems) {
+                        for (let partId in data.equippedItems) { if (data.equippedItems[partId].isAccessory) { const accNode = cariCreateAccNode(partId); accNode.dataset.accView = data.equippedItems[partId].accView; } }
+                        for (let partId in data.equippedItems) {
+                            const part = document.getElementById(partId);
+                            if (part) {
+                                const eq = data.equippedItems[partId];
+                                if (eq.front) { const img = document.createElement('img'); img.src = eq.front; img.setAttribute('data-view', 'front'); part.appendChild(img); part.classList.add('has-front-img'); }
+                                if (eq.side) { const img = document.createElement('img'); img.src = eq.side; img.setAttribute('data-view', 'side'); part.appendChild(img); part.classList.add('has-side-img'); }
+                            }
+                        }
+                    } alert("تم الاستيراد!"); cariSwitchView('front');
+                }
+            } catch(err) { alert("ملف غير صالح!"); }
+        }; reader.readAsText(file);
+    }
+
+    function cariHandleUpload() {
+        const fInp = document.getElementById('cari-upload-file');
+        if (fInp.files && fInp.files[0]) {
+            const reader = new FileReader(); reader.onload = function(e) { cariLibraryData.push({ id: cariIdCounter++, category: document.getElementById('cari-upload-category').value, view: document.getElementById('cari-upload-view').value, name: document.getElementById('cari-upload-name').value || 'عنصر', src: e.target.result }); cariRenderLibrary(); }
+            reader.readAsDataURL(fInp.files[0]);
+        }
+    }
+    function cariCreateEmptyItem() { const temp = document.createElement('canvas'); temp.width = 400; temp.height = 400; cariLibraryData.push({ id: cariIdCounter++, category: document.getElementById('cari-upload-category').value, view: document.getElementById('cari-upload-view').value, name: (document.getElementById('cari-upload-name').value || 'فيكتور') + ' (جديد)', src: temp.toDataURL('image/png') }); cariRenderLibrary(); }
+    function cariDeleteItem(e, id) { e.stopPropagation(); if(confirm("حذف العنصر؟")) { cariLibraryData = cariLibraryData.filter(i => i.id !== id); cariRenderLibrary(); } }
+    function openCariEditCat(e, id) { e.stopPropagation(); const item = cariLibraryData.find(i => i.id === id); if(item) { document.getElementById('cari-edit-item-id').value = id; document.getElementById('cari-edit-category').value = item.category; document.getElementById('cari-edit-view').value = item.view; document.getElementById('cari-edit-cat-modal').style.display = 'flex'; } }
+    function cariSaveCategory() { const item = cariLibraryData.find(i => i.id === parseInt(document.getElementById('cari-edit-item-id').value)); if(item) { item.category = document.getElementById('cari-edit-category').value; item.view = document.getElementById('cari-edit-view').value; closeModal('cari-edit-cat-modal'); cariRenderLibrary(); } }
+    function cariSetCanvasTool(tool) { currentCanvasTool = tool; document.getElementById('cari-tool-move').classList.toggle('active', tool === 'move'); document.getElementById('cari-tool-rotate').classList.toggle('active', tool === 'rotate'); }
+    function cariCreateAccNode(id) {
+        if(document.getElementById(id)) return document.getElementById(id);
+        const part = document.createElement('div'); part.className = `part accessory-part`; part.id = id; part.onclick = (e) => cariSelectPart(e, id);
+        part.innerHTML = `<span class="part-label">ملحق</span>`; document.getElementById('mannequin').appendChild(part); return part;
+    }
+    function cariEquipItem(item) {
+        if (currentActiveView !== item.view) cariSwitchView(item.view);
+        let targetPart = item.category === 'accessory' ? cariCreateAccNode('acc-' + Date.now()) : document.getElementById(`part-${item.category}`);
+        if(item.category === 'accessory') targetPart.dataset.accView = item.view;
+        if (targetPart) {
+            const oldImg = targetPart.querySelector(`:scope > img[data-view="${item.view}"]`); if(oldImg) oldImg.remove();
+            const img = document.createElement('img'); img.src = item.src; img.setAttribute('data-view', item.view);
+            targetPart.appendChild(img); targetPart.classList.add(`has-${item.view}-img`);
+        }
+    }
+    function cariUnequipCurrentPart() {
+        if (!currentSelectedPartId) return; const targetPart = document.getElementById(currentSelectedPartId);
+        if (targetPart.classList.contains('accessory-part')) { targetPart.remove(); delete partsState[currentSelectedPartId]; currentSelectedPartId = null; document.getElementById('cari-transform-panel').style.display = 'none'; return; }
+        const oldImg = targetPart.querySelector(`:scope > img[data-view="${currentActiveView}"]`); if(oldImg) oldImg.remove(); targetPart.classList.remove(`has-${currentActiveView}-img`);
+        targetPart.style.left = ''; targetPart.style.top = ''; targetPart.style.transform = ''; targetPart.dataset.scaleX = 1; targetPart.dataset.scaleY = 1; targetPart.dataset.rotate = 0;
+        if (partsState[currentSelectedPartId]) partsState[currentSelectedPartId][currentActiveView] = { left: '', top: '', scaleX: 1, scaleY: 1, rotate: 0 };
+        document.getElementById('cari-scale-x').value = 1; document.getElementById('cari-scale-y').value = 1; document.getElementById('cari-scale-all').value = 1; document.getElementById('cari-rotate-deg').value = 0;
+    }
+    function cariSwitchView(view) {
+        document.querySelectorAll('.cari-wrapper .part').forEach(part => {
+            if (!partsState[part.id]) partsState[part.id] = { front: {}, side: {} };
+            partsState[part.id][currentActiveView] = { left: part.style.left, top: part.style.top, scaleX: part.dataset.scaleX || 1, scaleY: part.dataset.scaleY || 1, rotate: part.dataset.rotate || 0 };
+        });
+        currentActiveView = view;
+        document.getElementById('mannequin').className = view + '-view'; document.getElementById('cari-filter-view').value = view;
+        document.getElementById('cari-btn-front').classList.toggle('active', view === 'front'); document.getElementById('cari-btn-side').classList.toggle('active', view === 'side');
+        document.querySelectorAll('.cari-wrapper .part').forEach(part => {
+            if (partsState[part.id] && partsState[part.id][currentActiveView]) {
+                const state = partsState[part.id][currentActiveView]; part.style.left = state.left || ''; part.style.top = state.top || '';
+                part.dataset.scaleX = state.scaleX; part.dataset.scaleY = state.scaleY; part.dataset.rotate = state.rotate; part.style.transform = `scale(${state.scaleX}, ${state.scaleY}) rotate(${state.rotate}deg)`;
+            } else { part.style.left = ''; part.style.top = ''; part.style.transform = ''; part.dataset.scaleX = 1; part.dataset.scaleY = 1; part.dataset.rotate = 0; }
+        });
+        cariRenderLibrary(); cariDeselectPart({target: document.getElementById('mannequin')});
+    }
+    function cariSelectPart(event, partId) {
+        event.stopPropagation(); document.querySelectorAll('.cari-wrapper .part').forEach(el => el.classList.remove('selected'));
+        const part = document.getElementById(partId); part.classList.add('selected'); currentSelectedPartId = partId;
+        document.getElementById('cari-transform-panel').style.display = 'block';
+        document.getElementById('cari-selected-part-name').innerText = part.querySelector('.part-label') ? part.querySelector('.part-label').innerText : 'عنصر';
+        document.getElementById('cari-scale-x').value = part.dataset.scaleX || 1; document.getElementById('cari-scale-y').value = part.dataset.scaleY || 1;
+        document.getElementById('cari-scale-all').value = Math.max(part.dataset.scaleX || 1, part.dataset.scaleY || 1); document.getElementById('cari-rotate-deg').value = part.dataset.rotate || 0;
+    }
+    function cariDeselectPart(event) {
+        if (event.target.classList.contains('canvas-container') || event.target.id === 'mannequin') { document.querySelectorAll('.cari-wrapper .part').forEach(el => el.classList.remove('selected')); document.getElementById('cari-transform-panel').style.display = 'none'; currentSelectedPartId = null; }
+    }
+    function cariApplyTransform() {
+        if (!currentSelectedPartId) return; const part = document.getElementById(currentSelectedPartId);
+        const scaleX = document.getElementById('cari-scale-x').value, scaleY = document.getElementById('cari-scale-y').value, rotate = document.getElementById('cari-rotate-deg').value;
+        part.dataset.scaleX = scaleX; part.dataset.scaleY = scaleY; part.dataset.rotate = rotate; part.style.transform = `scale(${scaleX}, ${scaleY}) rotate(${rotate}deg)`;
+    }
+    function cariApplyTransformAll() { const val = document.getElementById('cari-scale-all').value; document.getElementById('cari-scale-x').value = val; document.getElementById('cari-scale-y').value = val; cariApplyTransform(); }
+
+    let cariDragItem = null, cStartX, cStartY, cInitL, cInitT, cInitRot;
+    document.addEventListener('mousedown', function(e) {
+        const part = e.target.closest('.cari-wrapper .part');
+        if(part && !e.target.closest('input') && !e.target.closest('button')) {
+            cariDragItem = part; cStartX = e.clientX; cStartY = e.clientY;
+            cInitL = parseInt(window.getComputedStyle(part).left) || 0; cInitT = parseInt(window.getComputedStyle(part).top) || 0; cInitRot = parseFloat(part.dataset.rotate) || 0;
+        }
+    });
+    document.addEventListener('mousemove', function(e) {
+        if(cariDragItem) {
+            if (currentCanvasTool === 'move') {
+                let accSX = 1, accSY = 1, parent = cariDragItem.parentElement;
+                while(parent && parent.classList.contains('part')) { accSX *= parseFloat(parent.dataset.scaleX) || 1; accSY *= parseFloat(parent.dataset.scaleY) || 1; parent = parent.parentElement; }
+                cariDragItem.style.left = (cInitL + (e.clientX - cStartX) / accSX) + 'px'; cariDragItem.style.top = (cInitT + (e.clientY - cStartY) / accSY) + 'px';
+            } else if (currentCanvasTool === 'rotate') {
+                let newRot = cInitRot + (e.clientX - cStartX); if (newRot > 180) newRot -= 360; if (newRot < -180) newRot += 360;
+                cariDragItem.dataset.rotate = newRot; cariDragItem.style.transform = `scale(${cariDragItem.dataset.scaleX || 1}, ${cariDragItem.dataset.scaleY || 1}) rotate(${newRot}deg)`;
+                if (cariDragItem.id === currentSelectedPartId) document.getElementById('cari-rotate-deg').value = Math.round(newRot);
+            }
+        }
+    });
+    document.addEventListener('mouseup', () => { cariDragItem = null; });
+
+    // محرر الفيكتور داخل الكاريكاتير
+    function cariFabSetMode(mode) {
+        cariFabCanvas.isDrawingMode = (mode === 'draw');
+        document.getElementById('cari-vtool-select').classList.toggle('active', mode === 'select');
+        document.getElementById('cari-vtool-draw').classList.toggle('active', mode === 'draw');
+    }
+    function cariFabAddShape(type) {
+        cariFabSetMode('select'); let shape, fill = document.getElementById('cari-v-fill').value, stroke = document.getElementById('cari-v-stroke').value, sw = parseInt(document.getElementById('cari-v-stroke-width').value);
+        const opts = { left: 200, top: 200, fill: fill, stroke: stroke, strokeWidth: sw };
+        if(type === 'rect') shape = new fabric.Rect({ ...opts, width: 80, height: 80 }); else if(type === 'circle') shape = new fabric.Circle({ ...opts, radius: 40 }); else if(type === 'triangle') shape = new fabric.Triangle({ ...opts, width: 80, height: 80 }); else if(type === 'line') shape = new fabric.Line([50, 50, 150, 50], { ...opts, stroke: fill, strokeWidth: Math.max(sw, 5) }); else if(type === 'star') { shape = new fabric.Path('M 50 0 L 61 35 L 98 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 2 35 L 39 35 Z', opts); shape.scale(1.5); } else if(type === 'arrow') { shape = new fabric.Path('M 0 15 L 40 15 L 40 0 L 70 25 L 40 50 L 40 35 L 0 35 Z', opts); shape.scale(1.5); } else if(type === 'polygon') { shape = new fabric.Polygon([{x: 25, y: 0}, {x: 75, y: 0}, {x: 100, y: 43}, {x: 75, y: 86}, {x: 25, y: 86}, {x: 0, y: 43}], { ...opts, width: 100, height: 86 }); } else if(type === 'heart') { shape = new fabric.Path('M 27.27 10.45 C 27.27 5.75 22.36 2.45 17.5 2.45 C 13.55 2.45 10 5.45 10 9 C 10 5.45 6.45 2.45 2.5 2.45 C -2.36 2.45 -7.27 5.75 -7.27 10.45 C -7.27 17.27 10 28.55 10 28.55 C 10 28.55 27.27 17.27 27.27 10.45 Z', opts); shape.scale(2); } else if(type === 'bubble') { shape = new fabric.Path('M 0 0 L 100 0 L 100 70 L 60 70 L 40 100 L 40 70 L 0 70 Z', opts); }
+        cariFabCanvas.add(shape); cariFabCanvas.setActiveObject(shape);
+    }
+    function cariFabAddSticker(event) { const f = event.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = function(e) { fabric.Image.fromURL(e.target.result, function(img) { img.scaleToWidth(150); img.set({left:150, top:150}); cariFabCanvas.add(img); cariFabCanvas.setActiveObject(img); cariFabSetMode('select'); }); }; r.readAsDataURL(f); event.target.value=''; }
+    function cariUpdateProp(prop, value) { if (cariFabCanvas.isDrawingMode) { if (prop === 'stroke') cariFabCanvas.freeDrawingBrush.color = value; if (prop === 'strokeWidth') cariFabCanvas.freeDrawingBrush.width = value; return; } const obj = cariFabCanvas.getActiveObject(); if (obj) { if(obj.type === 'group' && prop === 'fill') { obj._objects.forEach(o => o.set(prop, value)); } else { obj.set(prop, value); } cariFabCanvas.renderAll(); } }
+    function cariUpdatePropsFromSelection() { const obj = cariFabCanvas.getActiveObject(); if(!obj) return; if(obj.fill) document.getElementById('cari-v-fill').value = obj.fill; if(obj.stroke) document.getElementById('cari-v-stroke').value = obj.stroke; if(obj.strokeWidth !== undefined) { document.getElementById('cari-v-stroke-width').value = obj.strokeWidth; document.getElementById('cari-val-stroke').innerText = obj.strokeWidth; } if(obj.opacity !== undefined) { document.getElementById('cari-v-opacity').value = obj.opacity; document.getElementById('cari-val-opacity').innerText = obj.opacity; } }
+    function cariFabAction(action) { const activeObj = cariFabCanvas.getActiveObject(); if (!activeObj && action !== 'clear') return; switch(action) { case 'front': activeObj.bringToFront(); break; case 'back': activeObj.sendToBack(); break; case 'forward': activeObj.bringForward(); break; case 'backward': activeObj.sendBackwards(); break; case 'flipX': activeObj.set('flipX', !activeObj.flipX); break; case 'flipY': activeObj.set('flipY', !activeObj.flipY); break; case 'delete': const objs = cariFabCanvas.getActiveObjects(); if (objs.length) { cariFabCanvas.discardActiveObject(); objs.forEach(o => cariFabCanvas.remove(o)); } break; case 'clone': activeObj.clone(function(c) { c.set({ left: c.left + 20, top: c.top + 20 }); cariFabCanvas.add(c); cariFabCanvas.setActiveObject(c); }); break; case 'group': if (activeObj.type === 'activeSelection') { activeObj.toGroup(); cariFabCanvas.requestRenderAll(); } break; case 'ungroup': if (activeObj.type === 'group') { activeObj.toActiveSelection(); cariFabCanvas.requestRenderAll(); } break; } cariFabCanvas.renderAll(); }
+    function openCariEditor(e, id) { e.stopPropagation(); const item = cariLibraryData.find(i => i.id === id); if(item) { cariEditingItemId = id; cariFabCanvas.clear(); if (item.fabricData) { cariFabCanvas.loadFromJSON(item.fabricData, cariFabCanvas.renderAll.bind(cariFabCanvas)); } else { fabric.Image.fromURL(item.src, function(img) { img.scaleToWidth(250); img.set({ left: 125, top: 125 }); cariFabCanvas.add(img); cariFabCanvas.setActiveObject(img); }); } document.getElementById('cari-vector-editor-modal').style.display = 'flex'; cariFabSetMode('select'); } }
+    function cariSaveVectorDrawing() { const item = cariLibraryData.find(i => i.id === cariEditingItemId); if(item) { item.src = cariFabCanvas.toDataURL({ format: 'png', multiplier: 1 }); item.fabricData = JSON.stringify(cariFabCanvas.toJSON()); closeModal('cari-vector-editor-modal'); cariRenderLibrary(); document.querySelectorAll('.cari-wrapper .part').forEach(part => { const eqImg = part.querySelector(`:scope > img[data-view="${item.view}"]`); if(eqImg && (part.id === `part-${item.category}` || part.id.startsWith('acc-'))) { eqImg.src = item.src; } }); } }
+
+    // =========================================================================
+    // التصدير العكسي: من استوديو الكاريكاتير إلى الاستوديو الكبير
+    // =========================================================================
+    window.exportCariToMain = function(viewMode) {
+        if (currentActiveView !== viewMode) cariSwitchView(viewMode);
+        cariDeselectPart({target: document.getElementById('mannequin')});
+
+        let mannequin = document.getElementById('mannequin');
+        let manRect = mannequin.getBoundingClientRect();
+        
+        let cx = canvas.width / 2;
+        let cy = canvas.height / 2;
+        let offsetX = cx - (manRect.width / 2);
+        let offsetY = cy - (manRect.height / 2);
+
+        let partsToExport = [];
+        let parts = mannequin.querySelectorAll('.part');
+        parts.forEach(part => {
+            let img = part.querySelector(`:scope > img[data-view="${viewMode}"]`);
+            let isAcc = part.classList.contains('accessory-part') && part.dataset.accView === viewMode;
+            
+            if (img || isAcc) {
+                let rect = part.getBoundingClientRect();
+                let src = img ? img.src : (part.querySelector('img') ? part.querySelector('img').src : null);
+                if(!src) return;
+
+                let st = window.getComputedStyle(part);
+                let tr = st.getPropertyValue("transform");
+                let angle = 0;
+                if(tr !== 'none') {
+                    let values = tr.split('(')[1].split(')')[0].split(',');
+                    let a = values[0], b = values[1];
+                    angle = Math.round(Math.atan2(b, a) * (180/Math.PI));
+                }
+
+                partsToExport.push({
+                    src: src,
+                    x: offsetX + (rect.left - manRect.left),
+                    y: offsetY + (rect.top - manRect.top),
+                    w: rect.width,
+                    h: rect.height,
+                    rotation: angle
+                });
+            }
+        });
+
+        if(partsToExport.length === 0) return alert("لا يوجد أجزاء لتصديرها في هذه الزاوية!");
+
+        let loadedCount = 0;
+        let tempObjs = [];
+
+        partsToExport.forEach(p => {
+            let sImg = new Image();
+            sImg.onload = () => {
+                let newId = generateId();
+                let sticker = { id: newId, img: sImg, x: p.x, y: p.y, w: p.w, h: p.h, alpha: 1.0, rotation: p.rotation, flipped: false, visible: true, locked: false };
+                stickers.push(sticker);
+                tempObjs.push({id: newId, type: 'sticker', obj: sticker});
+                loadedCount++;
+
+                if(loadedCount === partsToExport.length) {
+                    // تجميع عناصر الشخصية في الاستوديو الكبير
+                    let grpId = generateId();
+                    
+                    let sumX = 0, sumY = 0;
+                    tempObjs.forEach(t => { sumX += (t.obj.x + t.obj.w/2); sumY += (t.obj.y + t.obj.h/2); });
+                    let gCx = sumX / tempObjs.length;
+                    let gCy = sumY / tempObjs.length;
+
+                    let children = [];
+                    tempObjs.forEach(t => {
+                        t.obj.relX = t.obj.x - gCx;
+                        t.obj.relY = t.obj.y - gCy;
+                        t.obj.x = t.obj.relX; 
+                        t.obj.y = t.obj.relY;
+                        children.push({ id: t.id, type: 'sticker' });
+                    });
+
+                    groups.push({ id: grpId, x: gCx, y: gCy, rotation: 0, alpha: 1, flipped: false, visible: true, locked: false, children: children });
+                    layers.push({ id: grpId, type: 'group', name: 'شخصية (' + (viewMode==='front'?'أمامي':'جانبي') + ')', visible: true, locked: false });
+
+                    renderLayersPanel(); updateUI(); draw();
+                    closeModal('cari-app-modal');
+                    alert("تم التصدير والاستيراد بنجاح! ستجد الشخصية كمجموعة قابلة للتفكيك في الاستوديو الكبير.");
+                }
+            };
+            sImg.src = p.src;
+        });
+    }
+
+</script>
