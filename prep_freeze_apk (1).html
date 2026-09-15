@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Prep & Freeze | تجهيز وتفريز</title>
+    
+    <!-- مكتبات مساعدة -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- مكتبة تصدير PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- إعدادات Tailwind لتخصيص الألوان (الثيم الوردي الجذاب) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            300: '#fda4af',
+                            400: '#fb7185',
+                            500: '#f43f5e', // اللون الأساسي (وردي/روز)
+                            600: '#e11d48',
+                            700: '#be123c',
+                        }
+                    },
+                    animation: {
+                        'float-1': 'float 4s ease-in-out infinite',
+                        'float-2': 'float 5s ease-in-out infinite 1s',
+                        'float-3': 'float 6s ease-in-out infinite 2s',
+                        'float-4': 'float 4.5s ease-in-out infinite 1.5s',
+                        'spin-slow': 'spin 8s linear infinite',
+                        'wiggle': 'wiggle 1s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-20px) rotate(10deg)' },
+                        },
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-5deg)' },
+                            '50%': { transform: 'rotate(5deg)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #fffafb;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-top: 1px solid rgba(255, 228, 230, 0.8); border-bottom: 1px solid rgba(255, 228, 230, 0.8); }
+        .active-nav-btn { color: #f43f5e; }
+        .btn-hover-effect:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="text-slate-800 pb-20">
+
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-brand-50 flex flex-col items-center justify-center p-6 overflow-hidden">
+        <div class="absolute inset-0 pointer-events-none opacity-60">
+            <div class="animate-float-1 absolute text-5xl top-16 left-10">🧁</div>
+            <div class="animate-float-2 absolute text-6xl bottom-24 right-8">🍕</div>
+            <div class="animate-float-3 absolute text-5xl top-1/3 right-12">🥗</div>
+            <div class="animate-float-4 absolute text-4xl bottom-1/3 left-8">🍔</div>
+            <div class="animate-spin-slow absolute text-3xl top-1/4 left-1/3 opacity-50">✨</div>
+            <div class="animate-spin-slow absolute text-3xl bottom-1/4 right-1/4 opacity-50" style="animation-direction: reverse;">✨</div>
+        </div>
+
+        <div class="bg-white p-8 rounded-[2rem] shadow-2xl shadow-brand-200/50 w-full max-w-sm text-center relative z-10 border border-brand-100 flex flex-col items-center">
+            <div class="w-24 h-24 bg-gradient-to-tr from-brand-400 to-brand-300 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-300/40 relative">
+                <i class="fa-solid fa-fire-burner text-5xl text-white animate-wiggle"></i>
+                <div class="absolute -top-2 -right-2 bg-amber-400 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md animate-bounce"><i class="fa-solid fa-star"></i></div>
+            </div>
+            
+            <h1 class="text-3xl font-extrabold mb-2 text-brand-600 tracking-tight">Prep & Freeze</h1>
+            <p class="text-slate-500 mb-8 text-sm font-medium">سجل الدخول لاستعادة مخزونك ووصفاتك</p>
+            
+            <div class="space-y-4 mb-2 w-full">
+                <div class="relative">
+                    <i class="fa-solid fa-envelope absolute right-4 top-3.5 text-brand-300"></i>
+                    <input type="text" id="login-email" placeholder="البريد الإلكتروني أو رقم الهاتف" class="w-full bg-brand-50 border border-brand-100 rounded-2xl pr-11 pl-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition font-medium">
+                </div>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute right-4 top-3.5 text-brand-300"></i>
+                    <input type="password" id="login-password" placeholder="كلمة المرور" class="w-full bg-brand-50 border border-brand-100 rounded-2xl pr-11 pl-4 py-3 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition font-medium">
+                </div>
+            </div>
+
+            <div class="text-right mb-6 mt-2 w-full">
+                <button onclick="forgotPassword()" class="text-xs text-brand-500 font-bold hover:text-brand-600 transition">نسيت كلمة المرور؟</button>
+            </div>
+            
+            <button id="login-btn" onclick="handleLogin()" class="btn-hover-effect w-full bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold py-3.5 rounded-2xl shadow-xl shadow-brand-500/30 transition-all flex justify-center items-center gap-2 mb-6">
+                دخول / تسجيل
+            </button>
+
+            <!-- زر تحميل التطبيق في صفحة الدخول -->
+            <a href="https://paintinglikeair-alt.github.io/kjgxeAjlxsaesamlkiligcccjkjfdjjxdj/app-release2.apk" download class="btn-hover-effect flex items-center justify-center gap-2 text-brand-600 bg-brand-50 hover:bg-brand-100 w-full py-3 rounded-2xl font-bold transition border border-brand-100">
+                <i class="fa-brands fa-android text-xl"></i>
+                حمل تطبيق الأندرويد الآن
+            </a>
+        </div>
+    </div>
+
+    <header id="main-header" class="hidden fixed top-0 w-full z-30 glass-panel px-4 py-3 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-500">
+                <i class="fa-solid fa-fire-burner animate-pulse"></i>
+            </div>
+            <h1 class="font-extrabold text-xl tracking-tight text-slate-800">تجهيز وتفريز</h1>
+        </div>
+        <div class="flex gap-2">
+            <!-- زر تحميل التطبيق في الشاشة الرئيسية -->
+            <a href="https://paintinglikeair-alt.github.io/kjgxeAjlxsaesamlkiligcccjkjfdjjxdj/app-release2.apk" download class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 border border-emerald-100 flex items-center justify-center shadow-sm hover:bg-emerald-100 transition btn-hover-effect" title="تنزيل التطبيق">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </a>
+
+            <button id="save-cloud-btn" onclick="saveDataToCloud()" class="w-10 h-10 rounded-full bg-blue-50 text-blue-500 border border-blue-100 flex items-center justify-center shadow-sm hover:bg-blue-100 transition btn-hover-effect">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+            </button>
+            <button onclick="switchTab('cookbook')" class="w-10 h-10 rounded-full bg-amber-50 text-amber-500 border border-amber-100 flex items-center justify-center shadow-sm hover:bg-amber-100 transition btn-hover-effect">
+                <i class="fa-solid fa-book-open"></i>
+            </button>
+            <div onclick="switchTab('profile')" class="w-10 h-10 rounded-full bg-brand-100 border-2 border-brand-500 overflow-hidden cursor-pointer shadow-sm btn-hover-effect transition-transform hover:scale-105">
+                <img id="header-avatar" src="" class="w-full h-full object-cover">
+            </div>
+        </div>
+    </header>
+
+    <main id="main-content" class="hidden pt-24 px-4 max-w-3xl mx-auto">
+        
+        <section id="freezer" class="tab-content active">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-extrabold text-slate-800">مخزون الفريزر</h2>
+                <button onclick="document.getElementById('add-inventory-modal').classList.remove('hidden')" class="btn-hover-effect bg-brand-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-brand-500/30 flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> أضف صنف
+                </button>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-4">
+                <button onclick="filterInventory('الكل')" class="filter-btn bg-slate-800 text-white px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap shadow-md transition-all">الكل</button>
+                <button onclick="filterInventory('لحوم ودواجن')" class="filter-btn bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-brand-50 transition-all">لحوم ودواجن</button>
+                <button onclick="filterInventory('بحريات')" class="filter-btn bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-brand-50 transition-all">بحريات</button>
+                <button onclick="filterInventory('خضروات وأساسيات')" class="filter-btn bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-brand-50 transition-all">خضروات</button>
+                <button onclick="filterInventory('اقتصادي ونباتي')" class="filter-btn bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-brand-50 transition-all">اقتصادي</button>
+                <button onclick="filterInventory('معجنات ومخبوزات')" class="filter-btn bg-white border border-slate-200 text-slate-600 px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap hover:bg-brand-50 transition-all">معجنات</button>
+            </div>
+
+            <div id="inventory-list" class="space-y-3">
+                <!-- يُملأ برمجياً -->
+            </div>
+        </section>
+
+        <section id="library" class="tab-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-extrabold text-slate-800">مكتبة الوصفات</h2>
+                <button onclick="switchTab('create')" class="btn-hover-effect bg-brand-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-brand-500/30 flex items-center gap-2">
+                    <i class="fa-solid fa-puzzle-piece"></i> ابتكر وصفة
+                </button>
+            </div>
+            
+            <div id="library-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- يُملأ برمجياً -->
+            </div>
+        </section>
+
+        <section id="cookbook" class="tab-content">
+            <div class="bg-gradient-to-r from-amber-500 to-orange-400 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
+                <i class="fa-solid fa-book-open absolute -left-4 -top-4 text-white/20 text-8xl animate-pulse"></i>
+                <h2 class="text-2xl font-extrabold mb-2 relative z-10">صانع كتاب الطبخ</h2>
+                <p class="text-white/90 text-sm relative z-10 font-medium">اجمع وصفاتك المفضلة، أضف صوراً، وقم بتصديرها ككتاب PDF أو Word.</p>
+            </div>
+
+            <div class="flex gap-2 mb-6">
+                <button onclick="openSelectForCookbook()" class="flex-1 btn-hover-effect bg-white border-2 border-dashed border-amber-300 text-amber-600 py-3 rounded-2xl font-bold hover:bg-amber-50 transition">
+                    <i class="fa-solid fa-plus mb-1 block text-xl"></i> أضف وصفات للكتاب
+                </button>
+                <div class="flex flex-col gap-2">
+                    <button onclick="exportToPDF()" class="btn-hover-effect bg-brand-500 text-white px-5 py-2 rounded-xl font-bold shadow-md shadow-brand-500/30 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                    </button>
+                    <button onclick="exportToWord()" class="btn-hover-effect bg-blue-600 text-white px-5 py-2 rounded-xl font-bold shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-word"></i> Word
+                    </button>
+                </div>
+            </div>
+
+            <div id="cookbook-builder-list" class="space-y-4">
+                <!-- يُملأ برمجياً -->
+            </div>
+        </section>
+
+        <section id="create" class="tab-content">
+            <h2 class="text-2xl font-extrabold mb-6 text-slate-800">تركيب وصفة جديدة</h2>
+            
+            <div class="bg-brand-50 border border-brand-100 rounded-3xl p-5 mb-6 shadow-sm">
+                <div class="bg-brand-500 text-white p-4 rounded-2xl shadow-md mb-4 flex items-center justify-between">
+                    <input type="text" id="recipe-title" placeholder="اسم الوصفة (مثال: حواوشي فراخ)" class="bg-transparent text-white placeholder-brand-200 font-bold text-lg outline-none w-full">
+                    <i class="fa-solid fa-puzzle-piece text-2xl opacity-50 animate-wiggle"></i>
+                </div>
+                
+                <div id="puzzle-ingredients" class="space-y-3 ml-4 border-r-2 border-brand-200 pr-4">
+                    <div class="bg-white p-3 rounded-xl border border-brand-100 shadow-sm flex items-center">
+                        <i class="fa-solid fa-caret-left text-brand-400 ml-3"></i>
+                        <input type="text" placeholder="مكون (مثال: شاورما فراخ متبلة)" class="w-full outline-none text-sm font-medium ingredient-input">
+                    </div>
+                </div>
+                
+                <button onclick="addPuzzlePiece()" class="ml-4 pr-4 mt-4 text-brand-600 text-sm font-bold flex items-center gap-2 btn-hover-effect">
+                    <i class="fa-solid fa-plus-circle text-lg"></i> أضف مكون آخر
+                </button>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-bold text-brand-700 mb-2">التصنيف:</label>
+                    <select id="recipe-category" class="w-full bg-white border border-brand-200 rounded-xl p-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 font-medium">
+                        <option value="لحوم ودواجن">لحوم ودواجن</option>
+                        <option value="بحريات">بحريات</option>
+                        <option value="خضروات وأساسيات">خضروات وأساسيات</option>
+                        <option value="اقتصادي ونباتي">اقتصادي ونباتي</option>
+                        <option value="معجنات ومخبوزات">معجنات ومخبوزات</option>
+                    </select>
+                </div>
+
+                <div class="mt-6">
+                    <label class="block text-sm font-bold text-brand-700 mb-2">خطوات التحضير:</label>
+                    <textarea id="recipe-instructions" rows="4" placeholder="اكتب الخطوات يدوياً، أو استعن بالذكاء الاصطناعي..." class="w-full bg-white border border-brand-200 rounded-xl p-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 text-sm font-medium"></textarea>
+                    <button onclick="generateAIInstructions()" class="btn-hover-effect mt-3 w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center gap-2 transition">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> اقتراح الخطوات بالذكاء الاصطناعي
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="saveRecipe()" class="btn-hover-effect w-full bg-brand-500 hover:bg-brand-600 text-white font-extrabold py-4 rounded-2xl shadow-xl shadow-brand-500/30 mb-4 text-lg transition">
+                حفظ في المكتبة
+            </button>
+        </section>
+
+        <section id="shopping" class="tab-content">
+            <div class="bg-gradient-to-r from-teal-400 to-emerald-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
+                <i class="fa-solid fa-robot absolute -left-4 -bottom-4 text-white/20 text-8xl"></i>
+                <h2 class="text-2xl font-extrabold mb-2 relative z-10">التسوق الذكي (AI)</h2>
+                <p class="text-white/90 text-sm font-medium relative z-10">حدد الوصفات، وسيحسب الذكاء الاصطناعي الطلبات.</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 mb-4">
+                <h3 class="font-bold mb-4 text-slate-800 text-lg">اختر الوصفات المطلوبة:</h3>
+                <div id="shopping-recipes-list" class="space-y-2 max-h-48 overflow-y-auto no-scrollbar border-b border-slate-100 pb-4 mb-4">
+                    <!-- يُملأ برمجياً -->
+                </div>
+                
+                <textarea id="shopping-notes" rows="2" placeholder="ملاحظات (مثال: أحتاج خضار دايت إضافي)..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:border-emerald-500 mb-4 font-medium"></textarea>
+                
+                <button onclick="generateShoppingList()" class="btn-hover-effect w-full bg-slate-800 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-microchip text-emerald-400"></i> احسب الطلبات
+                </button>
+            </div>
+
+            <div id="shopping-result" class="hidden bg-emerald-50 p-5 rounded-2xl border border-emerald-200 text-sm leading-relaxed whitespace-pre-wrap font-bold text-slate-700 shadow-inner">
+            </div>
+        </section>
+
+        <section id="community" class="tab-content">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-brand-100 mb-6 text-center relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-20 h-20 bg-brand-50 rounded-full blur-2xl"></div>
+                <h3 class="font-extrabold text-xl mb-1 relative z-10 text-brand-600"><i class="fa-solid fa-stopwatch"></i> تحدي الإنجاز</h3>
+                <p class="text-xs text-slate-500 mb-5 relative z-10 font-medium">أنجز مهامك، واربح النقاط!</p>
+                
+                <div class="flex gap-2 justify-center mb-5 relative z-10">
+                    <button onclick="setTimer(10)" class="btn-hover-effect px-4 py-2 bg-brand-50 text-brand-600 border border-brand-100 rounded-full text-xs font-bold hover:bg-brand-100 transition">10 دقائق</button>
+                    <button onclick="setTimer(30)" class="btn-hover-effect px-4 py-2 bg-brand-50 text-brand-600 border border-brand-100 rounded-full text-xs font-bold hover:bg-brand-100 transition">30 دقيقة</button>
+                    <div class="relative">
+                        <input type="number" id="custom-time" placeholder="دقيقة" class="w-20 px-3 py-2 text-center bg-white rounded-full text-xs font-bold outline-none border border-slate-200 focus:border-brand-500">
+                    </div>
+                </div>
+
+                <div id="timer-display" class="text-6xl font-black text-slate-800 tracking-widest mb-6 relative z-10 drop-shadow-sm">00:00</div>
+                
+                <div class="flex justify-center gap-4 relative z-10">
+                    <button onclick="startTimer()" class="btn-hover-effect bg-brand-500 text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-brand-500/30 w-32">ابدأ</button>
+                    <button onclick="stopTimer()" class="btn-hover-effect bg-slate-200 text-slate-700 px-8 py-3 rounded-full font-bold shadow-md w-32 hover:bg-slate-300">إيقاف</button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-5 px-1">
+                <h2 class="text-2xl font-extrabold text-slate-800">شارك طبقك اليوم</h2>
+                <button onclick="openPostModal()" class="btn-hover-effect bg-blue-600 text-white w-12 h-12 rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-camera"></i>
+                </button>
+            </div>
+
+            <div id="community-feed" class="space-y-5">
+                <!-- يُملأ برمجياً -->
+            </div>
+        </section>
+
+        <section id="profile" class="tab-content">
+            <div class="bg-white rounded-3xl p-6 shadow-sm border border-brand-100 mb-6 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-brand-100/50 to-transparent"></div>
+                <div class="w-28 h-28 mx-auto rounded-full border-4 border-white shadow-lg overflow-hidden mb-4 relative z-10">
+                    <img id="profile-avatar" src="" class="w-full h-full object-cover">
+                </div>
+                <h2 id="profile-name" class="text-2xl font-extrabold text-slate-800 relative z-10">المستخدم</h2>
+                <p id="profile-email" class="text-sm text-slate-500 mb-6 relative z-10 font-medium">email</p>
+                
+                <div class="flex justify-center gap-8 mb-6 relative z-10">
+                    <div class="text-center bg-brand-50 px-6 py-3 rounded-2xl border border-brand-100">
+                        <span class="block text-3xl font-black text-brand-600" id="profile-points">0</span>
+                        <span class="text-xs font-bold text-brand-400">نقطة إنجاز</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-center gap-3 flex-wrap mb-8 relative z-10" id="profile-badges">
+                </div>
+                
+                <button onclick="handleLogout()" class="btn-hover-effect text-sm text-red-500 font-bold border border-red-200 px-6 py-2.5 rounded-full hover:bg-red-50 transition flex items-center justify-center gap-2 mx-auto relative z-10">
+                    <i class="fa-solid fa-sign-out-alt"></i> تسجيل الخروج
+                </button>
+            </div>
+
+            <h3 class="font-extrabold mb-4 text-xl px-1 text-slate-800">معرض أطباقي</h3>
+            <div id="profile-posts" class="grid grid-cols-3 gap-2">
+            </div>
+        </section>
+    </main>
+
+    <nav id="bottom-nav" class="hidden fixed bottom-0 w-full glass-panel pb-safe z-30">
+        <div class="flex justify-around items-center h-16">
+            <button onclick="switchTab('freezer')" class="nav-btn active-nav-btn flex flex-col items-center gap-1 w-1/5 btn-hover-effect" data-target="freezer">
+                <i class="fa-solid fa-snowflake text-xl mb-0.5"></i>
+                <span class="text-[11px] font-bold">الفريزر</span>
+            </button>
+            <button onclick="switchTab('library')" class="nav-btn flex flex-col items-center gap-1 w-1/5 text-slate-400 btn-hover-effect" data-target="library">
+                <i class="fa-solid fa-layer-group text-xl mb-0.5"></i>
+                <span class="text-[11px] font-bold">المكتبة</span>
+            </button>
+            <button onclick="switchTab('create')" class="nav-btn flex flex-col items-center gap-1 w-1/5 text-slate-400 btn-hover-effect relative" data-target="create">
+                <div class="w-14 h-14 bg-brand-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-500/40 absolute -top-8 border-4 border-white transition-transform hover:scale-105">
+                    <i class="fa-solid fa-puzzle-piece text-2xl"></i>
+                </div>
+                <span class="text-[11px] font-bold mt-6">ابتكر</span>
+            </button>
+            <button onclick="switchTab('shopping')" class="nav-btn flex flex-col items-center gap-1 w-1/5 text-slate-400 btn-hover-effect" data-target="shopping">
+                <i class="fa-solid fa-basket-shopping text-xl mb-0.5"></i>
+                <span class="text-[11px] font-bold">التسوق</span>
+            </button>
+            <button onclick="switchTab('community')" class="nav-btn flex flex-col items-center gap-1 w-1/5 text-slate-400 btn-hover-effect" data-target="community">
+                <i class="fa-solid fa-users text-xl mb-0.5"></i>
+                <span class="text-[11px] font-bold">المجتمع</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="hidden fixed inset-0 z-[200] bg-slate-900/40 items-center justify-center p-4 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl w-full max-w-xs p-6 text-center shadow-2xl transform scale-95 transition-transform duration-300" id="custom-modal-box">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" id="modal-icon-bg">
+                <i id="modal-icon" class="text-3xl"></i>
+            </div>
+            <h3 id="modal-title" class="font-extrabold text-lg mb-2 text-slate-800">تنبيه</h3>
+            <p id="modal-msg" class="text-sm text-slate-500 mb-6 font-medium">رسالة</p>
+            <div class="flex justify-center gap-3" id="modal-buttons"></div>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="add-inventory-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative">
+            <button onclick="document.getElementById('add-inventory-modal').classList.add('hidden')" class="absolute top-4 left-4 text-slate-400 bg-slate-100 w-8 h-8 rounded-full"><i class="fa-solid fa-times"></i></button>
+            <h3 class="font-extrabold text-xl mb-5 text-slate-800">إضافة صنف للفريزر</h3>
+            <input type="text" id="new-inv-name" placeholder="اسم الصنف..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-4 font-medium outline-none focus:border-brand-500">
+            <select id="new-inv-category" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 mb-4 font-medium outline-none focus:border-brand-500">
+                <option value="لحوم ودواجن">لحوم ودواجن</option>
+                <option value="بحريات">بحريات</option>
+                <option value="خضروات وأساسيات">خضروات وأساسيات</option>
+                <option value="اقتصادي ونباتي">اقتصادي ونباتي</option>
+                <option value="معجنات ومخبوزات">معجنات ومخبوزات</option>
+            </select>
+            <div class="flex items-center gap-3 mb-6">
+                <label class="text-sm font-bold text-slate-700">الكمية:</label>
+                <input type="number" id="new-inv-qty" value="1" min="1" class="w-24 text-center bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none font-bold focus:border-brand-500">
+            </div>
+            <button onclick="addDirectToInventory()" class="btn-hover-effect w-full bg-brand-500 text-white font-bold py-3.5 rounded-xl shadow-lg">إضافة</button>
+        </div>
+    </div>
+
+    <!-- Edit Recipe Modal -->
+    <div id="edit-recipe-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="document.getElementById('edit-recipe-modal').classList.add('hidden')" class="absolute top-4 left-4 text-slate-400 bg-slate-100 w-8 h-8 rounded-full"><i class="fa-solid fa-times"></i></button>
+            <h3 class="font-extrabold text-xl mb-4 text-slate-800">تعديل الوصفة</h3>
+            <input type="hidden" id="edit-recipe-id">
+            <input type="text" id="edit-recipe-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3 font-bold outline-none focus:border-brand-500">
+            <textarea id="edit-recipe-ings" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-3 text-sm font-medium outline-none focus:border-brand-500"></textarea>
+            <textarea id="edit-recipe-inst" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 mb-5 text-sm font-medium outline-none focus:border-brand-500"></textarea>
+            <button onclick="saveEditedRecipe()" class="btn-hover-effect w-full bg-brand-500 text-white font-bold py-3.5 rounded-xl shadow-lg">حفظ التعديلات</button>
+        </div>
+    </div>
+
+    <!-- Post Modal -->
+    <div id="post-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+        <div class="bg-white rounded-t-[2rem] sm:rounded-3xl w-full max-w-md p-6 relative">
+            <button onclick="closePostModal()" class="absolute top-4 left-4 text-slate-400 bg-slate-100 w-8 h-8 rounded-full"><i class="fa-solid fa-times"></i></button>
+            <h3 class="font-extrabold text-xl mb-4 text-slate-800">نشر طبق</h3>
+            <textarea id="post-text" rows="3" placeholder="اكتب وصفاً لطبقك..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4 text-sm font-medium outline-none focus:border-blue-500"></textarea>
+            
+            <div id="post-media-preview" class="mb-4 hidden rounded-2xl overflow-hidden bg-slate-100 max-h-48 flex items-center justify-center border border-slate-200"></div>
+
+            <div class="flex justify-between items-center mt-2">
+                <label class="cursor-pointer text-blue-600 bg-blue-50 px-5 py-2.5 rounded-full text-sm font-bold flex items-center gap-2 hover:bg-blue-100 transition btn-hover-effect">
+                    <i class="fa-solid fa-image text-lg"></i> إرفاق ملف
+                    <input type="file" id="media-upload" accept="image/*,video/*" class="hidden" onchange="handleMediaUpload(event)">
+                </label>
+                <button onclick="publishPost()" class="btn-hover-effect bg-slate-800 text-white px-8 py-2.5 rounded-full font-bold shadow-md">نشر</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div id="edit-post-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 items-end sm:items-center justify-center p-0 sm:p-4 transition-all">
+        <div class="bg-white rounded-t-[2rem] sm:rounded-3xl w-full max-w-md p-6 relative">
+            <button onclick="closeEditPostModal()" class="absolute top-4 left-4 text-slate-400 bg-slate-100 w-8 h-8 rounded-full"><i class="fa-solid fa-times"></i></button>
+            <h3 class="font-extrabold text-xl mb-4 text-slate-800">تعديل المنشور</h3>
+            <input type="hidden" id="edit-post-id">
+            <textarea id="edit-post-text" rows="3" placeholder="تعديل النص..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 mb-4 text-sm font-medium outline-none focus:border-blue-500"></textarea>
+            <div class="flex justify-end mt-2">
+                <button onclick="saveEditedPost()" class="btn-hover-effect bg-slate-800 text-white px-8 py-2.5 rounded-full font-bold shadow-md">حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookbook Select Modal -->
+    <div id="cookbook-select-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative max-h-[80vh] flex flex-col">
+            <button onclick="document.getElementById('cookbook-select-modal').classList.add('hidden')" class="absolute top-4 left-4 text-slate-400 bg-slate-100 w-8 h-8 rounded-full"><i class="fa-solid fa-times"></i></button>
+            <h3 class="font-extrabold text-xl mb-4 text-slate-800">اختر وصفات للكتاب</h3>
+            <div id="cookbook-options" class="overflow-y-auto no-scrollbar flex-1 space-y-2 mb-5"></div>
+            <button onclick="addSelectedToCookbook()" class="btn-hover-effect w-full bg-amber-500 text-white font-bold py-3.5 rounded-xl shadow-lg">إضافة للكتاب</button>
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox-modal" class="hidden fixed inset-0 z-[100] bg-black/95 flex-col items-center justify-center p-4">
+        <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white bg-white/20 w-10 h-10 rounded-full text-xl hover:bg-white/40 transition"><i class="fa-solid fa-times"></i></button>
+        <div id="lightbox-content" class="w-full max-w-2xl text-center flex flex-col items-center justify-center"></div>
+    </div>
+
+    <div id="toast" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-6 py-3.5 rounded-full shadow-2xl text-sm font-bold transition-all duration-400 opacity-0 pointer-events-none z-[300] flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-brand-400 text-lg"></i>
+        <span id="toast-msg">تم بنجاح!</span>
+    </div>
+
+    <audio id="alarm-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        const defaultAvatar = 'https://ui-avatars.com/api/?background=f43f5e&color=fff&name=';
+        
+        // ==========================================
+        // إعدادات المفاتيح 
+        // ==========================================
+        window.SUPABASE_URL = 'https://cuadsypqmdxyoqrprsbl.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1YWRzeXBxbWR4eW9xcnByc2JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzODE0NDMsImV4cCI6MjEwNDk1NzQ0M30.OBzHOOArNgYKMf6ykNSq4zg0oy79VXNAp9TOsrSagl8';
+
+   
+        window.GEMINI_API_KEY = 'AQ.Ab8RN6I85cRt4tJJx0toIF3oUT4Tdm2j-tQvoN7Nl5SbwGvr0g'; // ضعي مفتاح Gemini AI هنا
+
+        const defaultInventory = [
+            { id: 1, name: 'شاورما دجاج متبلة', category: 'لحوم ودواجن', qty: 3, alert: false, active: true },
+            { id: 2, name: 'سمبوسك (محشية جبنة/لحمة/شاورما)', category: 'معجنات ومخبوزات', qty: 4, alert: false, active: true },
+            { id: 3, name: 'حواوشي فراخ (محشي شاورما)', category: 'لحوم ودواجن', qty: 5, alert: false, active: true },
+            { id: 4, name: 'لحمة مفرومة سادة', category: 'لحوم ودواجن', qty: 2, alert: false, active: true },
+            { id: 5, name: 'سمك ماكريل متنظف ومتقطع جزل', category: 'بحريات', qty: 3, alert: false, active: true },
+            { id: 6, name: 'سردين صينية متنظف ومغسول', category: 'بحريات', qty: 2, alert: false, active: true },
+            { id: 7, name: 'عيش صحي (حمص/عدس/أرز)', category: 'معجنات ومخبوزات', qty: 6, alert: false, active: true },
+            { id: 8, name: 'بطاطس صوابع (مفرزة نصف مقلية)', category: 'خضروات وأساسيات', qty: 4, alert: false, active: true },
+            { id: 9, name: 'صوصات وصلصة وبصل مفروم', category: 'خضروات وأساسيات', qty: 5, alert: false, active: true },
+            { id: 10, name: 'بشاميل متفرز', category: 'خضروات وأساسيات', qty: 3, alert: false, active: true },
+            { id: 11, name: 'فول أخضر متفصص وخضرة مقطعة', category: 'خضروات وأساسيات', qty: 4, alert: false, active: true },
+            { id: 12, name: 'سبانخ مقطعة ومتفرزة', category: 'خضروات وأساسيات', qty: 3, alert: false, active: true },
+            { id: 13, name: 'أوراق مسلوقة ومقطعة للحشي', category: 'خضروات وأساسيات', qty: 2, alert: false, active: true },
+            { id: 14, name: 'كفتة أرز', category: 'اقتصادي ونباتي', qty: 3, alert: false, active: true },
+            { id: 15, name: 'مسقعة باللحمة المفرومة', category: 'لحوم ودواجن', qty: 2, alert: false, active: true },
+            { id: 16, name: 'عيش كريب', category: 'معجنات ومخبوزات', qty: 10, alert: false, active: true },
+            { id: 17, name: 'برجر فاصوليا حمراء أو مشروم', category: 'اقتصادي ونباتي', qty: 4, alert: false, active: true },
+            { id: 18, name: 'بانيه (جاهز ومتبل)', category: 'لحوم ودواجن', qty: 3, alert: false, active: true },
+            { id: 19, name: 'هوت دوج (جاهز للسلق)', category: 'لحوم ودواجن', qty: 5, alert: false, active: true },
+            { id: 20, name: 'كفتة داوود باشا (مشكلة ومتحمرة)', category: 'لحوم ودواجن', qty: 2, alert: false, active: true }
+        ];
+
+        const defaultLibrary = [
+            { id: 101, name: 'حواوشي دجاج سريع', category: 'لحوم ودواجن', ingredients: ['عيش صحي', 'شاورما دجاج متبلة', 'حشوة حواوشي'], instructions: 'التحضير:\nضع حشوة الشاورما في العيش الصحي.\nقم بتحميصها في الفرن أو على الجريل حتى تكتسب لوناً ذهبياً.' },
+            { id: 102, name: 'برجر نباتي (توفير)', category: 'اقتصادي ونباتي', ingredients: ['برجر الفاصوليا الحمراء والمشروم', 'عيش صحي', 'خس وصوص'], instructions: 'التحضير:\nقم بشوي البرجر النباتي.\nقدمه في العيش الصحي مع الإضافات المفضلة.' },
+            { id: 103, name: 'مسقعة سريعة', category: 'لحوم ودواجن', ingredients: ['مسقعة باللحمة المفرومة', 'عيش صحي'], instructions: 'التحضير:\nقم بتسخين المسقعة المفرزة في الفرن أو الميكروويف.\nقدمها ساخنة مع العيش الصحي.' },
+            { id: 104, name: 'صينية سردين', category: 'بحريات', ingredients: ['سردين صينية متنظف', 'بصل مفروم', 'صلصة', 'ليمون'], instructions: 'التحضير:\nرص السردين في صينية مع البصل والصلصة وشرائح الليمون.\nأدخلها الفرن حتى تنضج تماماً.' }
+        ];
+
+        window.appState = {
+            currentUser: null,
+            inventory: JSON.parse(JSON.stringify(defaultInventory)),
+            library: JSON.parse(JSON.stringify(defaultLibrary)),
+            posts: [],
+            cookbook: [],
+            tempMedia: null,
+            timerInterval: null
+        };
+
+        window.userId = null; 
+
+        function showToast(msg, isError = false) {
+            const t = document.getElementById('toast');
+            const icon = t.querySelector('i');
+            document.getElementById('toast-msg').innerText = msg;
+            
+            if(isError) {
+                t.classList.replace('bg-slate-800', 'bg-red-600');
+                icon.className = 'fa-solid fa-circle-exclamation text-white text-lg';
+            } else {
+                t.classList.replace('bg-red-600', 'bg-slate-800');
+                icon.className = 'fa-solid fa-circle-check text-brand-400 text-lg';
+            }
+
+            t.style.opacity = '1';
+            t.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transform = 'translate(-50%, 0)';
+            }, 3500);
+        }
+
+        function showCustomAlert(msg, type = 'info') {
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('custom-modal-box');
+            const iconBg = document.getElementById('modal-icon-bg');
+            const icon = document.getElementById('modal-icon');
+            
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-title').innerText = type === 'error' ? 'تنبيه' : 'معلومة';
+            
+            if(type === 'error') {
+                iconBg.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-red-100 text-red-500';
+                icon.className = 'fa-solid fa-circle-exclamation text-3xl animate-bounce';
+            } else {
+                iconBg.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-brand-100 text-brand-500';
+                icon.className = 'fa-solid fa-bell text-3xl animate-wiggle';
+            }
+
+            document.getElementById('modal-buttons').innerHTML = `<button onclick="closeCustomModal()" class="w-full bg-slate-800 text-white font-bold py-2.5 rounded-xl">حسناً</button>`;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10);
+        }
+
+        function showCustomConfirm(msg, confirmCallback) {
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('custom-modal-box');
+            
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal-title').innerText = 'تأكيد الحذف';
+            
+            document.getElementById('modal-icon-bg').className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-amber-100 text-amber-500';
+            document.getElementById('modal-icon').className = 'fa-solid fa-triangle-exclamation text-3xl';
+
+            window.currentConfirmCallback = confirmCallback;
+
+            document.getElementById('modal-buttons').innerHTML = `
+                <button onclick="executeConfirm()" class="flex-1 bg-red-500 text-white font-bold py-2.5 rounded-xl shadow-md">تأكيد</button>
+                <button onclick="closeCustomModal()" class="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl">إلغاء</button>
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95'); }, 10);
+        }
+
+        function executeConfirm() {
+            if(window.currentConfirmCallback) window.currentConfirmCallback();
+            closeCustomModal();
+        }
+
+        function closeCustomModal() {
+            const modal = document.getElementById('custom-modal');
+            const box = document.getElementById('custom-modal-box');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
+        function safeText(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            
+            if (!email || !pass) { 
+                showCustomAlert('الرجاء إدخال البريد الإلكتروني وكلمة المرور.', 'error'); 
+                return; 
+            }
+            
+            const btn = document.getElementById('login-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الاتصال بالنظام...';
+            
+            try {
+                const displayName = email.split('@')[0];
+                const avatarUrl = defaultAvatar + encodeURIComponent(displayName);
+
+                if (window.SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE' || !window.supabaseClient) {
+                    window.userId = 'test-user-' + btoa(email);
+                    window.appState.currentUser = { 
+                        name: displayName, email: email, points: 150, 
+                        badges: [{ icon: 'fa-medal', text: 'مبتدئ', color: 'brand' }] 
+                    };
+                    showToast('تم الدخول في وضع التجربة المحلي!');
+                } else {
+                    let { data, error } = await window.supabaseClient.auth.signInWithPassword({ email, password: pass });
+                    
+                    if (error && error.message.includes('Invalid login credentials')) {
+                        const signUpResp = await window.supabaseClient.auth.signUp({ email, password: pass });
+                        data = signUpResp.data;
+                        error = signUpResp.error;
+                    }
+
+                    if (error) throw error;
+                    
+                    window.userId = data.user.id;
+                    window.appState.currentUser = { 
+                        name: displayName, email: data.user.email, points: 150, 
+                        badges: [{ icon: 'fa-medal', text: 'مبتدئ', color: 'brand' }] 
+                    };
+                    
+                    if (window.loadCloudData) await window.loadCloudData();
+                }
+
+                document.getElementById('header-avatar').src = avatarUrl;
+                document.getElementById('profile-avatar').src = avatarUrl;
+                document.getElementById('profile-name').innerText = displayName;
+                document.getElementById('profile-email').innerText = email;
+
+                document.getElementById('auth-screen').style.display = 'none';
+                
+                document.getElementById('main-header').classList.remove('hidden');
+                document.getElementById('bottom-nav').classList.remove('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                
+                initApp();
+                showToast('تم تسجيل الدخول بنجاح!');
+            } catch (error) {
+                console.error("Login Error:", error);
+                let errorMsg = error.message;
+                if (errorMsg.toLowerCase().includes('rate limit')) {
+                    errorMsg = 'يوجد ضغط على النظام حالياً، يرجى تعطيل (Confirm email) من إعدادات الحماية ليعمل الموقع فوراً.';
+                } else if (errorMsg.toLowerCase().includes('email not confirmed') || errorMsg.toLowerCase().includes('email link')) {
+                    errorMsg = 'يرجى مراجعة الإيميل للتأكيد، أو إيقاف خاصية التأكيد من الإعدادات.';
+                } else if (errorMsg.toLowerCase().includes('password')) {
+                    errorMsg = 'كلمة المرور غير صحيحة أو ضعيفة جداً.';
+                }
+                showCustomAlert('حدث خطأ: ' + errorMsg, 'error');
+            } finally {
+                btn.innerHTML = 'دخول / تسجيل';
+            }
+        }
+
+        function forgotPassword() {
+            const email = document.getElementById('login-email').value.trim();
+            if(!email) {
+                showCustomAlert('الرجاء كتابة البريد الإلكتروني لإرسال رابط الاستعادة.', 'error');
+                return;
+            }
+            showToast(`تم إرسال رابط الاستعادة إلى: ${email}`);
+        }
+
+        function handleLogout() {
+            window.appState = {
+                currentUser: null,
+                inventory: JSON.parse(JSON.stringify(defaultInventory)),
+                library: JSON.parse(JSON.stringify(defaultLibrary)),
+                posts: [],
+                cookbook: [],
+                tempMedia: null,
+                timerInterval: null
+            };
+            window.userId = null;
+            
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('bottom-nav').classList.add('hidden');
+            document.getElementById('main-content').classList.add('hidden');
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-btn').innerHTML = 'دخول / تسجيل';
+            showToast('تم تسجيل الخروج وتفريغ الذاكرة');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-nav-btn');
+                btn.classList.add('text-slate-400');
+            });
+            const activeBtn = document.querySelector(`.nav-btn[data-target="${tabId}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active-nav-btn');
+                activeBtn.classList.remove('text-slate-400');
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function initApp() {
+            try {
+                renderInventory('الكل');
+                renderLibrary();
+                populateShoppingSelect();
+                renderCommunity();
+                renderProfile();
+            } catch(e) {
+                console.error("App Init Error:", e);
+            }
+        }
+
+        function renderInventory(filterCat) {
+            let filtered = window.appState.inventory;
+            if (filterCat !== 'الكل') filtered = filtered.filter(item => item.category === filterCat);
+            
+            filtered.sort((a, b) => {
+                if (a.active === b.active) return 0;
+                return a.active ? -1 : 1;
+            });
+
+            const listEl = document.getElementById('inventory-list');
+            listEl.innerHTML = '';
+
+            filtered.forEach(item => {
+                const isInactive = !item.active;
+                const opacityClass = isInactive ? 'opacity-50 grayscale' : '';
+                const alertClass = (item.qty <= 1 && item.active) ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-700';
+
+                listEl.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between transition-all ${opacityClass}">
+                        <div class="flex items-center gap-3 flex-1">
+                            <input type="checkbox" ${item.active ? 'checked' : ''} onchange="toggleInventoryActive(${item.id})" class="w-5 h-5 accent-brand-500 rounded cursor-pointer shrink-0">
+                            <div class="truncate pl-2">
+                                <h3 class="font-extrabold text-sm ${isInactive ? 'line-through text-slate-400' : 'text-slate-800'} truncate">${escapeHTML(item.name)}</h3>
+                                <span class="text-[10px] text-slate-500 font-medium">${escapeHTML(item.category)}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <div class="flex items-center bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                <button onclick="updateQty(${item.id}, -1)" class="px-3 py-1.5 hover:bg-slate-200 text-slate-600 transition" ${isInactive?'disabled':''}>-</button>
+                                <span class="px-2 font-bold text-sm w-8 text-center ${alertClass}">${item.qty}</span>
+                                <button onclick="updateQty(${item.id}, 1)" class="px-3 py-1.5 hover:bg-slate-200 text-slate-600 transition" ${isInactive?'disabled':''}>+</button>
+                            </div>
+                            <button onclick="deleteInventoryItem(${item.id})" class="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-xl hover:bg-red-100 transition btn-hover-effect">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function filterInventory(cat) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-slate-800', 'text-white', 'shadow-md');
+                btn.classList.add('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+                if(btn.innerText.trim() === cat) {
+                    btn.classList.remove('bg-white', 'text-slate-600', 'border', 'border-slate-200');
+                    btn.classList.add('bg-slate-800', 'text-white', 'shadow-md');
+                }
+            });
+            renderInventory(cat);
+        }
+
+        function updateQty(id, change) {
+            const item = window.appState.inventory.find(i => i.id === id);
+            if (item) {
+                item.qty += change;
+                if (item.qty < 0) item.qty = 0;
+                item.alert = item.qty <= 1;
+                renderInventory(document.querySelector('.filter-btn.bg-slate-800').innerText.trim());
+            }
+        }
+
+        function toggleInventoryActive(id) {
+            const item = window.appState.inventory.find(i => i.id === id);
+            if(item) {
+                item.active = !item.active;
+                renderInventory(document.querySelector('.filter-btn.bg-slate-800').innerText.trim());
+            }
+        }
+
+        function deleteInventoryItem(id) {
+            showCustomConfirm('هل تريد بالتأكيد حذف هذا الصنف من الفريزر؟', () => {
+                window.appState.inventory = window.appState.inventory.filter(i => i.id !== id);
+                renderInventory(document.querySelector('.filter-btn.bg-slate-800').innerText.trim());
+                showToast('تم حذف الصنف');
+            });
+        }
+
+        function addDirectToInventory() {
+            const name = document.getElementById('new-inv-name').value.trim();
+            const cat = document.getElementById('new-inv-category').value;
+            const qty = parseInt(document.getElementById('new-inv-qty').value) || 1;
+            
+            if(!name) { showCustomAlert('الرجاء إدخال اسم الصنف', 'error'); return; }
+            
+            window.appState.inventory.unshift({ id: Date.now(), name: name, category: cat, qty: qty, alert: qty <= 1, active: true });
+            
+            document.getElementById('new-inv-name').value = '';
+            document.getElementById('add-inventory-modal').classList.add('hidden');
+            renderInventory('الكل');
+            document.querySelectorAll('.filter-btn')[0].click();
+            showToast('تمت إضافة الصنف للفريزر');
+        }
+
+        function addPuzzlePiece() {
+            const container = document.getElementById('puzzle-ingredients');
+            const newPiece = document.createElement('div');
+            newPiece.className = 'bg-white p-3 rounded-xl border border-brand-100 shadow-sm flex items-center mt-3';
+            newPiece.innerHTML = `
+                <i class="fa-solid fa-caret-left text-brand-400 ml-3"></i>
+                <input type="text" placeholder="مكون إضافي..." class="w-full outline-none text-sm font-medium ingredient-input">
+                <button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-lg mr-2 transition"><i class="fa-solid fa-times"></i></button>
+            `;
+            container.appendChild(newPiece);
+        }
+
+        async function callGeminiAI(prompt) {
+            if (!window.GEMINI_API_KEY || window.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+                return null;
+            }
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${window.GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch(e) {
+                console.error("Gemini AI Error:", e);
+                return null;
+            }
+        }
+
+        async function generateAIInstructions() {
+            const title = document.getElementById('recipe-title').value.trim();
+            const inputs = document.querySelectorAll('.ingredient-input');
+            let ings = [];
+            inputs.forEach(inp => { if(inp.value.trim()) ings.push(inp.value.trim()); });
+            
+            const instEl = document.getElementById('recipe-instructions');
+            instEl.value = "جاري ابتكار الخطوات بالذكاء الاصطناعي... ⏳";
+            
+            const prompt = `أنت شيف محترف وخبير في تجهيز الوجبات للتفريز (Meal Prep). 
+بناءً على المكونات التالية: ${ings.join('، ')}. واسم الوصفة: ${title || 'وصفة غير محددة'}. 
+يرجى كتابة تقرير شامل يحتوي على:
+1. (المقادير): كميات ومقادير المكونات المقترحة بدقة.
+2. (طريقة التحضير والطبخ): تفاصيل وخطوات التحضير خطوة بخطوة للطبخ.
+3. (طريقة التجهيز والتفريز): الطريقة الصحيحة لتجهيز وتفريز هذه الوجبة للحفاظ على جودتها، ومدة الصلاحية المقترحة.
+4. (نصائح التقديم): أفكار وإضافات عند تقديم الوجبة.
+اجعل الأسلوب احترافياً ومباشراً.`;
+            
+            const aiResponse = await callGeminiAI(prompt);
+            
+            if (aiResponse) {
+                instEl.value = aiResponse;
+            } else {
+                setTimeout(() => {
+                    instEl.value = `المقادير المقترحة:\n- كميات مناسبة من (${ings.join('، ')}).\n\nخطوات التحضير والطبخ:\n1. قم بتجهيز المكونات وغسلها جيداً.\n2. اخلط المكونات مع إضافة التوابل حسب الرغبة.\n3. قم بتسوية الوجبة أو تحضيرها بالشكل المناسب.\n\nطريقة التجهيز والتفريز:\n- اترك الوجبة لتبرد تماماً، ثم ضعها في أكياس أو علب محكمة الغلق.\n- قم بتفريغ الهواء للحفاظ على النكهة ومنع تكون الثلج.\n\nنصائح التقديم:\n- يفضل تقديمها ساخنة مع مقبلات خفيفة.`;
+                }, 1000);
+            }
+        }
+
+        function saveRecipe() {
+            const title = document.getElementById('recipe-title').value.trim();
+            const cat = document.getElementById('recipe-category').value;
+            const inst = document.getElementById('recipe-instructions').value.trim();
+            const inputs = document.querySelectorAll('.ingredient-input');
+            let ings = [];
+            inputs.forEach(inp => { if(inp.value.trim()) ings.push(inp.value.trim()); });
+
+            if (!title) { showCustomAlert('الرجاء إدخال اسم الوصفة أولاً.', 'error'); return; }
+
+            window.appState.library.unshift({ id: Date.now(), name: title, category: cat, ingredients: ings, instructions: inst });
+
+            document.getElementById('recipe-title').value = '';
+            document.getElementById('recipe-instructions').value = '';
+            document.getElementById('puzzle-ingredients').innerHTML = `
+                <div class="bg-white p-3 rounded-xl border border-brand-100 shadow-sm flex items-center">
+                    <i class="fa-solid fa-caret-left text-brand-400 ml-3"></i>
+                    <input type="text" placeholder="مكون..." class="w-full outline-none text-sm font-medium ingredient-input">
+                </div>
+            `;
+            showToast('تم حفظ الوصفة بنجاح!');
+            renderLibrary();
+            populateShoppingSelect();
+            switchTab('library');
+        }
+
+        function renderLibrary() {
+            const listEl = document.getElementById('library-list');
+            listEl.innerHTML = window.appState.library.map(recipe => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition">
+                    <div>
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-extrabold text-lg text-slate-800">${escapeHTML(recipe.name)}</h3>
+                            <span class="text-[10px] bg-brand-50 text-brand-600 px-3 py-1 rounded-full font-bold border border-brand-100">${escapeHTML(recipe.category)}</span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 mb-4">
+                            ${recipe.ingredients.map(ing => `<span class="text-[10px] bg-slate-50 px-2 py-1 rounded-lg text-slate-600 font-bold border border-slate-200">${escapeHTML(ing)}</span>`).join('')}
+                        </div>
+                        ${recipe.instructions ? `<p class="text-xs text-slate-500 mb-4 line-clamp-2 font-medium leading-relaxed">${escapeHTML(recipe.instructions)}</p>` : ''}
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-auto pt-4 border-t border-slate-50">
+                        <button onclick="addRecipeToFreezer(${recipe.id})" class="btn-hover-effect flex-1 text-xs bg-emerald-50 text-emerald-600 py-2 rounded-xl font-bold hover:bg-emerald-100 transition shadow-sm"><i class="fa-solid fa-snowflake mb-1 block text-lg"></i> للفريزر</button>
+                        <button onclick="openEditRecipe(${recipe.id})" class="btn-hover-effect flex-1 text-xs bg-blue-50 text-blue-600 py-2 rounded-xl font-bold hover:bg-blue-100 transition shadow-sm"><i class="fa-solid fa-pen mb-1 block text-lg"></i> تعديل</button>
+                        <button onclick="deleteRecipe(${recipe.id})" class="btn-hover-effect text-xs bg-red-50 text-red-500 px-4 py-2 rounded-xl hover:bg-red-100 transition shadow-sm flex items-center justify-center"><i class="fa-solid fa-trash text-lg"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addRecipeToFreezer(id) {
+            const recipe = window.appState.library.find(r => r.id === id);
+            if(recipe) {
+                window.appState.inventory.unshift({ 
+                    id: Date.now(), 
+                    name: recipe.name, 
+                    category: recipe.category, 
+                    qty: 1, 
+                    alert: false, 
+                    active: true 
+                });
+                renderInventory('الكل');
+                document.querySelectorAll('.filter-btn')[0].click();
+                showToast(`تم إدراج "${recipe.name}" للفريزر!`);
+            }
+        }
+
+        function deleteRecipe(id) {
+            showCustomConfirm('هل تريد بالتأكيد حذف هذه الوصفة من المكتبة؟', () => {
+                window.appState.library = window.appState.library.filter(r => r.id !== id);
+                renderLibrary();
+                populateShoppingSelect();
+                showToast('تم حذف الوصفة من المكتبة');
+            });
+        }
+
+        function openEditRecipe(id) {
+            const recipe = window.appState.library.find(r => r.id === id);
+            if(recipe) {
+                document.getElementById('edit-recipe-id').value = id;
+                document.getElementById('edit-recipe-name').value = recipe.name;
+                document.getElementById('edit-recipe-ings').value = recipe.ingredients.join('، ');
+                document.getElementById('edit-recipe-inst').value = recipe.instructions || '';
+                document.getElementById('edit-recipe-modal').classList.remove('hidden');
+                document.getElementById('edit-recipe-modal').classList.add('flex');
+            }
+        }
+
+        function saveEditedRecipe() {
+            const id = parseInt(document.getElementById('edit-recipe-id').value);
+            const name = document.getElementById('edit-recipe-name').value.trim();
+            const ings = document.getElementById('edit-recipe-ings').value.split('،').map(i => i.trim()).filter(i => i);
+            const inst = document.getElementById('edit-recipe-inst').value.trim();
+            
+            if(!name) { showCustomAlert('الرجاء كتابة اسم الوصفة', 'error'); return; }
+            
+            const recipe = window.appState.library.find(r => r.id === id);
+            if(recipe) {
+                recipe.name = name;
+                recipe.ingredients = ings;
+                recipe.instructions = inst;
+                
+                document.getElementById('edit-recipe-modal').classList.add('hidden');
+                document.getElementById('edit-recipe-modal').classList.remove('flex');
+                
+                renderLibrary();
+                populateShoppingSelect();
+                showToast('تم حفظ التعديلات بنجاح!');
+            }
+        }
+
+        async function generateShoppingList() {
+            const cbs = document.querySelectorAll('.shop-cb:checked');
+            if(cbs.length === 0) { showCustomAlert('حدد وصفة واحدة على الأقل', 'error'); return; }
+            let allIngs = [];
+            cbs.forEach(cb => allIngs.push(...cb.dataset.ings.split(',')));
+            const notes = document.getElementById('shopping-notes').value.trim();
+            
+            const btn = document.querySelector('button[onclick="generateShoppingList()"]');
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-lg"></i> جاري الحساب...`;
+            
+            const uniqueIngs = [...new Set(allIngs)];
+            const prompt = `أقوم بتجهيز الوجبات لتفريزها. هذه المكونات في وصفاتي: ${uniqueIngs.join('، ')}. وملاحظاتي الإضافية هي: ${notes || 'لا يوجد'}. قم بتلخيص وإنشاء قائمة تسوق ذكية، منظمة حسب الأقسام (خضار، لحوم، بقالة).`;
+            
+            const aiResponse = await callGeminiAI(prompt);
+            
+            if (aiResponse) {
+                document.getElementById('shopping-result').innerText = aiResponse;
+                document.getElementById('shopping-result').classList.remove('hidden');
+                btn.innerHTML = `<i class="fa-solid fa-microchip text-emerald-400 text-lg"></i> احسب الطلبات`;
+            } else {
+                setTimeout(() => {
+                    let res = `الطلبات المحسوبة بدقة:\n\n` + uniqueIngs.map(ing => `• ${ing}`).join('\n');
+                    if (notes) res += `\n\nملاحظات: ${notes}`;
+                    document.getElementById('shopping-result').innerText = res;
+                    document.getElementById('shopping-result').classList.remove('hidden');
+                    btn.innerHTML = `<i class="fa-solid fa-microchip text-emerald-400 text-lg"></i> احسب الطلبات`;
+                }, 1500);
+            }
+        }
+
+        function populateShoppingSelect() {
+            const listEl = document.getElementById('shopping-recipes-list');
+            if(!listEl) return;
+            listEl.innerHTML = window.appState.library.map(recipe => `
+                <label class="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition border border-transparent hover:border-slate-100">
+                    <input type="checkbox" class="shop-cb w-5 h-5 accent-emerald-500 rounded" data-ings="${escapeHTML(recipe.ingredients.join(','))}">
+                    <span class="font-bold text-sm text-slate-700">${escapeHTML(recipe.name)}</span>
+                </label>
+            `).join('');
+        }
+
+        function openSelectForCookbook() {
+            const opts = document.getElementById('cookbook-options');
+            opts.innerHTML = window.appState.library.map(r => `
+                <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition border border-slate-100">
+                    <input type="checkbox" class="cb-cookbook-sel w-5 h-5 accent-amber-500 rounded" value="${r.id}">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm">${escapeHTML(r.name)}</h4>
+                        <p class="text-[10px] text-slate-500">${escapeHTML(r.category)}</p>
+                    </div>
+                </label>
+            `).join('') || '<p class="text-sm text-slate-500 text-center">المكتبة فارغة.</p>';
+            
+            document.getElementById('cookbook-select-modal').classList.remove('hidden');
+            document.getElementById('cookbook-select-modal').classList.add('flex');
+        }
+
+        function addSelectedToCookbook() {
+            const cbs = document.querySelectorAll('.cb-cookbook-sel:checked');
+            cbs.forEach(cb => {
+                const r = window.appState.library.find(x => x.id === parseInt(cb.value));
+                if(r && !window.appState.cookbook.find(c => c.id === r.id)) {
+                    window.appState.cookbook.push({...r, cookbookImg: null, cookbookChapter: 'وصفات عامة'});
+                }
+            });
+            document.getElementById('cookbook-select-modal').classList.add('hidden');
+            document.getElementById('cookbook-select-modal').classList.remove('flex');
+            renderCookbook();
+            showToast('تم الإضافة للكتاب!');
+        }
+
+        function renderCookbook() {
+            const list = document.getElementById('cookbook-builder-list');
+            list.innerHTML = window.appState.cookbook.map((r, index) => `
+                <div class="bg-white p-4 rounded-2xl border border-amber-100 shadow-sm relative">
+                    <button onclick="removeFromCookbook(${r.id})" class="absolute top-3 left-3 text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition"><i class="fa-solid fa-times"></i></button>
+                    
+                    <div class="flex justify-between items-center mb-3 pr-2">
+                        <h4 class="font-bold text-slate-800">${escapeHTML(r.name)}</h4>
+                        <div class="flex gap-1 flex-row-reverse">
+                            <button onclick="moveCookbookItem(${index}, -1)" class="w-7 h-7 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200" ${index === 0 ? 'disabled' : ''}><i class="fa-solid fa-arrow-up"></i></button>
+                            <button onclick="moveCookbookItem(${index}, 1)" class="w-7 h-7 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200" ${index === window.appState.cookbook.length - 1 ? 'disabled' : ''}><i class="fa-solid fa-arrow-down"></i></button>
+                        </div>
+                    </div>
+
+                    <input type="text" placeholder="اسم الفصل/القسم (مثال: مقبلات)" value="${escapeHTML(r.cookbookChapter)}" onchange="updateCookbookItem(${r.id}, 'chapter', this.value)" class="w-full bg-amber-50/50 border border-amber-100 rounded-xl p-2 text-xs mb-3 outline-none focus:border-amber-400 font-bold text-amber-700">
+
+                    <label class="block w-full h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl mb-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition overflow-hidden relative group">
+                        ${r.cookbookImg ? `<img src="${r.cookbookImg}" class="w-full h-full object-cover"> <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><span class="text-white text-xs font-bold"><i class="fa-solid fa-pen"></i> تغيير الصورة</span></div>` : `<i class="fa-solid fa-camera text-slate-300 text-2xl mb-1"></i><span class="text-xs text-slate-500 font-bold">أضف صورة للوصفة</span>`}
+                        <input type="file" accept="image/*" class="hidden" onchange="addImgToCookbookItem(event, ${r.id})">
+                    </label>
+
+                    <textarea onchange="updateCookbookItem(${r.id}, 'ings', this.value)" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-medium outline-none focus:border-amber-400 mb-2" placeholder="المكونات...">${escapeHTML(r.ingredients.join('، '))}</textarea>
+                    <textarea onchange="updateCookbookItem(${r.id}, 'inst', this.value)" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-xs font-medium outline-none focus:border-amber-400" placeholder="خطوات التحضير...">${escapeHTML(r.instructions)}</textarea>
+                </div>
+            `).join('') || '<p class="text-sm text-slate-500 text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">لم تقم بإضافة وصفات للكتاب بعد.</p>';
+        }
+
+        function moveCookbookItem(index, dir) {
+            const arr = window.appState.cookbook;
+            if(index + dir < 0 || index + dir >= arr.length) return;
+            const temp = arr[index];
+            arr[index] = arr[index + dir];
+            arr[index + dir] = temp;
+            renderCookbook();
+        }
+
+        function removeFromCookbook(id) {
+            window.appState.cookbook = window.appState.cookbook.filter(c => c.id !== id);
+            renderCookbook();
+        }
+
+        function updateCookbookItem(id, field, val) {
+            const item = window.appState.cookbook.find(c => c.id === id);
+            if(item) {
+                if(field === 'chapter') item.cookbookChapter = val;
+                if(field === 'ings') item.ingredients = val.split('،').map(i=>i.trim()).filter(i=>i);
+                if(field === 'inst') item.instructions = val;
+            }
+        }
+
+        function addImgToCookbookItem(e, id) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const item = window.appState.cookbook.find(c => c.id === id);
+            if(item) {
+                item.cookbookImg = URL.createObjectURL(file);
+                renderCookbook();
+            }
+        }
+
+        function exportToWord() {
+            if(window.appState.cookbook.length === 0) { showCustomAlert('الكتاب فارغ!', 'error'); return; }
+            
+            let content = `<html dir="rtl"><head><meta charset="utf-8"><title>كتاب الطبخ</title></head><body style="font-family: Arial, sans-serif;">`;
+            content += `<h1 style="text-align:center; color: #f43f5e; font-size: 24pt;">وصفاتي الخاصة</h1>`;
+            
+            let chapters = {};
+            window.appState.cookbook.forEach(r => {
+                let ch = r.cookbookChapter || 'وصفات عامة';
+                if(!chapters[ch]) chapters[ch] = [];
+                chapters[ch].push(r);
+            });
+
+            for(let ch in chapters) {
+                content += `<h2 style="color: #eab308; border-bottom: 2px solid #eab308; padding-bottom: 5px; margin-top: 30px;">${escapeHTML(ch)}</h2>`;
+                chapters[ch].forEach(r => {
+                    content += `<h3 style="color: #1e293b;">${escapeHTML(r.name)}</h3>`;
+                    content += `<h4>المكونات:</h4><p>${escapeHTML(r.ingredients.join('، '))}</p>`;
+                    content += `<h4>طريقة التحضير:</h4><p style="white-space: pre-wrap;">${escapeHTML(r.instructions)}</p>`;
+                    content += `<hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">`;
+                });
+            }
+            content += `</body></html>`;
+
+            const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'My_Cookbook.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('تم تحميل الكتاب بصيغة Word');
+        }
+
+        function exportToPDF() {
+            if(window.appState.cookbook.length === 0) { showCustomAlert('الكتاب فارغ!', 'error'); return; }
+            showToast('جاري تجهيز الـ PDF...');
+            
+            const container = document.createElement('div');
+            container.style.padding = '20px';
+            container.style.fontFamily = "'Cairo', sans-serif";
+            container.dir = 'rtl';
+            container.innerHTML = `<h1 style="text-align:center; color: #f43f5e; margin-bottom: 30px;">تجهيز وتفريز - كتاب الطبخ</h1>`;
+
+            let chapters = {};
+            window.appState.cookbook.forEach(r => {
+                let ch = r.cookbookChapter || 'وصفات عامة';
+                if(!chapters[ch]) chapters[ch] = [];
+                chapters[ch].push(r);
+            });
+
+            for(let ch in chapters) {
+                container.innerHTML += `<h2 style="color: #eab308; border-bottom: 2px solid #eab308; padding-bottom: 5px; margin-top: 30px;">${escapeHTML(ch)}</h2>`;
+                chapters[ch].forEach(r => {
+                    let itemHtml = `<div style="margin-bottom: 30px; break-inside: avoid;">`;
+                    itemHtml += `<h3 style="color: #1e293b; margin-bottom: 10px;">${escapeHTML(r.name)}</h3>`;
+                    if(r.cookbookImg) {
+                        itemHtml += `<img src="${r.cookbookImg}" style="max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 15px;">`;
+                    }
+                    itemHtml += `<div><strong>المكونات:</strong> <p>${escapeHTML(r.ingredients.join('، '))}</p></div>`;
+                    itemHtml += `<div><strong>الطريقة:</strong> <p style="white-space: pre-wrap;">${escapeHTML(r.instructions)}</p></div>`;
+                    itemHtml += `</div><hr style="border:0; border-top:1px solid #e2e8f0; margin:15px 0;">`;
+                    container.innerHTML += itemHtml;
+                });
+            }
+
+            const opt = {
+                margin:       10,
+                filename:     'My_Cookbook.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(container).save().then(() => showToast('تم التصدير بنجاح!'));
+        }
+
+        function renderCommunity() {
+            const feed = document.getElementById('community-feed');
+            if (!feed) return;
+            const sortedPosts = [...window.appState.posts].sort((a, b) => b.timestamp - a.timestamp);
+            feed.innerHTML = sortedPosts.map(post => `
+                <div class="bg-white p-5 rounded-3xl border border-brand-100 shadow-sm relative mb-4">
+                    ${(post.user_id === window.userId || post.user === window.appState.currentUser?.name) ? `
+                    <div class="absolute top-4 left-4 flex gap-2 z-10">
+                        <button onclick="editPost(${post.timestamp})" class="text-blue-400 hover:text-blue-600 bg-blue-50 w-8 h-8 rounded-full flex items-center justify-center transition btn-hover-effect"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="deletePost(${post.timestamp})" class="text-red-400 hover:text-red-600 bg-red-50 w-8 h-8 rounded-full flex items-center justify-center transition btn-hover-effect"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>
+                    ` : ''}
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="${post.avatar}" class="w-10 h-10 rounded-full border-2 border-brand-100 object-cover">
+                        <div>
+                            <h4 class="font-extrabold text-sm text-slate-800">${escapeHTML(post.user)}</h4>
+                            <span class="text-[10px] text-slate-400">${post.time}</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-600 font-medium mb-4 whitespace-pre-wrap">${escapeHTML(post.text)}</p>
+                    ${post.mediaUrl ? (
+                        post.mediaType === 'video' ? 
+                        `<div class="relative rounded-2xl overflow-hidden bg-slate-100 border border-slate-100 cursor-pointer" onclick="openLightbox(${post.timestamp})">
+                            <video src="${post.mediaUrl}" class="w-full max-h-64 object-cover"></video>
+                            <div class="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none"><i class="fa-solid fa-play text-white text-3xl opacity-80"></i></div>
+                        </div>` :
+                        `<img src="${post.mediaUrl}" onclick="openLightbox(${post.timestamp})" class="w-full rounded-2xl max-h-64 object-cover cursor-pointer border border-slate-100 bg-slate-50">`
+                    ) : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderProfile() {
+            if(!window.appState.currentUser) return;
+            
+            document.getElementById('profile-points').innerText = window.appState.currentUser.points;
+            
+            const badgesContainer = document.getElementById('profile-badges');
+            if(badgesContainer) {
+                badgesContainer.innerHTML = window.appState.currentUser.badges.map(badge => `
+                    <div class="bg-white border border-${badge.color || 'brand'}-200 px-4 py-2 rounded-2xl flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid ${badge.icon} text-${badge.color || 'brand'}-500 text-lg"></i>
+                        <span class="text-xs font-bold text-slate-700">${escapeHTML(badge.text)}</span>
+                    </div>
+                `).join('');
+            }
+
+            const myPosts = window.appState.posts.filter(p => (p.user_id === window.userId || p.user === window.appState.currentUser.name) && p.mediaUrl);
+            const postsContainer = document.getElementById('profile-posts');
+            if(postsContainer) {
+                postsContainer.innerHTML = myPosts.map(post => `
+                    <div class="aspect-square rounded-2xl overflow-hidden cursor-pointer relative group border border-brand-100 shadow-sm" onclick="openLightbox(${post.timestamp})">
+                        ${post.mediaType === 'video' ? 
+                            `<video src="${post.mediaUrl}" class="w-full h-full object-cover"></video><div class="absolute inset-0 bg-black/20 flex items-center justify-center"><i class="fa-solid fa-play text-white text-2xl opacity-80"></i></div>` : 
+                            `<img src="${post.mediaUrl}" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">`
+                        }
+                    </div>
+                `).join('') || '<p class="text-xs text-slate-400 col-span-3 text-center py-4 font-medium">لم تقم بالنشر بعد.</p>';
+            }
+        }
+
+        function openLightbox(timestamp) {
+            const post = window.appState.posts.find(p => p.timestamp === timestamp);
+            if (!post) return;
+
+            const modal = document.getElementById('lightbox-modal');
+            const content = document.getElementById('lightbox-content');
+            content.innerHTML = post.mediaType === 'video' ? 
+                `<video src="${post.mediaUrl}" controls autoplay class="w-full max-h-[70vh] rounded-2xl shadow-2xl"></video>` : 
+                `<img src="${post.mediaUrl}" class="w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl">`;
+            
+            if (post.text) {
+                content.innerHTML += `<p class="text-white mt-4 text-center font-medium bg-black/60 px-5 py-3 rounded-2xl backdrop-blur-md max-w-md text-sm whitespace-pre-wrap">${escapeHTML(post.text)}</p>`;
+            }
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('lightbox-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.getElementById('lightbox-content').innerHTML = '';
+        }
+
+        function openPostModal() {
+            document.getElementById('post-text').value = '';
+            document.getElementById('post-media-preview').innerHTML = '';
+            document.getElementById('post-media-preview').classList.add('hidden');
+            window.appState.tempMedia = null;
+            document.getElementById('post-modal').classList.remove('hidden');
+            document.getElementById('post-modal').classList.add('flex');
+        }
+
+        function closePostModal() {
+            document.getElementById('post-modal').classList.add('hidden');
+            document.getElementById('post-modal').classList.remove('flex');
+        }
+
+        function handleMediaUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const preview = document.getElementById('post-media-preview');
+            const url = URL.createObjectURL(file); 
+            const isVideo = file.type.startsWith('video');
+            
+            window.appState.tempMedia = { url: url, type: isVideo ? 'video' : 'image' };
+            
+            preview.innerHTML = isVideo ? 
+                `<video src="${url}" controls class="w-full h-full object-contain"></video>` : 
+                `<img src="${url}" class="w-full h-full object-contain">`;
+            
+            preview.classList.remove('hidden');
+        }
+
+        function publishPost() {
+            const text = document.getElementById('post-text').value.trim();
+            if(!text && !window.appState.tempMedia) {
+                showCustomAlert('الرجاء كتابة نص أو إرفاق صورة/فيديو.', 'error');
+                return;
+            }
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            
+            const newPost = {
+                user_id: window.userId,
+                user: window.appState.currentUser.name,
+                avatar: document.getElementById('profile-avatar').src,
+                time: timeString,
+                text: text,
+                mediaUrl: window.appState.tempMedia ? window.appState.tempMedia.url : null,
+                mediaType: window.appState.tempMedia ? window.appState.tempMedia.type : null,
+                timestamp: Date.now()
+            };
+
+            window.appState.posts.unshift(newPost);
+            
+            if(window.addCloudPost) {
+                window.addCloudPost(newPost);
+            }
+
+            closePostModal();
+            renderCommunity();
+            renderProfile();
+            showToast('تم النشر بنجاح!');
+        }
+
+        function deletePost(timestamp) {
+            showCustomConfirm('هل تريد بالتأكيد حذف هذا المنشور؟', () => {
+                window.appState.posts = window.appState.posts.filter(p => p.timestamp !== timestamp);
+                if(window.deleteCloudPost) window.deleteCloudPost(timestamp);
+                renderCommunity();
+                renderProfile();
+                showToast('تم الحذف بنجاح');
+            });
+        }
+
+        function editPost(timestamp) {
+            const post = window.appState.posts.find(p => p.timestamp === timestamp);
+            if(post) {
+                document.getElementById('edit-post-id').value = timestamp;
+                document.getElementById('edit-post-text').value = post.text;
+                document.getElementById('edit-post-modal').classList.remove('hidden');
+                document.getElementById('edit-post-modal').classList.add('flex');
+            }
+        }
+
+        function closeEditPostModal() {
+            document.getElementById('edit-post-modal').classList.add('hidden');
+            document.getElementById('edit-post-modal').classList.remove('flex');
+        }
+
+        function saveEditedPost() {
+            const timestamp = parseInt(document.getElementById('edit-post-id').value);
+            const newText = document.getElementById('edit-post-text').value.trim();
+            
+            const post = window.appState.posts.find(p => p.timestamp === timestamp);
+            if(post) {
+                post.text = newText;
+                if(window.updateCloudPost) window.updateCloudPost(timestamp, newText);
+                closeEditPostModal();
+                renderCommunity();
+                renderProfile();
+                showToast('تم التعديل بنجاح');
+            }
+        }
+
+        function setTimer(mins) {
+            document.getElementById('custom-time').value = mins;
+        }
+
+        function startTimer() {
+            let minsInput = document.getElementById('custom-time').value;
+            let timeInSecs = parseInt(minsInput) * 60;
+            
+            if(isNaN(timeInSecs) || timeInSecs <= 0) {
+                showCustomAlert('الرجاء إدخال وقت صحيح.', 'error');
+                return;
+            }
+
+            clearInterval(window.appState.timerInterval);
+            const display = document.getElementById('timer-display');
+            
+            window.appState.timerInterval = setInterval(() => {
+                timeInSecs--;
+                let m = Math.floor(timeInSecs / 60);
+                let s = timeInSecs % 60;
+                display.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                
+                if(timeInSecs <= 0) {
+                    clearInterval(window.appState.timerInterval);
+                    display.innerText = '00:00';
+                    document.getElementById('alarm-sound').play().catch(e=>console.log(e));
+                    
+                    window.appState.currentUser.points += 50;
+                    if(window.appState.currentUser.points >= 200 && !window.appState.currentUser.badges.find(b=>b.text==='بطل الإنجاز')) {
+                        window.appState.currentUser.badges.push({ icon: 'fa-trophy', text: 'بطل الإنجاز', color: 'amber' });
+                    }
+                    
+                    renderProfile();
+                    showCustomAlert('انتهى الوقت! تم كسب 50 نقطة.', 'info');
+                    if(window.saveDataToCloud) window.saveDataToCloud();
+                }
+            }, 1000);
+            
+            showToast('تم بدء المؤقت');
+        }
+
+        function stopTimer() {
+            clearInterval(window.appState.timerInterval);
+            document.getElementById('timer-display').innerText = '00:00';
+            document.getElementById('custom-time').value = '';
+        }
+
+    </script>
+
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+        if (window.SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE') {
+            window.supabaseClient = createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+            
+            window.saveDataToCloud = async function() {
+                if (!window.userId) return;
+                const btn = document.getElementById('save-cloud-btn');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('users_data')
+                        .upsert({ 
+                            user_id: window.userId, 
+                            inventory: window.appState.inventory,
+                            library: window.appState.library,
+                            profile: {
+                                points: window.appState.currentUser.points,
+                                badges: window.appState.currentUser.badges
+                            }
+                        }, { onConflict: 'user_id' });
+                        
+                    if (error) throw error;
+                    showToast('تم الحفظ في السحابة بنجاح!');
+                } catch (err) {
+                    console.error(err);
+                    showCustomAlert('حدث خطأ أثناء الحفظ: ' + err.message, 'error');
+                }
+                btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i>';
+            };
+
+            window.loadCloudData = async function() {
+                if (!window.userId) return;
+                
+                try {
+                    const { data, error } = await window.supabaseClient
+                        .from('users_data')
+                        .select('*')
+                        .eq('user_id', window.userId)
+                        .single();
+                        
+                    if (data) {
+                        window.appState.inventory = data.inventory || JSON.parse(JSON.stringify(defaultInventory));
+                        window.appState.library = data.library || JSON.parse(JSON.stringify(defaultLibrary));
+                        if (data.profile) {
+                            window.appState.currentUser.points = data.profile.points || 0;
+                            window.appState.currentUser.badges = data.profile.badges || window.appState.currentUser.badges;
+                        }
+                    } else {
+                        window.appState.inventory = JSON.parse(JSON.stringify(defaultInventory));
+                        window.appState.library = JSON.parse(JSON.stringify(defaultLibrary));
+                        window.appState.cookbook = [];
+                    }
+
+                    const { data: postsData, error: postsError } = await window.supabaseClient
+                        .from('community_posts')
+                        .select('*')
+                        .order('timestamp', { ascending: false });
+                        
+                    if (postsData && postsData.length > 0) {
+                        window.appState.posts = postsData;
+                    }
+                } catch (e) {
+                    console.error("Cloud DB Load Error:", e);
+                }
+            };
+
+            window.addCloudPost = async function(postData) {
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('community_posts')
+                        .insert([{
+                            user_id: window.userId,
+                            user: postData.user,
+                            avatar: postData.avatar,
+                            time: postData.time,
+                            text: postData.text,
+                            mediaUrl: postData.mediaUrl,
+                            mediaType: postData.mediaType,
+                            timestamp: postData.timestamp
+                        }]);
+                    if (error) throw error;
+                } catch (e) { console.error("Error saving post", e); }
+            };
+
+            window.updateCloudPost = async function(timestamp, newText) {
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('community_posts')
+                        .update({ text: newText })
+                        .eq('timestamp', timestamp);
+                    if (error) throw error;
+                } catch (e) { console.error("Error updating post", e); }
+            };
+
+            window.deleteCloudPost = async function(timestamp) {
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('community_posts')
+                        .delete()
+                        .eq('timestamp', timestamp);
+                    if (error) throw error;
+                } catch (e) { console.error("Error deleting post", e); }
+            };
+        } else {
+            window.saveDataToCloud = async function() { showToast('تم الحفظ (وضع محلي)'); };
+        }
+    </script>
+</body>
+</html>
