@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مغامرة أعماق المحيط - نسخة المحترفين</title>
+    <style>
+        :root {
+            --deep-ocean: #010b1a;
+            --mid-ocean: #003566;
+            --surface-ocean: #0077b6;
+            --neon-cyan: #00f2ff;
+            --neon-gold: #ffd60a;
+            --neon-pink: #ff006e;
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --text-white: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--deep-ocean);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: var(--text-white);
+        }
+
+        #game-container {
+            position: relative;
+            width: 95vw;
+            max-width: 1100px;
+            height: 85vh;
+            background: linear-gradient(180deg, #0077b6 0%, #001d3d 50%, #000814 100%);
+            border-radius: 30px;
+            overflow: hidden;
+            box-shadow: 0 0 100px rgba(0, 242, 255, 0.2);
+            border: 4px solid rgba(0, 242, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Background Elements --- */
+        .bubble {
+            position: absolute;
+            bottom: -50px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .fish {
+            position: absolute;
+            pointer-events: none;
+            z-index: 2;
+            transition: transform 0.5s;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3));
+        }
+
+        /* --- HUD --- */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .stat-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 12px 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .stat-label { font-size: 0.9rem; color: var(--neon-cyan); font-weight: bold; }
+        .stat-value { font-size: 1.3rem; font-weight: 800; text-shadow: 0 0 10px var(--neon-cyan); }
+
+        #progress-container {
+            width: 150px;
+            height: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--neon-cyan), #00b4d8);
+            box-shadow: 0 0 15px var(--neon-cyan);
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* --- Character: Octopus --- */
+        #guide-character {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 160px;
+            height: 160px;
+            z-index: 50;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.4));
+        }
+
+        .octopus-svg {
+            width: 100%;
+            height: 100%;
+            animation: float-body 4s infinite ease-in-out;
+        }
+
+        .tentacle {
+            animation: wiggle 3s infinite ease-in-out;
+            transform-origin: center top;
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(10deg) translateY(5px); }
+        }
+
+        @keyframes float-body {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .speech-bubble {
+            position: absolute;
+            bottom: 180px;
+            right: 40px;
+            background: var(--text-white);
+            color: var(--deep-ocean);
+            padding: 18px 24px;
+            border-radius: 25px;
+            border-bottom-right-radius: 2px;
+            max-width: 280px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 60;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        .speech-bubble.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- Screens --- */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+            transition: opacity 0.5s, visibility 0.5s;
+            z-index: 10;
+        }
+
+        .hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            background: linear-gradient(to bottom, var(--neon-gold), #eab308);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.5));
+        }
+
+        .btn {
+            background: var(--neon-gold);
+            color: var(--deep-ocean);
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.6rem;
+            font-weight: 900;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 0 #b08d00, 0 15px 30px rgba(255, 214, 10, 0.3);
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 0 #b08d00, 0 20px 40px rgba(255, 214, 10, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #b08d00;
+        }
+
+        /* --- Quiz Area --- */
+        #quiz-container {
+            width: 100%;
+            max-width: 800px;
+            z-index: 20;
+        }
+
+        .question-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            padding: 30px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+        }
+
+        .question-text {
+            font-size: 2rem;
+            line-height: 1.4;
+            font-weight: 700;
+            color: var(--text-white);
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--neon-cyan);
+            transform: scale(1.03);
+            box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        }
+
+        .option-btn.correct {
+            background: var(--neon-cyan) !important;
+            color: var(--deep-ocean) !important;
+            border-color: white !important;
+        }
+
+        .option-btn.wrong {
+            background: var(--neon-pink) !important;
+            border-color: white !important;
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .timer-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: var(--neon-pink);
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .options-grid { grid-template-columns: 1fr; }
+            .stat-panel { padding: 8px 15px; }
+            #guide-character { width: 100px; height: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud">
+            <div class="stat-panel">
+                <span class="stat-label">أعلى نتيجة:</span>
+                <span id="high-score" class="stat-value">0</span>
+            </div>
+            
+            <div class="stat-panel">
+                <div id="progress-container"><div id="progress-fill"></div></div>
+                <span id="level-text" class="stat-value" style="margin-right: 10px;">المستوى 1</span>
+            </div>
+
+            <div class="stat-panel">
+                <span class="stat-label">⭐ النقاط:</span>
+                <span id="score-val" class="stat-value">0</span>
+            </div>
+        </div>
+
+        <!-- Screens -->
+        <div id="start-screen" class="screen">
+            <h1>مغامرة الأعماق</h1>
+            <p style="font-size: 1.4rem; max-width: 600px; margin-bottom: 30px; opacity: 0.9;">
+                هل أنت مستعد لاكتشاف أسرار المحيط المظلمة؟ 
+                أجب بسرعة لتحصل على مكافآت الوقت!
+            </p>
+            <button class="btn" onclick="initGame()">ابدأ الاستكشاف</button>
+        </div>
+
+        <div id="game-screen" class="screen hidden">
+            <div id="quiz-container">
+                <div class="question-card">
+                    <div id="question-text" class="question-text">جاري التحميل...</div>
+                </div>
+                <div id="options-grid" class="options-grid">
+                    <!-- Options injected via JS -->
+                </div>
+            </div>
+        </div>
+
+        <div id="win-screen" class="screen hidden">
+            <h1 id="win-title">بطل المحيطات!</h1>
+            <p id="win-msg" style="font-size: 1.5rem; margin-bottom: 20px;"></p>
+            <div class="stat-panel" style="margin-bottom: 30px;">
+                <span style="font-size: 1.8rem;">مجموع النقاط: <span id="final-score" style="color: var(--neon-cyan);">0</span></span>
+            </div>
+            <button class="btn" onclick="location.reload()">رحلة جديدة</button>
+        </div>
+
+        <!-- Octopus Guide -->
+        <div class="speech-bubble" id="speech-bubble"></div>
+        <div id="guide-character">
+            <svg class="octopus-svg" viewBox="0 0 200 200">
+                <defs>
+                    <radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                        <stop offset="0%" style="stop-color:#ff4d6d;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#c9184a;stop-opacity:1" />
+                    </radialGradient>
+                </defs>
+                <!-- Body -->
+                <circle cx="100" cy="80" r="55" fill="url(#grad1)" />
+                <!-- Eyes -->
+                <g id="eyes-group">
+                    <circle cx="75" cy="75" r="12" fill="white" />
+                    <circle cx="125" cy="75" r="12" fill="white" />
+                    <circle id="eye-left" cx="75" cy="75" r="5" fill="#000" />
+                    <circle id="eye-right" cx="125" cy="75" r="5" fill="#000" />
+                </g>
+                <!-- Mouth -->
+                <path d="M 85 105 Q 100 120 115 105" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" />
+                <!-- Tentacles -->
+                <path class="tentacle" d="M 50 110 Q 20 160 50 190" stroke="#ff4d6d" stroke-width="18" fill="none" stroke-linecap="round" />
+                <path class="tentacle" d="M 85 125 Q 75 170 90 195" stroke="#ff4d6d" stroke-width="18" fill="none" stroke-linecap="round" />
+                <path class="tentacle" d="M 120 125 Q 130 170 120 195" stroke="#ff4d6d" stroke-width="18" fill="none" stroke-linecap="round" />
+                <path class="tentacle" d="M 155 110 Q 185 160 155 190" stroke="#ff4d6d" stroke-width="18" fill="none" stroke-linecap="round" />
+            </svg>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * مبرمج اللعبة: مهندس برمجيات محترف
+         * الوظيفة: محرك تعليمي تفاعلي
+         */
+
+        const levels = [
+            {
+                level: 1,
+                zone: "منطقة ضوء الشمس",
+                question: "أي من هذه الكائنات يتنفس الهواء مثلنا؟",
+                options: [
+                    { text: "الدلفين 🐬", correct: true },
+                    { text: "القرش 🦈", correct: false },
+                    { text: "التونة 🐟", correct: false },
+                    { text: "الأخطبوط 🐙", correct: false }
+                ],
+                msg: "رائع! الدلافين ثدييات وليست أسماكاً."
+            },
+            {
+                level: 2,
+                zone: "منطقة الغسق",
+                question: "كم عدداً من القلوب يمتلك الأخطبوط؟",
+                options: [
+                    { text: "قلب واحد", correct: false },
+                    { text: "قلبان", correct: false },
+                    { text: "ثلاثة قلوب", correct: true },
+                    { text: "ليس لديه قلب", correct: false }
+                ],
+                msg: "مذهل! لدي 3 قلوب لضخ دمي الأزرق!"
+            },
+            {
+                level: 3,
+                zone: "منطقة منتصف الليل",
+                question: "ما هو الكائن الذي يضيء في الظلام لجذب فرائسه؟",
+                options: [
+                    { text: "سمكة الصياد 🐟🔦", correct: true },
+                    { text: "نجم البحر ⭐", correct: false },
+                    { text: "السلحفاة 🐢", correct: false },
+                    { text: "الحصان البحري 🐎", correct: false }
+                ],
+                msg: "صحيح! تستخدم الضوء الحيوي كطعم."
+            },
+            {
+                level: 4,
+                zone: "الهاوية السحيقة",
+                question: "ما هو أضخم حيوان يعيش في المحيط (وعلى الأرض)؟",
+                options: [
+                    { text: "الحوت الأزرق 🐋", correct: true },
+                    { text: "حوت العنبر 🐳", correct: false },
+                    { text: "الميجالودون 🦈", correct: false },
+                    { text: "الحبار العملاق 🦑", correct: false }
+                ],
+                msg: "بالفعل! الحوت الأزرق يصل طوله لـ 30 متراً."
+            },
+            {
+                level: 5,
+                zone: "خندق ماريانا",
+                question: "أي من هذه الكائنات يستطيع تغيير لونه وشكله للاختفاء؟",
+                options: [
+                    { text: "السرطان 🦀", correct: false },
+                    { text: "الحبار 🦑", correct: true },
+                    { text: "قنديل البحر 🪼", correct: false },
+                    { text: "ثعبان البحر 🐍", correct: false }
+                ],
+                msg: "عبقري! الحبار ملك التمويه في الأعماق."
+            },
+            {
+                level: 6,
+                zone: "قاع المحيط",
+                question: "ماذا تسمى الفوهات التي تخرج منها مياه ساخنة ومعادن؟",
+                options: [
+                    { text: "البراكين المائية", correct: false },
+                    { text: "الينابيع الباردة", correct: false },
+                    { text: "المدخن الأسود", correct: true },
+                    { text: "الكهوف الملحية", correct: false }
+                ],
+                msg: "أحسنت! هذه الفوهات تدعم حياة غريبة جداً."
+            }
+        ];
+
+        let currentLevel = 0;
+        let score = 0;
+        let levelStartTime = 0;
+        let audioCtx = null;
+        let isProcessing = false;
+        let highScore = localStorage.getItem('ocean_highscore') || 0;
+
+        // Initialize AudioContext on first interaction
+        const initAudio = () => {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        };
+
+        const playSound = (freq, type = 'sine', duration = 0.2) => {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        };
+
+        const showSpeech = (text, duration = 3500) => {
+            const bubble = document.getElementById('speech-bubble');
+            bubble.innerText = text;
+            bubble.classList.add('active');
+            clearTimeout(bubble.timer);
+            bubble.timer = setTimeout(() => bubble.classList.remove('active'), duration);
+        };
+
+        const updateHUD = () => {
+            document.getElementById('score-val').innerText = score;
+            document.getElementById('high-score').innerText = highScore;
+            const progress = (currentLevel / levels.length) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+            if(levels[currentLevel]) {
+                document.getElementById('level-text').innerText = levels[currentLevel].zone;
+            }
+        };
+
+        const spawnBubble = () => {
+            const container = document.getElementById('game-container');
+            const b = document.createElement('div');
+            b.className = 'bubble';
+            const size = Math.random() * 30 + 10;
+            b.style.width = `${size}px`;
+            b.style.height = `${size}px`;
+            b.style.left = `${Math.random() * 100}%`;
+            container.appendChild(b);
+
+            const anim = b.animate([
+                { transform: 'translateY(0) scale(1)', opacity: 0 },
+                { opacity: 0.6, offset: 0.2 },
+                { transform: `translateY(-${container.offsetHeight + 100}px) scale(1.5)`, opacity: 0 }
+            ], {
+                duration: Math.random() * 4000 + 3000,
+                easing: 'linear'
+            });
+
+            anim.onfinish = () => b.remove();
+        };
+
+        const spawnFish = () => {
+            if (document.hidden) return;
+            const container = document.getElementById('game-container');
+            const f = document.createElement('div');
+            f.className = 'fish';
+            const fishIcons = ['🐠', '🐟', '🐡', '🦐'];
+            f.innerText = fishIcons[Math.floor(Math.random() * fishIcons.length)];
+            f.style.fontSize = `${Math.random() * 20 + 20}px`;
+            f.style.top = `${Math.random() * 70 + 15}%`;
+            
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            f.style.left = direction === 1 ? '-50px' : 'calc(100% + 50px)';
+            f.style.transform = `scaleX(${direction})`;
+            container.appendChild(f);
+
+            const anim = f.animate([
+                { left: f.style.left },
+                { left: direction === 1 ? '110%' : '-10%' }
+            ], {
+                duration: Math.random() * 6000 + 6000,
+                easing: 'linear'
+            });
+
+            anim.onfinish = () => f.remove();
+        };
+
+        const initGame = () => {
+            initAudio();
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            showSpeech("مرحباً بك يا بطل! لنبدأ رحلتنا إلى الأعماق.");
+            loadLevel();
+            // Start background loops
+            setInterval(spawnBubble, 400);
+            setInterval(spawnFish, 3000);
+        };
+
+        const loadLevel = () => {
+            isProcessing = false;
+            const data = levels[currentLevel];
+            if (!data) {
+                endGame();
+                return;
+            }
+
+            updateHUD();
+            document.getElementById('question-text').innerText = data.question;
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+
+            data.options.forEach(opt => {
+                const b = document.createElement('div');
+                b.className = 'option-btn';
+                b.innerHTML = opt.text;
+                b.onclick = () => handleAnswer(opt.correct, b);
+                grid.appendChild(b);
+            });
+
+            levelStartTime = Date.now();
+        };
+
+        const handleAnswer = (isCorrect, element) => {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            if (isCorrect) {
+                playSound(600, 'sine', 0.3);
+                playSound(800, 'sine', 0.5);
+                element.classList.add('correct');
+                
+                // Score Calculation (Base 100 + Time Bonus up to 100)
+                const timeTaken = (Date.now() - levelStartTime) / 1000;
+                const timeBonus = Math.max(0, Math.floor(100 - timeTaken * 5));
+                const totalGain = 100 + timeBonus;
+                score += totalGain;
+
+                showSpeech(`${levels[currentLevel].msg} (+${totalGain} نقطة)`);
+
+                setTimeout(() => {
+                    currentLevel++;
+                    if (currentLevel < levels.length) {
+                        loadLevel();
+                    } else {
+                        endGame();
+                    }
+                }, 2000);
+            } else {
+                playSound(150, 'sawtooth', 0.4);
+                element.classList.add('wrong');
+                showSpeech("حاول مرة أخرى! يمكنك فعلها.");
+                setTimeout(() => {
+                    element.classList.remove('wrong');
+                    isProcessing = false;
+                }, 1000);
+            }
+        };
+
+        const endGame = () => {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('ocean_highscore', highScore);
+            }
+
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('win-screen').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('win-msg').innerText = `لقد أصبحت خبيراً في أعماق المحيط! حصلت على ${score} نقطة.`;
+            showSpeech("يا له من إنجاز! أنت مستكشف حقيقي.");
+        };
+
+        // Octopus Eye Tracking
+        document.addEventListener('mousemove', (e) => {
+            const eyes = document.getElementById('eyes-group');
+            if (!eyes) return;
+            const rect = eyes.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            const distance = 4;
+            const moveX = Math.cos(angle) * distance;
+            const moveY = Math.sin(angle) * distance;
+
+            document.getElementById('eye-left').setAttribute('transform', `translate(${moveX}, ${moveY})`);
+            document.getElementById('eye-right').setAttribute('transform', `translate(${moveX}, ${moveY})`);
+        });
+
+        // Initialize HUD on load
+        updateHUD();
+
+    </script>
+</body>
+</html>
