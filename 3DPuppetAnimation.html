@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مسرح الظلال التفاعلي | True 3D</title>
+    <!-- استدعاء خطوط جوجل (كايرو) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- تحديث مكتبة Three.js إلى إصدار أحدث يدعم CapsuleGeometry -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* تصميم الروافع */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 18px; width: 18px;
+            border-radius: 50%; background: #3b82f6; cursor: pointer;
+            margin-top: -6px; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 6px; cursor: pointer;
+            background: #475569; border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 flex justify-center min-h-screen items-center">
+
+    <div class="max-w-7xl w-full flex flex-col lg:flex-row gap-6">
+        
+        <!-- منطقة المسرح 3D (اليسار) -->
+        <div class="w-full lg:w-3/5 bg-slate-800 rounded-3xl shadow-2xl p-6 border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h1 id="main-title" class="text-2xl font-black text-amber-400">مسرح الظلال 3D</h1>
+                <div class="flex gap-2">
+                    <button id="free-play-btn" onclick="toggleFreePlay()" class="bg-purple-600 text-white px-4 py-1 rounded-full text-sm font-bold shadow-inner hover:bg-purple-500 transition-colors">
+                        التحريك الحر 🎭
+                    </button>
+                    <div id="level-indicator" class="bg-indigo-600 px-4 py-1 rounded-full text-sm font-bold shadow-inner">
+                        مستوى: <span id="level-display">1</span> - <span id="level-name-display" class="text-indigo-200"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- حاوية الكانفاس الحقيقي -->
+            <div id="stage-canvas-container" class="relative w-full h-[520px] rounded-2xl overflow-hidden shadow-inner border-4 border-slate-900 bg-slate-900 cursor-grab active:cursor-grabbing">
+                <!-- لافتات المسرح -->
+                <div id="banner-target" class="absolute bottom-4 left-[20%] -translate-x-1/2 bg-slate-950 border border-slate-700 text-white px-4 py-1 rounded-full shadow-lg text-sm font-bold pointer-events-none z-10">✨ الوضعية المطلوبة</div>
+                <div id="banner-player" class="absolute bottom-4 right-[20%] translate-x-1/2 bg-amber-600 text-white px-4 py-1 rounded-full shadow-lg text-sm font-bold pointer-events-none z-10">👤 شخصيتك</div>
+                
+                <!-- إرشاد الكاميرا -->
+                <div class="absolute top-4 right-4 bg-black/60 text-slate-300 text-xs px-3 py-1 rounded-full pointer-events-none z-10 border border-slate-700">اسحب بالماوس لتدوير الكاميرا 🔄</div>
+            </div>
+            
+            <!-- إشعار النجاح المدمج -->
+            <div id="success-message" class="mt-4 p-4 bg-emerald-900/50 border border-emerald-500 rounded-xl text-emerald-300 font-bold text-center hidden transition-all duration-300">
+                <span class="text-2xl mr-2">✨</span> تطابق مذهل! استعد للمشهد التالي...
+            </div>
+        </div>
+
+        <!-- لوحة التحكم (اليمين) -->
+        <div class="w-full lg:w-2/5 bg-slate-900 rounded-3xl p-6 shadow-2xl border-4 border-slate-800 flex flex-col">
+            <h2 class="text-xl font-bold text-slate-300 mb-6 border-b border-slate-700 pb-2 text-center">
+                غرفة التحكم (نسبة السماح: 25°)
+            </h2>
+            
+            <!-- أزرار التحكم بالمفاصل (شبكة معدلة) -->
+            <div class="overflow-y-auto pr-2 flex-grow" style="max-height: 520px;">
+                <div id="controls-container" class="flex flex-col gap-4 pb-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- شاشة النهاية -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
+        <h2 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 mb-6 text-center leading-tight">
+            أنت محرك دمى محترف! 🎭
+        </h2>
+        <p class="text-2xl text-slate-300 mb-8">لقد سيطرت على الـ 3D وطابقت جميع الظلال ببراعة.</p>
+        <button onclick="location.reload()" class="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full font-black text-white text-xl hover:scale-105 transition-transform shadow-lg shadow-indigo-500/30">
+            أغلق الستار وابدأ من جديد
+        </button>
+    </div>
+
+    <script>
+        // إعادة هيكلة المجموعات لتكون منطقية (اليمين واليسار متجاورين)
+        const jointsConfig = [
+            { id: 'body-y', group: 'الجسم والرأس', label: 'استدارة الجسم (دوران)', min: -180, max: 180, default: 0 },
+            { id: 'torso-z', group: 'الجسم والرأس', label: 'انحناء الجذع للأمام', min: -90, max: 90, default: 0 },
+            { id: 'head', group: 'الجسم والرأس', label: 'ميل الرأس', min: -60, max: 60, default: 0 },
+            
+            { id: 'arm-r', group: 'الذراعين', subGroup: 'اليمين', label: 'الكتف', min: -180, max: 180, default: 0 },
+            { id: 'elbow-r', group: 'الذراعين', subGroup: 'اليمين', label: 'الكوع', min: 0, max: 150, default: 0 },
+            { id: 'hand-r', group: 'الذراعين', subGroup: 'اليمين', label: 'كف اليد', min: -90, max: 90, default: 0 },
+            
+            { id: 'arm-l', group: 'الذراعين', subGroup: 'اليسار', label: 'الكتف', min: -180, max: 180, default: 0 },
+            { id: 'elbow-l', group: 'الذراعين', subGroup: 'اليسار', label: 'الكوع', min: 0, max: 150, default: 0 },
+            { id: 'hand-l', group: 'الذراعين', subGroup: 'اليسار', label: 'كف اليد', min: -90, max: 90, default: 0 },
+            
+            { id: 'leg-r', group: 'الساقين', subGroup: 'اليمين', label: 'مفصل الفخذ', min: -90, max: 90, default: 0 },
+            { id: 'knee-r', group: 'الساقين', subGroup: 'اليمين', label: 'الركبة', min: -150, max: 0, default: 0 },
+            { id: 'foot-r', group: 'الساقين', subGroup: 'اليمين', label: 'القدم', min: -45, max: 45, default: 0 },
+
+            { id: 'leg-l', group: 'الساقين', subGroup: 'اليسار', label: 'مفصل الفخذ', min: -90, max: 90, default: 0 },
+            { id: 'knee-l', group: 'الساقين', subGroup: 'اليسار', label: 'الركبة', min: -150, max: 0, default: 0 },
+            { id: 'foot-l', group: 'الساقين', subGroup: 'اليسار', label: 'القدم', min: -45, max: 45, default: 0 }
+        ];
+
+        /* المستويات المستهدفة */
+        const levels = [
+            {
+                name: "التحية الرسمية 👋",
+                targetPose: { 'body-y': 45, 'torso-z': 15, 'head': 10, 'arm-l': 0, 'elbow-l': 0, 'hand-l': 0, 'arm-r': 160, 'elbow-r': 30, 'hand-r': 20, 'leg-l': 0, 'knee-l': 0, 'foot-l': 0, 'leg-r': 0, 'knee-r': 0, 'foot-r': 0 }
+            },
+            {
+                name: "الركض السريع 🏃",
+                targetPose: { 'body-y': 90, 'torso-z': 15, 'head': -10, 'arm-l': 80, 'elbow-l': 90, 'hand-l': 0, 'arm-r': -60, 'elbow-r': 100, 'hand-r': 0, 'leg-l': 45, 'knee-l': -20, 'foot-l': 20, 'leg-r': -60, 'knee-r': -80, 'foot-r': 10 }
+            },
+            {
+                name: "ركلة الكاراتيه 🥋",
+                targetPose: { 'body-y': 90, 'torso-z': -20, 'head': 20, 'arm-l': 90, 'elbow-l': 40, 'hand-l': 0, 'arm-r': -110, 'elbow-r': 120, 'hand-r': 0, 'leg-l': 85, 'knee-l': -10, 'foot-l': -30, 'leg-r': 0, 'knee-r': 0, 'foot-r': 0 }
+            },
+            {
+                name: "التخفي والترقب 🕵️",
+                targetPose: { 'body-y': 90, 'torso-z': 45, 'head': -30, 'arm-l': 40, 'elbow-l': 120, 'hand-l': 30, 'arm-r': 60, 'elbow-r': 130, 'hand-r': 40, 'leg-l': 30, 'knee-l': -60, 'foot-l': 30, 'leg-r': 40, 'knee-r': -70, 'foot-r': 40 }
+            }
+        ];
+
+        let currentLevelIndex = 0;
+        let playerPose = {};
+        const TOLERANCE = 25;
+        let isLevelComplete = false;
+        let isFreePlayMode = false;
+
+        const controlsContainer = document.getElementById('controls-container');
+        const levelDisplay = document.getElementById('level-display');
+        const levelNameDisplay = document.getElementById('level-name-display');
+        const successMsg = document.getElementById('success-message');
+
+        let scene, camera, renderer;
+        let targetPuppet, playerPuppet;
+
+        // دالة إنشاء الدمية مع زيادة جودة النعومة والمنحنيات (Smoothness)
+        function createPuppet(isShadow) {
+            const group = new THREE.Group();
+            
+            const mat = (color) => isShadow 
+                ? new THREE.MeshBasicMaterial({color: 0x111111}) 
+                : new THREE.MeshStandardMaterial({color: color, roughness: 0.6, metalness: 0.1}); // مادة أنعم
+
+            function createBone(type, params, color, meshPosY, rotZ = 0, rotX = 0) {
+                let geo;
+                // تم رفع الأجزاء (Segments) إلى 32 لتكون ناعمة وخالية تماماً من المظهر المكعب/الحاد
+                if (type === 'capsule') geo = new THREE.CapsuleGeometry(params.r, params.l, 32, 32);
+                else if (type === 'sphere') geo = new THREE.SphereGeometry(params.r, 32, 32);
+                
+                const mesh = new THREE.Mesh(geo, mat(color));
+                mesh.position.y = meshPosY;
+                if (rotZ) mesh.rotation.z = rotZ;
+                if (rotX) mesh.rotation.x = rotX;
+                mesh.castShadow = !isShadow;
+                mesh.receiveShadow = !isShadow;
+                
+                const pivot = new THREE.Group();
+                pivot.add(mesh);
+                return {pivot, mesh};
+            }
+
+            // الحوض (Pelvis)
+            const pelvis = createBone('capsule', {r: 0.45, l: 0.6}, 0x1d4ed8, 0, Math.PI/2);
+            group.add(pelvis.pivot);
+
+            // الجذع (Torso)
+            const torso = createBone('capsule', {r: 0.45, l: 1.1}, 0xb91c1c, 0.8);
+            torso.mesh.scale.set(1.5, 1, 0.8); // الجذع أعرض وأكثر تسطحاً بشكل طبيعي
+            torso.pivot.position.y = 0.5;
+            pelvis.pivot.add(torso.pivot);
+
+            // الرقبة (Neck)
+            const neck = createBone('capsule', {r: 0.18, l: 0.3}, 0xfcd34d, 0.2);
+            neck.pivot.position.y = 1.7;
+            torso.pivot.add(neck.pivot);
+
+            // الرأس (Head)
+            const head = createBone('sphere', {r: 0.55}, 0xfcd34d, 0.5);
+            head.pivot.position.y = 0.1;
+            neck.pivot.add(head.pivot);
+            
+            if (!isShadow) { 
+                const eyeMat = new THREE.MeshBasicMaterial({color: 0x0f172a});
+                const eyeGeo = new THREE.SphereGeometry(0.08, 16, 16);
+                const eyeL = new THREE.Mesh(eyeGeo, eyeMat); eyeL.position.set(-0.2, 0.6, 0.48);
+                const eyeR = new THREE.Mesh(eyeGeo, eyeMat); eyeR.position.set(0.2, 0.6, 0.48);
+                head.pivot.add(eyeL, eyeR);
+            }
+
+            // الذراع اليسرى
+            const armL = createBone('capsule', {r: 0.22, l: 1.1}, 0xb91c1c, -0.75);
+            armL.pivot.position.set(-1.05, 1.6, 0); // تعديل المسافة للخارج بسبب الجذع العريض
+            torso.pivot.add(armL.pivot);
+
+            const lowerArmL = createBone('capsule', {r: 0.18, l: 1.1}, 0xb91c1c, -0.75);
+            lowerArmL.pivot.position.set(0, -1.5, 0);
+            armL.pivot.add(lowerArmL.pivot);
+
+            const handL = createBone('sphere', {r: 0.22}, 0xfcd34d, -0.1);
+            handL.pivot.position.set(0, -1.5, 0);
+            lowerArmL.pivot.add(handL.pivot);
+
+            // الذراع اليمنى
+            const armR = createBone('capsule', {r: 0.22, l: 1.1}, 0xb91c1c, -0.75);
+            armR.pivot.position.set(1.05, 1.6, 0); // تعديل المسافة للخارج
+            torso.pivot.add(armR.pivot);
+
+            const lowerArmR = createBone('capsule', {r: 0.18, l: 1.1}, 0xb91c1c, -0.75);
+            lowerArmR.pivot.position.set(0, -1.5, 0);
+            armR.pivot.add(lowerArmR.pivot);
+
+            const handR = createBone('sphere', {r: 0.22}, 0xfcd34d, -0.1);
+            handR.pivot.position.set(0, -1.5, 0);
+            lowerArmR.pivot.add(handR.pivot);
+
+            // الساق اليسرى
+            const legL = createBone('capsule', {r: 0.28, l: 1.3}, 0x1d4ed8, -0.9);
+            legL.pivot.position.set(-0.45, -0.5, 0);
+            pelvis.pivot.add(legL.pivot);
+
+            const lowerLegL = createBone('capsule', {r: 0.24, l: 1.3}, 0x1d4ed8, -0.9);
+            lowerLegL.pivot.position.set(0, -1.8, 0);
+            legL.pivot.add(lowerLegL.pivot);
+
+            const footL = createBone('capsule', {r: 0.22, l: 0.5}, 0x1e293b, -0.1, 0, Math.PI/2);
+            footL.mesh.position.z = 0.25; 
+            footL.pivot.position.set(0, -1.8, 0);
+            lowerLegL.pivot.add(footL.pivot);
+
+            // الساق اليمنى
+            const legR = createBone('capsule', {r: 0.28, l: 1.3}, 0x1d4ed8, -0.9);
+            legR.pivot.position.set(0.45, -0.5, 0);
+            pelvis.pivot.add(legR.pivot);
+
+            const lowerLegR = createBone('capsule', {r: 0.24, l: 1.3}, 0x1d4ed8, -0.9);
+            lowerLegR.pivot.position.set(0, -1.8, 0);
+            legR.pivot.add(lowerLegR.pivot);
+
+            const footR = createBone('capsule', {r: 0.22, l: 0.5}, 0x1e293b, -0.1, 0, Math.PI/2);
+            footR.mesh.position.z = 0.25;
+            footR.pivot.position.set(0, -1.8, 0);
+            lowerLegR.pivot.add(footR.pivot);
+
+            return {
+                group,
+                parts: {
+                    'body-y': pelvis.pivot,
+                    'torso-z': torso.pivot,
+                    'head': neck.pivot, // ربط دوران الرأس بالرقبة للحصول على انحناء طبيعي
+                    'arm-l': armL.pivot, 'elbow-l': lowerArmL.pivot, 'hand-l': handL.pivot,
+                    'arm-r': armR.pivot, 'elbow-r': lowerArmR.pivot, 'hand-r': handR.pivot,
+                    'leg-l': legL.pivot, 'knee-l': lowerLegL.pivot, 'foot-l': footL.pivot,
+                    'leg-r': legR.pivot, 'knee-r': lowerLegR.pivot, 'foot-r': footR.pivot
+                }
+            };
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('stage-canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            camera.position.set(0, 2, 16);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // الإضاءة
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.top = 10; dirLight.shadow.camera.bottom = -10;
+            dirLight.shadow.camera.left = -10; dirLight.shadow.camera.right = 10;
+            scene.add(dirLight);
+
+            // الأرضية
+            const floorGeo = new THREE.PlaneGeometry(40, 20);
+            const floorMat = new THREE.MeshStandardMaterial({color: 0x1e293b, roughness: 0.9});
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -3.4; 
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // إضافة الشخصيات للمسرح
+            targetPuppet = createPuppet(true);
+            targetPuppet.group.position.set(-3.5, 1.0, 0);
+            scene.add(targetPuppet.group);
+
+            playerPuppet = createPuppet(false);
+            playerPuppet.group.position.set(3.5, 1.0, 0);
+            scene.add(playerPuppet.group);
+
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let cameraAngleY = 0;
+            let cameraAngleX = 0;
+
+            renderer.domElement.addEventListener('mousedown', () => isDragging = true);
+            renderer.domElement.addEventListener('mouseup', () => isDragging = false);
+            renderer.domElement.addEventListener('mouseleave', () => isDragging = false);
+            renderer.domElement.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = { x: e.offsetX - previousMousePosition.x, y: e.offsetY - previousMousePosition.y };
+                    cameraAngleY -= deltaMove.x * 0.01;
+                    cameraAngleX -= deltaMove.y * 0.01;
+                    cameraAngleX = Math.max(-Math.PI/4, Math.min(Math.PI/4, cameraAngleX)); 
+
+                    const radius = 16;
+                    camera.position.x = radius * Math.sin(cameraAngleY) * Math.cos(cameraAngleX);
+                    camera.position.y = 2 + radius * Math.sin(cameraAngleX);
+                    camera.position.z = radius * Math.cos(cameraAngleY) * Math.cos(cameraAngleX);
+                    camera.lookAt(0, 1, 0);
+                }
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            window.addEventListener('resize', () => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                camera.aspect = newWidth / newHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(newWidth, newHeight);
+            });
+
+            animateLoop();
+        }
+
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+            renderer.render(scene, camera);
+        }
+
+        // إنشاء عنصر الرافعة للواجهة
+        function createControlRow(joint) {
+            const controlRow = document.createElement('div');
+            controlRow.className = "mb-3";
+            
+            const labelDiv = document.createElement('div');
+            labelDiv.className = "flex justify-between text-xs text-slate-300 mb-1";
+            labelDiv.innerHTML = `<span>${joint.label}</span> <span id="val-${joint.id}" class="font-mono bg-slate-900 px-1 rounded text-[10px]">${joint.default}°</span>`;
+            
+            const input = document.createElement('input');
+            input.type = "range";
+            input.id = `slider-${joint.id}`;
+            input.min = joint.min;
+            input.max = joint.max;
+            input.value = joint.default;
+            input.oninput = (e) => updateJoint(joint.id, e.target.value);
+            
+            controlRow.appendChild(labelDiv);
+            controlRow.appendChild(input);
+            return controlRow;
+        }
+
+        function initGame() {
+            controlsContainer.innerHTML = '';
+            
+            const mainGroups = ['الجسم والرأس', 'الذراعين', 'الساقين'];
+
+            mainGroups.forEach(groupName => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = `bg-slate-800 p-4 rounded-xl border border-slate-700`;
+                
+                const groupTitle = document.createElement('h3');
+                groupTitle.className = "text-indigo-400 font-bold mb-3 text-sm text-center bg-slate-900 py-1 rounded shadow-inner";
+                groupTitle.innerText = groupName;
+                groupDiv.appendChild(groupTitle);
+
+                const groupItems = jointsConfig.filter(j => j.group === groupName);
+
+                if (groupName === 'الجسم والرأس') {
+                    // عمود واحد للجسم والرأس
+                    groupItems.forEach(joint => {
+                        playerPose[joint.id] = joint.default;
+                        groupDiv.appendChild(createControlRow(joint));
+                    });
+                } else {
+                    // عمودين متجاورين للأطراف (يمين ويسار بجوار بعضهما)
+                    const colsContainer = document.createElement('div');
+                    colsContainer.className = "grid grid-cols-2 gap-4";
+
+                    const rightCol = document.createElement('div');
+                    const leftCol = document.createElement('div');
+
+                    rightCol.innerHTML = '<h4 class="text-xs font-bold text-amber-500 mb-2 border-b border-slate-700 pb-1 text-center">الجهة اليمنى</h4>';
+                    leftCol.innerHTML = '<h4 class="text-xs font-bold text-emerald-500 mb-2 border-b border-slate-700 pb-1 text-center">الجهة اليسرى</h4>';
+
+                    groupItems.forEach(joint => {
+                        playerPose[joint.id] = joint.default;
+                        if (joint.subGroup === 'اليمين') rightCol.appendChild(createControlRow(joint));
+                        else leftCol.appendChild(createControlRow(joint));
+                    });
+
+                    colsContainer.appendChild(rightCol);
+                    colsContainer.appendChild(leftCol);
+                    groupDiv.appendChild(colsContainer);
+                }
+                
+                controlsContainer.appendChild(groupDiv);
+            });
+
+            // تشغيل محرك 3D
+            initThreeJS();
+            loadLevel();
+        }
+
+        function loadLevel() {
+            if (currentLevelIndex >= levels.length) {
+                showVictory();
+                return;
+            }
+
+            const level = levels[currentLevelIndex];
+            levelDisplay.innerText = currentLevelIndex + 1;
+            levelNameDisplay.innerText = level.name;
+            
+            isLevelComplete = false;
+            successMsg.classList.add('hidden');
+
+            // تصفير لون الظل الهدف إلى الأسود القاتم
+            targetPuppet.group.traverse((child) => {
+                if (child.isMesh) child.material.color.setHex(0x111111);
+            });
+
+            // ضبط وضعية الظل الهدف
+            for (let jointId in level.targetPose) {
+                const rad = THREE.MathUtils.degToRad(level.targetPose[jointId]);
+                if (jointId === 'body-y') targetPuppet.parts[jointId].rotation.y = rad;
+                else targetPuppet.parts[jointId].rotation.x = rad;
+            }
+
+            // تصفير شخصية اللاعب
+            jointsConfig.forEach(joint => {
+                const slider = document.getElementById(`slider-${joint.id}`);
+                slider.value = 0;
+                updateJoint(joint.id, 0, false);
+            });
+        }
+
+        function updateJoint(jointId, value, checkWin = true) {
+            if (isLevelComplete) return;
+
+            value = parseInt(value);
+            playerPose[jointId] = value;
+            document.getElementById(`val-${jointId}`).innerText = `${value}°`;
+            
+            const rad = THREE.MathUtils.degToRad(value);
+            
+            if (jointId === 'body-y') {
+                playerPuppet.parts[jointId].rotation.y = rad;
+            } else {
+                playerPuppet.parts[jointId].rotation.x = rad;
+            }
+
+            if (checkWin && !isFreePlayMode) checkMatch();
+        }
+
+        function checkMatch() {
+            const targetPose = levels[currentLevelIndex].targetPose;
+            let isMatched = true;
+
+            for (let jointId in targetPose) {
+                let diff = Math.abs(playerPose[jointId] - targetPose[jointId]);
+                if (diff > 180) diff = 360 - diff;
+                
+                if (diff > TOLERANCE) {
+                    isMatched = false;
+                    break;
+                }
+            }
+
+            if (isMatched && !isLevelComplete) {
+                isLevelComplete = true;
+                
+                // الشفط المغناطيسي للوضعية المثالية
+                for (let jointId in targetPose) {
+                    updateJoint(jointId, targetPose[jointId], false);
+                    document.getElementById(`slider-${jointId}`).value = targetPose[jointId];
+                }
+
+                // تلوين الظل بالأخضر للدلالة على التطابق
+                targetPuppet.group.traverse((child) => {
+                    if (child.isMesh) child.material.color.setHex(0x10b981);
+                });
+                
+                successMsg.classList.remove('hidden');
+                setTimeout(() => {
+                    currentLevelIndex++;
+                    loadLevel();
+                }, 2500);
+            }
+        }
+
+        function showVictory() {
+            const modal = document.getElementById('victory-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 50);
+        }
+
+        function toggleFreePlay() {
+            isFreePlayMode = !isFreePlayMode;
+            const btn = document.getElementById('free-play-btn');
+            const levelInd = document.getElementById('level-indicator');
+            const bannerT = document.getElementById('banner-target');
+            const bannerP = document.getElementById('banner-player');
+            const title = document.getElementById('main-title');
+
+            if (isFreePlayMode) {
+                btn.innerText = "العودة للمستويات 🔙";
+                btn.classList.replace('bg-purple-600', 'bg-slate-600');
+                levelInd.classList.add('hidden');
+                bannerT.classList.add('hidden');
+                bannerP.classList.add('hidden');
+                title.innerText = "التحريك الحر 🎭";
+                
+                targetPuppet.group.visible = false;
+                playerPuppet.group.position.set(0, 1.0, 0); // نقل الدمية في المنتصف
+            } else {
+                btn.innerText = "التحريك الحر 🎭";
+                btn.classList.replace('bg-slate-600', 'bg-purple-600');
+                levelInd.classList.remove('hidden');
+                bannerT.classList.remove('hidden');
+                bannerP.classList.remove('hidden');
+                title.innerText = "مسرح الظلال 3D";
+                
+                targetPuppet.group.visible = true;
+                playerPuppet.group.position.set(3.5, 1.0, 0); // إعادة الدمية لليمين
+                loadLevel(); 
+            }
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>غرفة الهروب الهندسية</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #020617; /* لون كحلي داكن جداً */
+            color: #f8fafc;
+            overflow: hidden;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            user-select: none;
+        }
+
+        .room {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            height: 600px;
+            background: linear-gradient(to bottom, #0f172a 0%, #1e293b 80%, #0f172a 100%);
+            border: 8px solid #334155;
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 100px rgba(0,0,0,0.9);
+            overflow: hidden;
+            perspective: 1000px;
+        }
+
+        /* جدار الغرفة والأرضية */
+        .back-wall {
+            position: absolute; inset: 0; bottom: 100px;
+            border-bottom: 2px solid #020617;
+            background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 100px);
+        }
+        .floor {
+            position: absolute; bottom: 0; left: 0; right: 0; height: 100px;
+            background: #020617;
+            transform: rotateX(60deg);
+            transform-origin: top;
+            box-shadow: inset 0 20px 50px rgba(0,0,0,0.9);
+        }
+
+        /* الباب */
+        .door-container {
+            position: absolute; right: 50px; bottom: 0; width: 160px; height: 320px;
+            border: 6px solid #475569;
+            border-bottom: none;
+            background-color: #1e293b;
+            border-radius: 4px 4px 0 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            cursor: pointer;
+            transition: all 0.5s ease;
+        }
+        .door-container.open {
+            background-color: #f8fafc; /* نور ساطع عند الفتح */
+            box-shadow: 0 0 50px #f8fafc, inset 0 0 20px #e2e8f0;
+            border-color: #cbd5e1;
+            transform: perspective(500px) rotateY(-15deg);
+            transform-origin: left;
+        }
+        .door-status-light {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 15px; height: 15px; border-radius: 50%;
+            background-color: #ef4444; /* أحمر مغلق */
+            box-shadow: 0 0 10px #ef4444;
+            transition: all 0.5s;
+        }
+        .door-status-light.unlocked {
+            background-color: #22c55e; /* أخضر مفتوح */
+            box-shadow: 0 0 15px #22c55e, 0 0 30px #22c55e;
+        }
+        .door-panel {
+            position: absolute; inset: 20px 20px 40px 20px;
+            border: 2px solid #334155;
+            transition: opacity 0.3s;
+        }
+        .door-handle {
+            position: absolute; left: 15px; top: 50%;
+            width: 12px; height: 30px; background: #64748b; border-radius: 4px;
+        }
+
+        /* المكتبة ولغز الألوان */
+        .bookshelf {
+            position: absolute; left: 50px; top: 150px; width: 220px; height: 20px;
+            background: #475569; border-radius: 4px;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.6);
+            display: flex; align-items: flex-end; justify-content: space-evenly;
+            padding: 0 5px;
+        }
+        .book {
+            width: 25px; height: 80px; border-radius: 3px 3px 0 0;
+            cursor: pointer; position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .book:hover { transform: translateY(-10px); }
+        .book.selected { transform: translateY(-20px); box-shadow: 0 0 15px rgba(255,255,255,0.5); z-index: 10; }
+        .bookshelf.solved .book { pointer-events: none; transform: none !important; box-shadow: 0 0 10px #22c55e; border-color: #22c55e; }
+
+        /* المنصة والمجسم الهندسي */
+        .pedestal {
+            position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%);
+            width: 100px; height: 180px;
+            background: linear-gradient(to right, #1e293b, #334155, #1e293b);
+            border-top: 5px solid #475569;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            z-index: 5;
+        }
+        .geometric-object {
+            position: absolute; left: 50%; top: -80px; transform: translateX(-50%);
+            width: 60px; height: 80px;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* معين */
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.5);
+            z-index: 6;
+            transition: filter 0.5s;
+        }
+        .geometric-object.dark { filter: brightness(0.2); }
+
+        /* الظل والرمز على الحائط */
+        .shadow-target-outline {
+            position: absolute; left: 50%; bottom: 180px;
+            width: 120px; height: 160px;
+            border: 3px dashed rgba(255,255,255,0.1);
+            transform: translateX(-50%) skewX(45deg); /* الزاوية المطلوبة */
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            z-index: 1;
+            transition: all 0.5s;
+            opacity: 0;
+        }
+        .shadow-target-outline.visible { opacity: 1; border-color: rgba(34, 197, 94, 0.4); box-shadow: 0 0 20px rgba(34, 197, 94, 0.1) inset; }
+        
+        .cast-shadow {
+            position: absolute; left: 50%; bottom: 180px;
+            width: 120px; height: 160px;
+            background: rgba(0,0,0,0.8);
+            transform-origin: bottom center;
+            transform: translateX(-50%) skewX(0deg); /* يتغير ديناميكياً */
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            z-index: 2;
+            transition: transform 0.1s linear, background 0.3s;
+            filter: blur(4px);
+            opacity: 0;
+        }
+        .cast-shadow.active { opacity: 1; }
+        .cast-shadow.solved { background: rgba(34, 197, 94, 0.6); filter: blur(2px); box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); }
+
+        /* الإضاءة العلوية */
+        .spotlight-source {
+            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+            width: 40px; height: 20px; background: #334155; border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+        .light-beam {
+            position: absolute; top: 20px; left: 50%;
+            width: 200px; height: 600px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, transparent 100%);
+            transform-origin: top center;
+            transform: translateX(-50%) rotate(0deg);
+            pointer-events: none;
+            opacity: 0; transition: opacity 0.5s, transform 0.1s linear;
+            clip-path: polygon(40% 0, 60% 0, 100% 100%, 0% 100%);
+            z-index: 4;
+        }
+        .light-beam.on { opacity: 1; }
+
+        /* لوحة التحكم بالإضاءة (تظهر لاحقاً) */
+        .light-control-panel {
+            position: absolute; left: 50px; bottom: 50px;
+            background: rgba(30, 41, 59, 0.9); border: 2px solid #475569;
+            padding: 15px; border-radius: 12px;
+            opacity: 0; pointer-events: none; transform: translateY(20px);
+            transition: all 0.5s; z-index: 20;
+        }
+        .light-control-panel.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        
+        input[type="range"] { accent-color: #38bdf8; width: 150px; }
+
+        /* شريط الرسائل */
+        .message-bar {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); border: 1px solid #38bdf8;
+            color: #bae6fd; padding: 10px 20px; border-radius: 8px;
+            font-size: 16px; font-weight: bold; text-align: center;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+            z-index: 30; width: 80%; max-width: 500px;
+            transition: all 0.3s;
+        }
+        .message-bar.success { border-color: #22c55e; color: #bbf7d0; box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+
+    </style>
+</head>
+<body>
+
+    <div class="room" id="game-room">
+        <div class="back-wall"></div>
+        <div class="floor"></div>
+
+        <!-- شريط التوجيه -->
+        <div id="message-bar" class="message-bar">
+            أنت محتجز في الغرفة. لعودة الكهرباء، رتب الكتب لتطابق ألوان قوس قزح (من الأحمر يساراً إلى البنفسجي يميناً). 💡 انقر على كتابين للتبديل بينهما.
+        </div>
+
+        <!-- لغز الكتب (يسار) -->
+        <div class="bookshelf" id="bookshelf">
+            <!-- سيتم حقن الكتب عبر الجافاسكريبت -->
+        </div>
+
+        <!-- مركز الغرفة (المنصة والمجسم والظل) -->
+        <div class="shadow-target-outline" id="shadow-target"></div>
+        <div class="cast-shadow" id="cast-shadow"></div>
+        
+        <div class="pedestal">
+            <div class="geometric-object dark" id="main-object"></div>
+        </div>
+
+        <!-- مصدر الضوء (أعلى) -->
+        <div class="spotlight-source"></div>
+        <div class="light-beam" id="light-beam"></div>
+
+        <!-- لغز الإضاءة (لوحة التحكم أسفل يسار) -->
+        <div class="light-control-panel" id="light-controls">
+            <h3 class="text-xs text-sky-300 mb-2 font-bold text-center">عجلة توجيه الضوء</h3>
+            <input type="range" id="light-slider" min="-60" max="60" value="0">
+        </div>
+
+        <!-- الباب (يمين) -->
+        <div class="door-container" id="exit-door" onclick="tryOpenDoor()">
+            <div class="door-status-light" id="door-light"></div>
+            <div class="door-panel"></div>
+            <div class="door-handle"></div>
+        </div>
+    </div>
+
+    <!-- شاشة النهاية -->
+    <div id="victory-modal" class="fixed inset-0 bg-slate-950/95 z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-1000">
+        <h2 class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500 mb-6 text-center">
+            تألق هندسي! ✨
+        </h2>
+        <p class="text-2xl text-slate-300 mb-8 text-center max-w-lg">
+            لقد فهمت لغة الألوان، وأتقنت توجيه الضوء والظل. لقد فككت شفرة الغرفة الهندسية بنجاح.
+        </p>
+        <button onclick="location.reload()" class="px-10 py-4 bg-emerald-600 hover:bg-emerald-500 rounded-full font-bold text-white text-xl transition-all shadow-lg shadow-emerald-600/40">
+            العب مرة أخرى
+        </button>
+    </div>
+
+    <script>
+        // حالة اللعبة
+        let isBooksSolved = false;
+        let isLightSolved = false;
+        let isDoorUnlocked = false;
+
+        // عناصر الواجهة
+        const msgBar = document.getElementById('message-bar');
+        const bookshelfEl = document.getElementById('bookshelf');
+        const mainObject = document.getElementById('main-object');
+        const lightBeam = document.getElementById('light-beam');
+        const lightControls = document.getElementById('light-controls');
+        const lightSlider = document.getElementById('light-slider');
+        const shadowTarget = document.getElementById('shadow-target');
+        const castShadow = document.getElementById('cast-shadow');
+        const doorLight = document.getElementById('door-light');
+        const exitDoor = document.getElementById('exit-door');
+
+        // ==== لغز الكتب (التدرج اللوني) ====
+        // الترتيب الصحيح (تدرج من الأحمر للبنفسجي - قوس قزح)
+        const targetColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'];
+        // الترتيب العشوائي للبداية
+        let currentBooks = ['#eab308', '#a855f7', '#ef4444', '#3b82f6', '#f97316', '#22c55e'];
+        let selectedBookIndex = null;
+        
+        const defaultMessage = 'أنت محتجز في الغرفة. لعودة الكهرباء، رتب الكتب لتطابق ألوان قوس قزح (من الأحمر يساراً إلى البنفسجي يميناً). 💡 انقر على كتابين للتبديل بينهما.';
+
+        function initBooks() {
+            bookshelfEl.innerHTML = '';
+            currentBooks.forEach((color, index) => {
+                const book = document.createElement('div');
+                book.className = 'book';
+                book.style.backgroundColor = color;
+                book.onclick = () => handleBookClick(index);
+                bookshelfEl.appendChild(book);
+            });
+        }
+
+        function handleBookClick(index) {
+            if (isBooksSolved) return;
+
+            const bookElements = bookshelfEl.children;
+
+            // إذا لم يتم تحديد كتاب بعد
+            if (selectedBookIndex === null) {
+                selectedBookIndex = index;
+                bookElements[index].classList.add('selected');
+                msgBar.innerText = 'تم تحديد الكتاب! الآن انقر على كتاب آخر للتبديل معه.';
+            } else {
+                // إذا تم النقر على نفس الكتاب، إلغاء التحديد
+                if (selectedBookIndex === index) {
+                    bookElements[index].classList.remove('selected');
+                    selectedBookIndex = null;
+                    msgBar.innerText = defaultMessage;
+                    return;
+                }
+
+                // تبديل الكتب
+                const temp = currentBooks[selectedBookIndex];
+                currentBooks[selectedBookIndex] = currentBooks[index];
+                currentBooks[index] = temp;
+
+                selectedBookIndex = null;
+                initBooks(); // إعادة الرسم
+                
+                msgBar.innerText = defaultMessage;
+                checkBooksPuzzle();
+            }
+        }
+
+        function checkBooksPuzzle() {
+            // التحقق من التطابق مع المصفوفة الهدف
+            let isMatch = true;
+            for (let i = 0; i < targetColors.length; i++) {
+                if (currentBooks[i] !== targetColors[i]) {
+                    isMatch = false;
+                    break;
+                }
+            }
+
+            if (isMatch) {
+                isBooksSolved = true;
+                bookshelfEl.classList.add('solved');
+                triggerPowerOn();
+            }
+        }
+
+        function triggerPowerOn() {
+            // تأثيرات بصرية لعودة الطاقة
+            msgBar.className = 'message-bar success';
+            msgBar.innerText = 'عادت الطاقة! التدرج اللوني مكتمل. الآن استخدم أداة التحكم لتوجيه الضوء ومطابقة الظل مع الرمز.';
+            
+            setTimeout(() => {
+                mainObject.classList.remove('dark');
+                lightBeam.classList.add('on');
+                lightControls.classList.add('visible');
+                shadowTarget.classList.add('visible');
+                castShadow.classList.add('active');
+                
+                // إعادة شريط الرسائل للون الطبيعي
+                msgBar.className = 'message-bar';
+            }, 1000);
+        }
+
+        // ==== لغز الإضاءة (إسقاط الظل) ====
+        const TARGET_ANGLE = 45; // الزاوية المطلوبة ليتطابق الظل
+        const TOLERANCE = 3;     // هامش الخطأ المسموح
+
+        lightSlider.addEventListener('input', (e) => {
+            if (isLightSolved || !isBooksSolved) return;
+            
+            const angle = parseInt(e.target.value);
+            
+            // تحريك شعاع الضوء (من الأعلى)
+            lightBeam.style.transform = `translateX(-50%) rotate(${angle / 2}deg)`;
+            
+            // تحريك وانحراف الظل (على الأرض/الحائط)
+            // العلاقة عكسية بين مكان الضوء وانحراف الظل
+            castShadow.style.transform = `translateX(-50%) skewX(${-angle}deg)`;
+
+            checkLightPuzzle(-angle);
+        });
+
+        function checkLightPuzzle(currentShadowAngle) {
+            if (Math.abs(currentShadowAngle - TARGET_ANGLE) <= TOLERANCE) {
+                isLightSolved = true;
+                lightSlider.disabled = true;
+                
+                // جذب الظل للمكان المثالي
+                castShadow.style.transform = `translateX(-50%) skewX(${TARGET_ANGLE}deg)`;
+                castShadow.classList.add('solved');
+                shadowTarget.style.borderColor = 'transparent'; // إخفاء الإطار ليبرز الظل المكتمل
+
+                // فتح القفل
+                unlockDoor();
+            }
+        }
+
+        function unlockDoor() {
+            isDoorUnlocked = true;
+            doorLight.classList.add('unlocked');
+            msgBar.className = 'message-bar success';
+            msgBar.innerText = 'تطابق مثالي! سُمع صوت نقرة معدنية... الباب أصبح مفتوحاً الآن.';
+            
+            // تأثير حركة خفيف للباب لدعوة اللاعب للنقر
+            setTimeout(() => {
+                exitDoor.style.transform = 'perspective(500px) rotateY(-5deg)';
+            }, 500);
+        }
+
+        function tryOpenDoor() {
+            if (isDoorUnlocked) {
+                exitDoor.classList.add('open');
+                exitDoor.querySelector('.door-panel').style.opacity = '0';
+                
+                setTimeout(() => {
+                    const modal = document.getElementById('victory-modal');
+                    modal.classList.remove('hidden');
+                    setTimeout(() => modal.classList.remove('opacity-0'), 50);
+                }, 800);
+            } else {
+                // إذا حاول فتح الباب وهو مغلق
+                msgBar.className = 'message-bar';
+                msgBar.innerText = 'الباب مقفل بإحكام. يبدو أن النظام الإلكتروني يحتاج لتفعيله أولاً.';
+                
+                // تأثير اهتزاز للباب
+                exitDoor.style.transform = 'translateX(5px)';
+                setTimeout(() => exitDoor.style.transform = 'translateX(-5px)', 100);
+                setTimeout(() => exitDoor.style.transform = 'translateX(0)', 200);
+            }
+        }
+
+        // تهيئة اللعبة عند التحميل
+        window.onload = () => {
+            initBooks();
+        };
+
+    </script>
+</body>
+</html>

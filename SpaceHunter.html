@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة صائد الفضاء</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a; /* خلفية داكنة للفضاء */
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .math-space-bg {
+            background-color: #1e1b4b;
+            border: 4px solid #3730a3;
+            padding: 20px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        .math-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 0 auto;
+            background: #020617;
+            background-image: radial-gradient(#312e81 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 4px solid #4f46e5;
+        }
+
+        .math-hero {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #38bdf8;
+            z-index: 10;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35px;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+        }
+
+        .math-meteor {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle, #52525b, #27272a);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 4px solid #18181b;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            left: 50%;
+            transform: translateX(-50%);
+            transition: transform 0.2s; /* لانيميشن الانفجار */
+        }
+
+        .math-laser {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            background: #38bdf8;
+            box-shadow: 0 0 20px #38bdf8;
+            border-radius: 3px;
+            z-index: 5;
+            animation: shoot 0.15s ease-out forwards;
+        }
+
+        @keyframes shoot {
+            0% { height: 0; bottom: 70px; opacity: 1; }
+            50% { height: 400px; bottom: 70px; opacity: 1; }
+            100% { height: 400px; bottom: 70px; opacity: 0; }
+        }
+
+        /* تنسيقات الرسائل المنبثقة (Toast) */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            width: 90%;
+            max-width: 400px;
+        }
+        .toast {
+            background: linear-gradient(to right, #4f46e5, #ec4899);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .toast.error { background: linear-gradient(to right, #ef4444, #b91c1c); }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="toast-container"></div>
+
+    <main class="math-space-bg">
+        <div class="flex justify-between items-center mb-4">
+            <button onclick="initMathSpace()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold shadow border border-indigo-400 transition">إعادة اللعب 🔄</button>
+            <span class="font-bold text-white bg-indigo-800 px-4 py-1 rounded-full border border-sky-400">النقاط: <span id="math-score" class="text-yellow-300">0</span></span>
+        </div>
+        
+        <h2 class="text-center text-3xl font-black text-sky-400 mb-6 drop-shadow-md">صائد الفضاء 🚀</h2>
+        
+        <div class="math-container" id="math-board">
+            <!-- بطل اللعبة (ايموجي افتراضي بدلاً من الصورة) -->
+            <div id="math-hero" class="math-hero">👩‍🚀</div>
+            
+            <!-- النيزك -->
+            <div id="math-meteor" class="math-meteor"></div>
+        </div>
+        
+        <!-- أزرار الإجابات ستتولد هنا -->
+        <div class="grid grid-cols-3 gap-3 mt-4" id="math-options"></div>
+    </main>
+
+    <script>
+        // المتغيرات الأساسية للعبة
+        let mathMeteorY = -80;
+        let mathRunning = false;
+        let mathScore = 0;
+        let currentMathAns = 0;
+        let animationFrame = null;
+        let meteorSpeed = 1.0; // السرعة المبدئية
+
+        // دالة عرض الرسائل المنبثقة
+        function showToast(msg, isError = false) {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${isError ? 'error' : ''}`;
+            t.innerText = msg;
+            container.appendChild(t);
+            
+            // تحريك الرسالة للظهور
+            setTimeout(() => t.classList.add('show'), 10);
+            
+            // إخفاء وحذف الرسالة بعد 3 ثواني
+            setTimeout(() => { 
+                t.classList.remove('show'); 
+                setTimeout(() => t.remove(), 300); 
+            }, 3000);
+        }
+
+        // دالة بدء/إعادة تشغيل اللعبة
+        function initMathSpace() {
+            cancelAnimationFrame(animationFrame);
+            mathRunning = true;
+            mathScore = 0;
+            meteorSpeed = 1.0; // إعادة ضبط السرعة
+            document.getElementById('math-score').innerText = '0';
+            document.getElementById('math-meteor').innerText = ''; 
+            
+            spawnMathMeteor();
+            updateMathSpace();
+        }
+
+        // دالة توليد نيزك جديد بمعادلة رياضية
+        function spawnMathMeteor() {
+            mathMeteorY = -80; // إرجاع النيزك للأعلى
+            
+            // توليد أرقام عشوائية من 1 إلى 10
+            let a = Math.floor(Math.random() * 10) + 1;
+            let b = Math.floor(Math.random() * 10) + 1;
+            currentMathAns = a + b;
+            
+            const meteor = document.getElementById('math-meteor');
+            meteor.innerText = `${a} + ${b}`;
+            meteor.style.top = mathMeteorY + 'px';
+            meteor.style.transform = 'translateX(-50%) scale(1)'; // إعادة الحجم الطبيعي
+            
+            // توليد الخيارات (إجابة صحيحة + إجابات خاطئة عشوائية)
+            let opts = [currentMathAns];
+            while(opts.length < 3) {
+                // توليد إجابة خاطئة قريبة من الصحيحة
+                let wrongAns = currentMathAns + Math.floor(Math.random() * 7) - 3;
+                if(wrongAns !== currentMathAns && wrongAns > 0 && !opts.includes(wrongAns)) {
+                    opts.push(wrongAns);
+                }
+            }
+            
+            // خلط الخيارات عشوائياً
+            opts.sort(() => Math.random() - 0.5);
+            
+            // عرض أزرار الإجابات
+            const optDiv = document.getElementById('math-options');
+            optDiv.innerHTML = '';
+            opts.forEach(o => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-sky-600 hover:bg-sky-500 text-white font-black text-2xl py-4 rounded-xl shadow-lg border-b-4 border-sky-800 active:scale-95 transition';
+                btn.innerText = o;
+                btn.onclick = () => shootMathLaser(o);
+                optDiv.appendChild(btn);
+            });
+        }
+
+        // دالة إطلاق شعاع الليزر
+        function shootMathLaser(ans) {
+            if(!mathRunning) return;
+            
+            const laser = document.createElement('div');
+            laser.className = 'math-laser';
+            document.getElementById('math-board').appendChild(laser);
+            
+            // التحقق من الإجابة بعد جزء من الثانية لتتزامن مع حركة الليزر
+            setTimeout(() => {
+                laser.remove(); // إخفاء الليزر
+                
+                if(ans === currentMathAns) {
+                    // إجابة صحيحة
+                    mathScore += 10;
+                    document.getElementById('math-score').innerText = mathScore;
+                    
+                    // تأثير انفجار النيزك
+                    const meteor = document.getElementById('math-meteor');
+                    meteor.innerText = '💥';
+                    meteor.style.transform = 'translateX(-50%) scale(1.5)';
+                    
+                    // زيادة سرعة النيزك قليلاً لزيادة الصعوبة
+                    meteorSpeed += 0.15;
+                    
+                    // توليد نيزك جديد بعد نصف ثانية
+                    setTimeout(spawnMathMeteor, 500);
+                } else {
+                    // إجابة خاطئة
+                    showToast('إجابة خاطئة! النيزك يقترب بسرعة...', true);
+                    // تسريع النيزك كعقاب على الإجابة الخاطئة
+                    mathMeteorY += 20; 
+                }
+            }, 150);
+        }
+
+        // حلقة اللعبة (Game Loop) لتحريك النيزك
+        function updateMathSpace() {
+            if(!mathRunning) return;
+            
+            mathMeteorY += meteorSpeed;
+            document.getElementById('math-meteor').style.top = mathMeteorY + 'px';
+            
+            // التحقق من الاصطدام (إذا وصل النيزك للأرض عند مسافة 400px تقريباً)
+            if(mathMeteorY > 400) {
+                mathRunning = false;
+                showToast(`انتهت اللعبة! اصطدم النيزك بك. النقاط: ${mathScore}`, true);
+                
+                // تأثير الاصطدام للبطل
+                document.getElementById('math-hero').innerText = '😵';
+                return; // إيقاف الانيميشن
+            }
+            
+            // استمرار الحلقة
+            animationFrame = requestAnimationFrame(updateMathSpace);
+        }
+
+        // تشغيل اللعبة تلقائياً عند تحميل الصفحة
+        window.onload = function() {
+            initMathSpace();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المخرج الفني - ستوب موشن</title>
+    <!-- استدعاء خطوط جوجل (كايرو) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة Gifshot لتوليد ملفات الـ GIF داخل المتصفح -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* تصميم الشريط السينمائي */
+        .film-strip {
+            background-color: #000000;
+            padding: 16px 8px;
+            border-top: 12px dashed #1e293b;
+            border-bottom: 12px dashed #1e293b;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            min-height: 120px;
+        }
+
+        /* إطارات اللعبة */
+        .frame-slot {
+            width: 80px;
+            height: 80px;
+            background-color: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            overflow: hidden; /* لمنع خروج العناصر عن الإطار */
+        }
+        
+        .frame-slot.empty {
+            border: 2px dashed #64748b;
+            background-color: transparent;
+        }
+
+        .frame-slot:hover {
+            transform: scale(1.05);
+            border-color: #fbbf24;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+        }
+
+        /* تأثيرات العرض السينمائي */
+        .cinema-screen {
+            box-shadow: 0 0 50px rgba(0,0,0,0.8) inset, 0 0 30px rgba(255,255,255,0.1);
+        }
+
+        /* شريط التمرير */
+        ::-webkit-scrollbar {
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- حاوية اللعبة الرئيسية -->
+    <div id="game-board" class="max-w-3xl w-full bg-slate-800 rounded-3xl shadow-2xl p-6 md:p-8 border border-slate-700">
+        
+        <!-- الهيدر -->
+        <div class="text-center mb-8">
+            <div class="inline-block bg-amber-500 text-slate-900 px-4 py-1 rounded-full font-bold text-sm mb-3 shadow-lg shadow-amber-500/20">
+                مستوى <span id="level-display">1</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-500 mb-2">
+                المخرج الفني: ستوب موشن
+            </h1>
+            <p class="text-slate-400 text-sm md:text-base">رتب الإطارات المبعثرة في الشريط لتكوين حركة متصلة، ثم حملها كـ GIF!</p>
+            <div class="mt-4">
+                <h2 id="level-title" class="text-xl font-bold text-white bg-slate-700/50 inline-block px-6 py-2 rounded-lg border border-slate-600">
+                    المشهد: الكرة النطاطة
+                </h2>
+            </div>
+            <div id="level-note-container" class="mt-3 hidden">
+                <p id="level-note" class="inline-block text-amber-300 font-bold bg-amber-900/40 border border-amber-500/50 px-4 py-2 rounded-lg text-sm shadow-lg shadow-amber-900/20"></p>
+            </div>
+        </div>
+
+        <!-- الشريط السينمائي (Timeline) -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-2 px-2">
+                <span class="text-sm font-bold text-slate-300 uppercase tracking-wider">شريط العرض (انقر للإزالة)</span>
+                <span id="slots-count" class="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded">0 / 6</span>
+            </div>
+            <div id="timeline" class="film-strip flex gap-3 overflow-x-auto items-center">
+                <!-- سيتم حقن الخانات هنا -->
+            </div>
+        </div>
+
+        <!-- بنك الإطارات المبعثرة -->
+        <div class="bg-slate-900/50 rounded-2xl p-6 border border-slate-700/50 mb-8">
+            <h3 class="text-sm font-bold text-slate-400 mb-4 text-center">اللقطات المبعثرة (انقر للإضافة)</h3>
+            <div id="frames-pool" class="flex flex-wrap justify-center gap-4">
+                <!-- سيتم حقن الإطارات هنا -->
+            </div>
+        </div>
+
+        <!-- أزرار التحكم -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <button onclick="playScene()" class="flex-1 max-w-xs bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-orange-500/30 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                تشغيل المشهد
+            </button>
+            <button onclick="resetTimeline()" class="px-6 py-3 rounded-xl font-bold text-slate-300 bg-slate-700 hover:bg-slate-600 transition-colors border border-slate-600">
+                إعادة ضبط
+            </button>
+        </div>
+    </div>
+
+    <!-- مكتبة المشاهد المكتملة -->
+    <div id="library-section" class="max-w-3xl w-full bg-slate-800 rounded-3xl shadow-xl p-6 md:p-8 border border-slate-700 mt-8 hidden">
+        <div class="flex items-center gap-3 mb-6 border-b border-slate-700 pb-4">
+            <span class="text-3xl">🍿</span>
+            <h2 class="text-2xl font-black text-white">مكتبة الإنتاج الخاصة بك</h2>
+        </div>
+        <p class="text-slate-400 text-sm mb-6">هنا تظهر المشاهد التي قمت بإخراجها بنجاح. يمكنك معاينتها أو تحميلها كصور متحركة (GIF).</p>
+        
+        <div id="library-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- سيتم حقن كروت المشاهد هنا -->
+        </div>
+    </div>
+
+    <!-- نافذة العرض السينمائي (Modal) -->
+    <div id="cinema-modal" class="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <h2 id="cinema-status" class="text-2xl font-bold text-white mb-6 h-8 text-center">جاري العرض...</h2>
+        
+        <!-- شاشة العرض -->
+        <div class="cinema-screen bg-slate-900 w-64 h-64 md:w-80 md:h-80 rounded-xl overflow-hidden border-4 border-slate-700 relative flex items-center justify-center">
+            <div id="countdown" class="text-6xl font-black text-amber-500">3</div>
+            <div id="animation-display" class="w-full h-full hidden">
+                <!-- يُعرض هنا الإطار الحالي -->
+            </div>
+        </div>
+
+        <button id="close-cinema-btn" onclick="closeCinema()" class="mt-8 px-8 py-3 bg-slate-700 hover:bg-slate-600 rounded-full font-bold text-white transition-colors hidden border border-slate-500">
+            العودة للوحة الإخراج
+        </button>
+        
+        <button id="next-level-btn" onclick="nextLevel()" class="mt-8 px-8 py-3 bg-green-500 hover:bg-green-400 text-white rounded-full font-bold transition-all hover:scale-105 shadow-lg shadow-green-500/30 hidden">
+            حفظ في المكتبة والتالي 🎬
+        </button>
+    </div>
+
+    <script>
+        // ملاحظة هامة جداً: تم استبدال (bg-color) بخصائص <rect> داخل الـ SVG لضمان تصديرها كـ GIF بدون أخطاء
+        const levels = [
+            {
+                name: "الكرة النطاطة",
+                frames: [
+                    { id: 0, svg: `<circle cx="50" cy="20" r="14" fill="#3b82f6"/>` },
+                    { id: 1, svg: `<ellipse cx="50" cy="45" rx="13" ry="15" fill="#3b82f6"/><path d="M40 20 v10 M50 15 v15 M60 20 v10" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>` },
+                    { id: 2, svg: `<ellipse cx="50" cy="70" rx="12" ry="16" fill="#3b82f6"/><path d="M40 40 v15 M50 35 v20 M60 40 v15" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>` },
+                    { id: 3, svg: `<ellipse cx="50" cy="85" rx="18" ry="8" fill="#3b82f6"/><path d="M20 85 h10 M80 85 h-10 M30 75 l-5 -5 M70 75 l5 -5" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>` },
+                    { id: 4, svg: `<ellipse cx="50" cy="65" rx="12" ry="16" fill="#3b82f6"/><path d="M40 80 v10 M50 80 v15 M60 80 v10" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>` },
+                    { id: 5, svg: `<ellipse cx="50" cy="35" rx="13" ry="15" fill="#3b82f6"/><path d="M40 50 v10 M50 50 v15 M60 50 v10" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"/>` }
+                ].map(f => ({
+                    ...f, 
+                    svg: `<svg viewBox="0 0 100 100" class="w-full h-full rounded-md"><rect width="100" height="100" fill="#1e293b"/><rect x="0" y="90" width="100" height="10" fill="#0f172a"/>${f.svg}</svg>`
+                }))
+            },
+            {
+                name: "نمو الزهرة", // المشهد الجديد الذي طلبته (بديل البندول)
+                note: "💡 التدرج الطبيعي: البذرة تنمو لتصبح برعماً ثم تتفتح الزهرة.",
+                frames: [
+                    `<circle cx="50" cy="85" r="5" fill="#92400e"/>`, // بذرة
+                    `<path d="M50 85 Q45 70 50 65" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>`, // نبتة صغيرة
+                    `<path d="M50 85 Q45 60 50 50" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                     <path d="M50 70 Q35 60 30 70 Q40 75 50 70" fill="#22c55e"/>
+                     <path d="M50 60 Q65 50 70 60 Q60 65 50 60" fill="#22c55e"/>`, // بأوراق
+                    `<path d="M50 85 Q45 50 50 40" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                     <path d="M50 70 Q35 60 30 70 Q40 75 50 70" fill="#22c55e"/>
+                     <path d="M50 60 Q65 50 70 60 Q60 65 50 60" fill="#22c55e"/>
+                     <circle cx="50" cy="38" r="6" fill="#ec4899"/>`, // برعم وردي مغلق
+                    `<path d="M50 85 Q45 50 50 40" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                     <path d="M50 70 Q35 60 30 70 Q40 75 50 70" fill="#22c55e"/>
+                     <path d="M50 60 Q65 50 70 60 Q60 65 50 60" fill="#22c55e"/>
+                     <circle cx="44" cy="34" r="5" fill="#f472b6"/><circle cx="56" cy="34" r="5" fill="#f472b6"/><circle cx="50" cy="42" r="5" fill="#f472b6"/>
+                     <circle cx="50" cy="36" r="4" fill="#facc15"/>`, // بداية التفتح
+                    `<path d="M50 85 Q45 50 50 40" fill="none" stroke="#22c55e" stroke-width="4" stroke-linecap="round"/>
+                     <path d="M50 70 Q35 60 30 70 Q40 75 50 70" fill="#22c55e"/>
+                     <path d="M50 60 Q65 50 70 60 Q60 65 50 60" fill="#22c55e"/>
+                     <circle cx="40" cy="36" r="8" fill="#ec4899"/><circle cx="60" cy="36" r="8" fill="#ec4899"/>
+                     <circle cx="50" cy="24" r="8" fill="#ec4899"/><circle cx="42" cy="46" r="8" fill="#ec4899"/><circle cx="58" cy="46" r="8" fill="#ec4899"/>
+                     <circle cx="50" cy="36" r="6" fill="#facc15"/>` // تفتح كامل
+                ].map((content, i) => ({
+                    id: i,
+                    svg: `<svg viewBox="0 0 100 100" class="w-full h-full rounded-md"><rect width="100" height="100" fill="#bae6fd"/><rect x="0" y="85" width="100" height="15" fill="#451a03"/><rect x="0" y="85" width="100" height="3" fill="#166534"/>${content}</svg>`
+                }))
+            },
+            {
+                name: "دورة اليوم",
+                frames: [
+                    { x: 20, y: 75, c: "#f97316", bg: "#1e3a8a", t: "الفجر" },
+                    { x: 35, y: 35, c: "#facc15", bg: "#3b82f6", t: "الصباح" },
+                    { x: 50, y: 15, c: "#fef08a", bg: "#60a5fa", t: "الظهر" },
+                    { x: 65, y: 35, c: "#facc15", bg: "#3b82f6", t: "العصر" },
+                    { x: 80, y: 75, c: "#f97316", bg: "#1e3a8a", t: "الغروب" },
+                    { x: 50, y: 110, c: "#f8fafc", bg: "#0f172a", t: "الليل" } 
+                ].map((s, i) => ({
+                    id: i,
+                    svg: `<svg viewBox="0 0 100 100" class="w-full h-full rounded-md"><rect width="100" height="100" fill="${s.bg}"/>${i===5 ? '<circle cx="20" cy="30" r="1.5" fill="#fff"/><circle cx="75" cy="20" r="1" fill="#fff"/><circle cx="40" cy="50" r="2" fill="#fff"/>' : ''}<circle cx="${s.x}" cy="${s.y}" r="12" fill="${s.c}"/><rect x="0" y="80" width="100" height="20" fill="#064e3b"/><text x="50" y="94" fill="#ffffff" font-size="12" font-family="Cairo, sans-serif" text-anchor="middle" font-weight="bold">${s.t}</text></svg>`
+                }))
+            },
+            {
+                name: "الطائر المرفرف",
+                frames: [
+                    { id: 0, d: "M 50 45 Q 30 10 10 10 Q 35 30 50 45", lines: "" },
+                    { id: 1, d: "M 50 45 Q 25 25 5 35 Q 30 40 50 45", lines: "<path d='M 15 20 L 15 10 M 30 25 L 30 15' stroke='white' stroke-width='2' stroke-linecap='round'/>" },
+                    { id: 2, d: "M 50 45 Q 20 45 5 55 Q 30 50 50 45", lines: "<path d='M 10 40 L 10 30 M 25 40 L 25 30' stroke='white' stroke-width='2' stroke-linecap='round'/>" },
+                    { id: 3, d: "M 50 45 Q 30 75 15 85 Q 35 65 50 45", lines: "" },
+                    { id: 4, d: "M 50 45 Q 20 55 10 60 Q 30 50 50 45", lines: "<path d='M 15 70 L 15 80 M 30 60 L 30 70' stroke='white' stroke-width='2' stroke-linecap='round'/>" },
+                    { id: 5, d: "M 50 45 Q 25 35 10 25 Q 30 40 50 45", lines: "<path d='M 15 40 L 15 50 M 30 45 L 30 55' stroke='white' stroke-width='2' stroke-linecap='round'/>" }
+                ].map(f => ({
+                    id: f.id,
+                    svg: `<svg viewBox="0 0 100 100" class="w-full h-full rounded-md"><rect width="100" height="100" fill="#38bdf8"/><circle cx="85" cy="15" r="8" fill="#fde047"/><path d="M 20 25 Q 25 20 30 25 Q 35 20 40 25 L 40 30 L 20 30 Z" fill="#ffffff" opacity="0.7"/><g><path d="${f.d}" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/><g>${f.lines}</g><g transform="translate(100, 0) scale(-1, 1)"><path d="${f.d}" fill="#f8fafc" stroke="#94a3b8" stroke-width="1"/><g>${f.lines}</g></g><ellipse cx="50" cy="50" rx="8" ry="16" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/><polygon points="46,65 54,65 50,80" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1"/><polygon points="48,36 52,36 50,30" fill="#f59e0b"/><circle cx="47" cy="40" r="1.5" fill="#0f172a"/><circle cx="53" cy="40" r="1.5" fill="#0f172a"/></g></svg>`
+                }))
+            },
+            {
+                name: "أطوار القمر",
+                note: "💡 ملحوظة مهمة: يجب أن نبدأ الترتيب من طور (التربيع الأول).",
+                frames: [
+                    { id: 0, phase: "تربيع أول", content: `<path d="M 50 25 A 20 20 0 0 1 50 65 Z" fill="#f8fafc"/>` },
+                    { id: 1, phase: "أحدب متزايد", content: `<circle cx="50" cy="45" r="20" fill="#f8fafc"/><path d="M 50 25 A 10 20 0 0 0 50 65 Z" fill="#0f172a"/>` },
+                    { id: 2, phase: "بدر", content: `<circle cx="50" cy="45" r="20" fill="#f8fafc"/>` },
+                    { id: 3, phase: "أحدب متناقص", content: `<circle cx="50" cy="45" r="20" fill="#f8fafc"/><path d="M 50 25 A 10 20 0 0 1 50 65 Z" fill="#0f172a"/>` },
+                    { id: 4, phase: "تربيع أخير", content: `<path d="M 50 25 A 20 20 0 0 0 50 65 Z" fill="#f8fafc"/>` },
+                    { id: 5, phase: "هلال متناقص", content: `<circle cx="50" cy="45" r="20" fill="#f8fafc"/><circle cx="58" cy="45" r="20" fill="#0f172a"/>` }
+                ].map(f => ({
+                    id: f.id,
+                    svg: `<svg viewBox="0 0 100 100" class="w-full h-full rounded-md"><rect width="100" height="100" fill="#0f172a"/><circle cx="20" cy="20" r="1" fill="#fff" opacity="0.8"/><circle cx="80" cy="25" r="1.5" fill="#fff" opacity="0.6"/><circle cx="25" cy="75" r="1" fill="#fff" opacity="0.5"/><circle cx="85" cy="70" r="2" fill="#fff" opacity="0.7"/>${f.content}<rect x="0" y="80" width="100" height="20" fill="#020617"/><text x="50" y="93" fill="#94a3b8" font-size="11" font-family="Cairo, sans-serif" font-weight="bold" text-anchor="middle">${f.phase}</text></svg>`
+                }))
+            }
+        ];
+
+        let currentLevel = 0;
+        let framesCount = 0;
+        let pool = [];      
+        let timeline = [];  
+        let animInterval = null;
+        
+        let lastSuccessfulTimeline = []; // لحفظ الإطارات مرتبة لإرسالها للمكتبة
+        let completedScenesData = [];    // تخزين بيانات المشاهد التي أُنجزت للمكتبة
+        let isPreviewMode = false;       // للتفريق بين فحص الحل أو معاينة من المكتبة
+
+        const timelineEl = document.getElementById('timeline');
+        const poolEl = document.getElementById('frames-pool');
+        const slotsCountEl = document.getElementById('slots-count');
+        const modal = document.getElementById('cinema-modal');
+        const countdownEl = document.getElementById('countdown');
+        const displayEl = document.getElementById('animation-display');
+        const statusEl = document.getElementById('cinema-status');
+        const closeBtn = document.getElementById('close-cinema-btn');
+        const nextBtn = document.getElementById('next-level-btn');
+        const levelNoteContainer = document.getElementById('level-note-container');
+        const levelNoteEl = document.getElementById('level-note');
+        
+        const librarySection = document.getElementById('library-section');
+        const libraryGrid = document.getElementById('library-grid');
+
+        function initGame() {
+            if (currentLevel >= levels.length) {
+                // شاشة الفوز النهائية
+                document.getElementById('game-board').innerHTML = `
+                    <div class="text-center py-20">
+                        <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-6">مبارك أيها المخرج العظيم! 🎬</h1>
+                        <p class="text-xl text-slate-300 mb-8">لقد أكملت جميع المشاهد بنجاح! يمكنك الآن الاستمتاع بتحميل أعمالك كـ GIF من المكتبة بالأسفل.</p>
+                        <button onclick="location.reload()" class="px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded-full font-bold text-white transition-all shadow-lg">العب من جديد</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const levelData = levels[currentLevel];
+            framesCount = levelData.frames.length;
+            
+            document.getElementById('level-display').innerText = currentLevel + 1;
+            document.getElementById('level-title').innerText = "المشهد: " + levelData.name;
+            
+            if (levelData.note) {
+                levelNoteEl.innerText = levelData.note;
+                levelNoteContainer.classList.remove('hidden');
+            } else {
+                levelNoteContainer.classList.add('hidden');
+            }
+            
+            timeline = Array(framesCount).fill(null);
+            pool = [...levelData.frames];
+            
+            // خلط الإطارات
+            do {
+                pool.sort(() => Math.random() - 0.5);
+            } while (pool.every((f, i) => f.id === i)); 
+
+            renderUI();
+        }
+
+        function renderUI() {
+            poolEl.innerHTML = '';
+            pool.forEach((frame, index) => {
+                if (frame === null) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = "w-20 h-20";
+                    poolEl.appendChild(placeholder);
+                    return;
+                }
+
+                const btn = document.createElement('div');
+                btn.className = "frame-slot hover:scale-110 shadow-lg";
+                btn.innerHTML = frame.svg;
+                btn.onclick = () => moveToTimeline(index);
+                poolEl.appendChild(btn);
+            });
+
+            timelineEl.innerHTML = '';
+            let placedCount = 0;
+            
+            for (let i = 0; i < framesCount; i++) {
+                const frame = timeline[i];
+                const slot = document.createElement('div');
+                
+                if (frame !== null) {
+                    placedCount++;
+                    slot.className = "frame-slot shadow-md border-amber-500/50";
+                    slot.innerHTML = frame.svg;
+                    slot.onclick = () => moveToPool(i);
+                } else {
+                    slot.className = "frame-slot empty";
+                }
+                timelineEl.appendChild(slot);
+            }
+
+            slotsCountEl.innerText = `${placedCount} / ${framesCount}`;
+            if (placedCount === framesCount) {
+                slotsCountEl.classList.replace('text-amber-400', 'text-green-400');
+                slotsCountEl.classList.replace('bg-amber-400/10', 'bg-green-400/10');
+            } else {
+                slotsCountEl.classList.replace('text-green-400', 'text-amber-400');
+                slotsCountEl.classList.replace('bg-green-400/10', 'bg-amber-400/10');
+            }
+        }
+
+        function moveToTimeline(poolIndex) {
+            const emptyTimelineIndex = timeline.indexOf(null);
+            if (emptyTimelineIndex === -1) return; 
+
+            const frame = pool[poolIndex];
+            pool[poolIndex] = null; 
+            timeline[emptyTimelineIndex] = frame; 
+            
+            renderUI();
+        }
+
+        function moveToPool(timelineIndex) {
+            const frame = timeline[timelineIndex];
+            if (!frame) return;
+            timeline[timelineIndex] = null; 
+            
+            const emptyPoolIndex = pool.indexOf(null);
+            if (emptyPoolIndex !== -1) {
+                pool[emptyPoolIndex] = frame;
+            } else {
+                pool.push(frame); 
+            }
+            
+            renderUI();
+        }
+
+        function resetTimeline() {
+            timeline.forEach((frame, i) => {
+                if (frame !== null) moveToPool(i);
+            });
+        }
+
+        function playScene() {
+            if (timeline.includes(null)) {
+                const originalText = slotsCountEl.innerText;
+                slotsCountEl.innerText = "أكمل الشريط!";
+                slotsCountEl.classList.add('bg-red-500/20', 'text-red-400');
+                setTimeout(() => {
+                    slotsCountEl.innerText = originalText;
+                    slotsCountEl.classList.remove('bg-red-500/20', 'text-red-400');
+                }, 2000);
+                return;
+            }
+
+            isPreviewMode = false;
+            triggerCinemaModal("تجهيز المشهد...");
+        }
+
+        // دالة مخصصة لمعاينة المشاهد من المكتبة
+        function previewLibraryScene(sceneIndex) {
+            isPreviewMode = true;
+            timeline = completedScenesData[sceneIndex].frames; // تعيين التايم لاين للإطارات المحفوظة
+            framesCount = timeline.length;
+            triggerCinemaModal("معاينة المشهد 🎬");
+        }
+
+        function triggerCinemaModal(titleText) {
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            
+            closeBtn.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+            statusEl.innerText = titleText;
+            statusEl.className = "text-2xl font-bold text-amber-500 mb-6 h-8 text-center";
+            
+            countdownEl.style.display = 'block';
+            displayEl.style.display = 'none';
+
+            let count = 3;
+            countdownEl.innerText = count;
+            
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownEl.innerText = count;
+                } else {
+                    clearInterval(countInterval);
+                    startAnimation();
+                }
+            }, 800);
+        }
+
+        function startAnimation() {
+            countdownEl.style.display = 'none';
+            displayEl.style.display = 'block';
+            
+            let currentFrame = 0;
+            let loopsCounter = 0;
+            const totalLoopsReq = isPreviewMode ? 4 : 3; 
+
+            statusEl.innerText = "جاري العرض 🎥";
+            statusEl.className = "text-2xl font-bold text-white mb-6 h-8 text-center animate-pulse";
+
+            animInterval = setInterval(() => {
+                displayEl.innerHTML = timeline[currentFrame].svg;
+                
+                currentFrame++;
+                if (currentFrame >= framesCount) {
+                    currentFrame = 0;
+                    loopsCounter++;
+                    
+                    if (loopsCounter >= totalLoopsReq) {
+                        clearInterval(animInterval);
+                        if (isPreviewMode) {
+                            // إظهار زر الإغلاق فقط في حالة المعاينة
+                            statusEl.innerText = "انتهى العرض";
+                            statusEl.classList.remove('animate-pulse');
+                            closeBtn.classList.remove('hidden');
+                        } else {
+                            evaluateScene();
+                        }
+                    }
+                }
+            }, 180); 
+        }
+
+        function evaluateScene() {
+            statusEl.classList.remove('animate-pulse');
+            
+            // اللوجيك الدائري
+            const targetSequence = levels[currentLevel].frames.map((_, i) => i).join(',');
+            const playerSequence = timeline.map(frame => frame.id).join(',');
+            const loopedPlayerSequence = playerSequence + ',' + playerSequence;
+
+            const isCorrect = loopedPlayerSequence.includes(targetSequence);
+
+            if (isCorrect) {
+                statusEl.innerText = "قطع! مشاهد متسلسلة بمثالية ✨";
+                statusEl.className = "text-2xl font-bold text-green-400 mb-6 h-8 text-center";
+                displayEl.classList.add('border-4', 'border-green-500', 'rounded-lg');
+                nextBtn.classList.remove('hidden');
+                
+                // حفظ الترتيب الصحيح للمكتبة
+                lastSuccessfulTimeline = [...timeline];
+            } else {
+                statusEl.innerText = "توقف! هناك تقطيع، الحركة غير متسلسلة 🎬";
+                statusEl.className = "text-2xl font-bold text-red-400 mb-6 h-8 text-center";
+                closeBtn.classList.remove('hidden');
+            }
+        }
+
+        function closeCinema() {
+            clearInterval(animInterval);
+            displayEl.classList.remove('border-4', 'border-green-500', 'rounded-lg');
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function nextLevel() {
+            // حفظ المشهد في المكتبة
+            completedScenesData.push({
+                name: levels[currentLevel].name,
+                frames: [...lastSuccessfulTimeline]
+            });
+            updateLibraryUI();
+
+            closeCinema();
+            currentLevel++;
+            setTimeout(initGame, 300); 
+        }
+
+        function updateLibraryUI() {
+            if (completedScenesData.length > 0) {
+                librarySection.classList.remove('hidden');
+            }
+            
+            libraryGrid.innerHTML = '';
+            completedScenesData.forEach((scene, index) => {
+                // الكارت الخاص بالمشهد
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 rounded-xl p-4 border border-slate-700 flex flex-col items-center gap-3";
+                
+                // شكل مصغر (أول إطار)
+                const thumb = document.createElement('div');
+                thumb.className = "w-24 h-24 rounded-lg overflow-hidden border-2 border-slate-600 bg-black";
+                thumb.innerHTML = scene.frames[0].svg;
+                
+                const title = document.createElement('h3');
+                title.className = "font-bold text-slate-200 text-sm";
+                title.innerText = scene.name;
+
+                const btnsDiv = document.createElement('div');
+                btnsDiv.className = "flex gap-2 w-full mt-2";
+
+                const previewBtn = document.createElement('button');
+                previewBtn.className = "flex-1 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-bold rounded-lg text-white transition-colors";
+                previewBtn.innerText = "معاينة 👁️";
+                previewBtn.onclick = () => previewLibraryScene(index);
+
+                const gifBtn = document.createElement('button');
+                gifBtn.className = "flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-xs font-bold rounded-lg text-white transition-colors flex justify-center items-center gap-1";
+                gifBtn.innerHTML = `تحميل GIF <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>`;
+                gifBtn.onclick = () => generateAndDownloadGIF(index, gifBtn);
+
+                btnsDiv.appendChild(previewBtn);
+                btnsDiv.appendChild(gifBtn);
+
+                card.appendChild(thumb);
+                card.appendChild(title);
+                card.appendChild(btnsDiv);
+                libraryGrid.appendChild(card);
+            });
+        }
+
+        // تحويل الـ SVG إلى صورة Base64 للكانفاس
+        function convertSvgToDataUrl(svgStr) {
+            return new Promise((resolve) => {
+                let modifiedSvg = svgStr;
+                // إضافة مساحة الأسماء المطلوبة
+                if (!modifiedSvg.includes('xmlns=')) {
+                    modifiedSvg = modifiedSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+                }
+                // فرض أبعاد ثابتة لضمان الوضوح عند التحويل لـ Canvas
+                modifiedSvg = modifiedSvg.replace('<svg', '<svg width="300" height="300"');
+                
+                const blob = new Blob([modifiedSvg], {type: 'image/svg+xml;charset=utf-8'});
+                const url = URL.createObjectURL(blob);
+                
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 300;
+                    canvas.height = 300;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 300, 300);
+                    resolve(canvas.toDataURL('image/png'));
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            });
+        }
+
+        // توليد ملف الـ GIF
+        async function generateAndDownloadGIF(sceneIndex, btnElement) {
+            btnElement.innerText = "جاري الدمج⏳";
+            btnElement.disabled = true;
+            btnElement.classList.replace('bg-purple-600', 'bg-slate-500');
+            
+            const scene = completedScenesData[sceneIndex];
+            
+            try {
+                // استخراج الصور من الـ SVGs
+                const base64Images = await Promise.all(scene.frames.map(frame => convertSvgToDataUrl(frame.svg)));
+
+                // إرسالها لمكتبة Gifshot
+                gifshot.createGIF({
+                    images: base64Images,
+                    interval: 0.18, // نفس سرعة اللعبة (180ms)
+                    gifWidth: 300,
+                    gifHeight: 300
+                }, function(obj) {
+                    if(!obj.error) {
+                        const link = document.createElement('a');
+                        link.download = `${scene.name}.gif`;
+                        link.href = obj.image;
+                        link.click();
+                        
+                        btnElement.innerText = "تم التحميل ✔️";
+                        btnElement.classList.replace('bg-slate-500', 'bg-green-600');
+                    } else {
+                        btnElement.innerText = "فشل ❌";
+                    }
+                    
+                    // استعادة حالة الزر بعد ثواني
+                    setTimeout(() => {
+                        btnElement.innerHTML = `تحميل GIF <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>`;
+                        btnElement.disabled = false;
+                        btnElement.classList.remove('bg-green-600', 'bg-slate-500');
+                        btnElement.classList.add('bg-purple-600');
+                    }, 3000);
+                });
+            } catch (error) {
+                console.error(error);
+                btnElement.innerText = "خطأ!";
+                setTimeout(() => { btnElement.innerText = "حاول مجدداً"; btnElement.disabled = false; }, 2000);
+            }
+        }
+
+        // تشغيل اللعبة
+        window.onload = initGame;
+    </script>
+</body>
+</html>

@@ -1,0 +1,817 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>المعلم فطاطري - لعبة الفطير المشلتت</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Reem+Kufi:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #fce7f3; /* Fallback */
+            overflow: hidden;
+            touch-action: none; /* Prevent scroll on touch */
+        }
+
+        .title-font {
+            font-family: 'Reem Kufi', sans-serif;
+        }
+
+        /* The iconic red and white checkered tablecloth */
+        .tablecloth-bg {
+            background-image: 
+                linear-gradient(45deg, rgba(200,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(200,0,0,0.2) 75%, rgba(200,0,0,0.2)), 
+                linear-gradient(45deg, rgba(200,0,0,0.2) 25%, transparent 25%, transparent 75%, rgba(200,0,0,0.2) 75%, rgba(200,0,0,0.2));
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            background-color: #fdf2f8;
+        }
+
+        /* Copper/Aluminum Tray for the Fiteer */
+        .tray-container {
+            border-radius: 50%;
+            background: radial-gradient(circle, #e2e8f0 30%, #cbd5e1 70%, #94a3b8 90%, #64748b 100%);
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.5), 
+                0 10px 20px rgba(0,0,0,0.3);
+            border: 4px solid #cbd5e1;
+        }
+
+        .ingredient-btn {
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .ingredient-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px;}
+        ::-webkit-scrollbar-thumb { background: #b45309; border-radius: 10px;}
+
+        /* Animations */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.3s ease-out forwards; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+
+        .speech-bubble {
+            position: relative;
+            background: white;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border: 2px solid #b45309;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: white transparent transparent transparent;
+            display: block;
+            width: 0;
+            z-index: 1;
+        }
+        .speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -13px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 12px 12px 0;
+            border-style: solid;
+            border-color: #b45309 transparent transparent transparent;
+            display: block;
+            width: 0;
+            z-index: 0;
+        }
+
+        #fiteer-canvas {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col tablecloth-bg text-gray-900">
+
+    
+    <!-- MAIN MENU SCREEN -->
+    <div id="screen-menu" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-yellow-100 bg-opacity-95 backdrop-blur-sm">
+        <div class="text-center animate-pop">
+            <h1 class="title-font text-6xl md:text-7xl font-bold text-yellow-800 mb-2 drop-shadow-md">المعلم فطاطري</h1>
+            <p class="text-xl md:text-2xl text-yellow-700 mb-8 font-bold">أحلى فطير مشلتت بلدي</p>
+            <div class="text-9xl mb-8">👨🏽‍🍳🫓</div>
+            <button id="btn-start" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-4 px-12 rounded-full text-2xl shadow-xl transform transition hover:scale-110 border-4 border-yellow-800">
+                افتح المحل
+            </button>
+        </div>
+    </div>
+
+    <!-- DAY SUMMARY SCREEN -->
+    <div id="screen-summary" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 bg-opacity-90 hidden backdrop-blur-sm text-white">
+        <div class="bg-yellow-50 p-8 rounded-3xl text-center max-w-md w-full shadow-2xl border-4 border-yellow-600 text-gray-800">
+            <h2 class="title-font text-4xl font-bold text-yellow-800 mb-4">نهاية الوردية</h2>
+            <div class="text-6xl mb-4">💰</div>
+            <p class="text-xl mb-2">الزباين اللي كلوا: <span id="summary-customers" class="font-bold text-green-600">0</span></p>
+            <p class="text-2xl mb-6">حصيلة اليوم: <span id="summary-money" class="font-bold text-green-600">0</span> جنيه</p>
+            <button id="btn-next-day" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-xl text-xl shadow-md w-full transition-colors">
+                يوم جديد يا فتاح يا عليم
+            </button>
+        </div>
+    </div>
+
+    <!-- STORE SCREEN -->
+    <div id="screen-store" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-blue-900 bg-opacity-90 hidden backdrop-blur-sm text-white">
+        <div class="bg-blue-50 p-6 md:p-8 rounded-3xl w-11/12 max-w-4xl shadow-2xl border-4 border-blue-600 text-gray-800 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6 border-b-2 border-blue-200 pb-4">
+                <h2 class="title-font text-3xl font-bold text-blue-800">سوق الإضافات والمشتريات 🛒</h2>
+                <button id="btn-close-store" class="text-red-500 hover:text-red-700 text-3xl font-bold">&times;</button>
+            </div>
+            
+            <div id="store-items" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto custom-scrollbar p-2">
+                <!-- Store items generated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME UI -->
+    
+    <!-- Top Header (Stats) -->
+    <header class="bg-yellow-800 text-white p-2 md:p-4 shadow-md flex justify-between items-center z-10 border-b-4 border-yellow-900">
+        <div class="flex items-center gap-4">
+            <div class="bg-yellow-900 px-4 py-1 rounded-full shadow-inner border border-yellow-700">
+                <span class="text-yellow-300 font-bold">اليوم:</span> <span id="ui-day" class="font-bold text-xl">1</span>
+            </div>
+            <div class="bg-green-800 px-4 py-1 rounded-full shadow-inner border border-green-700 flex items-center gap-2">
+                <i class="fas fa-coins text-yellow-400"></i>
+                <span id="ui-money" class="font-bold text-xl">0</span>
+            </div>
+        </div>
+        <h1 class="title-font text-2xl hidden md:block text-yellow-300">فطاطري السعادة</h1>
+        <div class="flex items-center gap-2">
+            <button id="btn-store" class="bg-blue-600 hover:bg-blue-700 w-10 h-10 rounded-full flex items-center justify-center shadow transition-colors" title="افتح المتجر">
+                <i class="fas fa-store"></i>
+            </button>
+            <button id="btn-trash" class="bg-red-600 hover:bg-red-700 w-10 h-10 rounded-full flex items-center justify-center shadow transition-colors" title="ارمي الفطيرة البايظة">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Area -->
+    <main class="flex-1 flex flex-col md:flex-row relative">
+        
+        <!-- Left Column: Customer Area -->
+        <section id="customer-zone" class="w-full md:w-1/3 p-4 flex flex-col items-center justify-start pt-8 relative z-10 h-48 md:h-full shrink-0">
+            <!-- Order Bubble -->
+            <div id="order-bubble" class="speech-bubble w-full max-w-sm text-center mb-6 opacity-0 transition-opacity duration-300">
+                <p id="order-text" class="text-lg md:text-xl font-bold text-gray-800 leading-relaxed"></p>
+            </div>
+            
+            <!-- Character Emoji -->
+            <div id="customer-emoji" class="text-7xl md:text-9xl animate-float opacity-0 transition-opacity duration-300">👨🏽</div>
+        </section>
+
+        <!-- Right Column: Prep Station -->
+        <section id="prep-zone" class="w-full md:w-2/3 flex flex-col items-center justify-center p-2 md:p-6 relative">
+            
+            <!-- The Fiteer Tray (Canvas Container) -->
+            <div class="relative flex items-center justify-center mb-4 md:mb-8 w-full max-w-md aspect-square">
+                <!-- Outer Tray Element -->
+                <div class="tray-container w-full h-full absolute flex items-center justify-center p-4 md:p-8">
+                    <!-- Canvas -->
+                    <canvas id="fiteer-canvas" class="w-full h-full rounded-full"></canvas>
+                </div>
+                
+                <!-- Serve Button (Overlay) -->
+                <button id="btn-serve" class="absolute -bottom-6 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-full shadow-lg border-4 border-green-800 text-xl transition transform hover:scale-105 z-20 hidden">
+                    قدم الطلب يا معلم
+                </button>
+            </div>
+
+            <!-- Ingredients Panel -->
+            <div class="w-full max-w-3xl bg-yellow-900 bg-opacity-95 p-3 rounded-2xl shadow-xl border-4 border-yellow-950 mt-auto md:mt-0 z-20">
+                <h3 class="text-center text-yellow-300 font-bold mb-2 border-b border-yellow-800 pb-1">الأساسيات البلدية</h3>
+                
+                <!-- Ingredients Grid -->
+                <div id="ingredients-grid" class="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-40 md:max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                    <!-- Buttons generated by JS -->
+                </div>
+
+                <!-- Premium Ingredients Bar -->
+                <div id="premium-container" class="hidden mt-3 pt-3 border-t-2 border-yellow-700 border-dashed">
+                    <h3 class="text-center text-blue-300 font-bold mb-2 text-sm">إضافات المتجر 🛒</h3>
+                    <div id="premium-grid" class="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-24 md:max-h-32 overflow-y-auto p-1 custom-scrollbar">
+                        <!-- Premium Buttons generated by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Floating Text Container for Feedback -->
+        <div id="feedback-container" class="absolute inset-0 pointer-events-none z-50 overflow-hidden"></div>
+    </main>
+
+    <script>
+        
+        // Ingredients Data
+        const INGREDIENTS = {
+            butter: { id: 'butter', name: 'زبدة بلدي', color: '#fef08a', type: 'spread', icon: '🧈', default: true },
+            sugar: { id: 'sugar', name: 'سكر بودرة', color: '#ffffff', type: 'dust', icon: '🧂', default: true },
+            white_honey: { id: 'white_honey', name: 'عسل أبيض', color: '#fcd34d', type: 'drizzle', icon: '🍯', default: true },
+            black_honey: { id: 'black_honey', name: 'عسل أسود', color: '#451a03', type: 'drizzle', icon: '🍯', default: true },
+            meat: { id: 'meat', name: 'لحمة مفرومة', color: '#78350f', type: 'chunk', icon: '🥩', default: true },
+            roumi: { id: 'roumi', name: 'جبنة رومي', color: '#fef9c3', type: 'shred', icon: '🧀', default: true },
+            mozzarella: { id: 'mozzarella', name: 'موتزاريلا', color: '#f8fafc', type: 'string', icon: '🧀', default: true },
+            jam: { id: 'jam', name: 'مربى فراولة', color: '#dc2626', type: 'blob', icon: '🍓', default: true },
+            white_cheese: { id: 'white_cheese', name: 'جبنة بيضاء', color: '#f1f5f9', type: 'block', icon: '🧊', default: true },
+            mish: { id: 'mish', name: 'جبنة قديمة (مش)', color: '#854d0e', type: 'blob', icon: '🟤', default: true },
+            halawa: { id: 'halawa', name: 'حلاوة طحينية', color: '#fde68a', type: 'crumble', icon: '🟨', default: true },
+            mahalabiya: { id: 'mahalabiya', name: 'مهلبية', color: '#fefce8', type: 'spread', icon: '🍮', default: false, price: 40 },
+            basbousa: { id: 'basbousa', name: 'بسبوسة', color: '#d97706', type: 'chunk', icon: '🥮', default: false, price: 50 },
+            ice_cream: { id: 'ice_cream', name: 'آيس كريم', color: '#fbcfe8', type: 'scoop', icon: '🍦', default: false, price: 80 },
+            apricot_jam: { id: 'apricot_jam', name: 'مربى مشمش', color: '#fb923c', type: 'blob', icon: '🍑', default: false, price: 45 },
+            chocolate: { id: 'chocolate', name: 'شوكولاتة', color: '#3b2210', type: 'drizzle', icon: '🍫', default: false, price: 90 },
+            sausage: { id: 'sausage', name: 'سجق شرقي', color: '#991b1b', type: 'cylinder', icon: '🌭', default: false, price: 100 }
+        };
+
+        const INGREDIENT_KEYS = Object.keys(INGREDIENTS);
+
+        // Customer Emojis
+        const CUSTOMER_FACES = ['👨🏽', '👩🏽', '👴🏽', '👵🏽', '👨🏽‍🦱', '👩🏽‍🦱', '👮🏽‍♂️', '👨🏽‍🌾'];
+
+        // Order Templates
+        const ORDER_TEMPLATES = [
+            "يا معلم، عايز فطيرة عليها {1} بس.",
+            "اعملي حتة فطيرة متغرقة {1} وكمان {2}.",
+            "عايز أفطر.. ظبطلي فطيرة بـ {1} و {2} تسلم إيدك.",
+            "وحياتك يا أسطى فطيرة مشلتتة عليها {1}، {2}، و {3} للعيال.",
+            "عايز اختراع.. فطيرة بـ {1} و {2}.. بسرعة والنبي!",
+            "اسمع يا سيدي.. حطلي {1} وفوقيها {2} واختم بـ {3}."
+        ];
+
+        let state = {
+            day: 1,
+            money: 0,
+            customersServedToday: 0,
+            totalCustomersToday: 5,
+            unlockedIngredients: [],
+            currentOrder: {
+                ingredients: []
+            },
+            fiteer: {
+                baseReady: true,
+                toppings: [] // array of strings (ingredient ids)
+            },
+            isPlaying: false
+        };
+
+        // DOM Elements
+        const canvas = document.getElementById('fiteer-canvas');
+        const ctx = canvas.getContext('2d');
+        const ingredientsGrid = document.getElementById('ingredients-grid');
+        const premiumGrid = document.getElementById('premium-grid');
+        const premiumContainer = document.getElementById('premium-container');
+        const orderBubble = document.getElementById('order-bubble');
+        const orderText = document.getElementById('order-text');
+        const customerEmoji = document.getElementById('customer-emoji');
+        const btnServe = document.getElementById('btn-serve');
+        const btnTrash = document.getElementById('btn-trash');
+        const btnStore = document.getElementById('btn-store');
+        const screenStore = document.getElementById('screen-store');
+        const storeItems = document.getElementById('store-items');
+        const btnCloseStore = document.getElementById('btn-close-store');
+        const uiMoney = document.getElementById('ui-money');
+        const uiDay = document.getElementById('ui-day');
+        const feedbackContainer = document.getElementById('feedback-container');
+
+        
+        function initUI() {
+            // Initialize unlocked ingredients based on default status
+            state.unlockedIngredients = INGREDIENT_KEYS.filter(key => INGREDIENTS[key].default);
+
+            renderIngredientsUI();
+
+            // Resize Canvas based on container
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        function renderIngredientsUI() {
+            ingredientsGrid.innerHTML = '';
+            premiumGrid.innerHTML = '';
+            
+            let hasPremium = false;
+
+            state.unlockedIngredients.forEach(key => {
+                const ing = INGREDIENTS[key];
+                const btn = document.createElement('button');
+                btn.className = 'ingredient-btn bg-yellow-100 hover:bg-yellow-200 border-2 border-yellow-600 rounded-xl p-2 flex flex-col items-center justify-center shadow';
+                btn.innerHTML = `
+                    <span class="text-2xl mb-1">${ing.icon}</span>
+                    <span class="text-xs font-bold text-yellow-900 text-center leading-tight">${ing.name}</span>
+                `;
+                btn.onclick = () => addIngredientToFiteer(key);
+                
+                if (ing.default) {
+                    ingredientsGrid.appendChild(btn);
+                } else {
+                    // Style premium buttons slightly differently (blueish hue)
+                    btn.className = 'ingredient-btn bg-blue-100 hover:bg-blue-200 border-2 border-blue-500 rounded-xl p-2 flex flex-col items-center justify-center shadow';
+                    premiumGrid.appendChild(btn);
+                    hasPremium = true;
+                }
+            });
+
+            if (hasPremium) {
+                premiumContainer.classList.remove('hidden');
+            }
+        }
+
+        function resizeCanvas() {
+            // Make internal resolution higher for crispness
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth * 1.5;
+            canvas.height = parent.clientHeight * 1.5;
+            renderFiteer();
+        }
+
+        
+        function renderFiteer() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerX = w / 2;
+            const centerY = h / 2;
+            const radius = Math.min(w, h) / 2.2;
+
+            ctx.clearRect(0, 0, w, h);
+
+            if (!state.fiteer.baseReady) return;
+
+            // 1. Draw Base Fiteer (Layers of golden dough)
+            drawBaseFiteer(centerX, centerY, radius);
+
+            // 2. Draw Toppings based on state.fiteer.toppings
+            // We group them by type to draw them efficiently
+            state.fiteer.toppings.forEach((ingId, index) => {
+                // Determine a seeded random layout based on index so it looks same upon resize
+                drawIngredient(ingId, centerX, centerY, radius, index);
+            });
+            
+            // Show/Hide Serve Button
+            if (state.fiteer.toppings.length > 0 && state.isPlaying) {
+                btnServe.classList.remove('hidden');
+                btnServe.classList.add('animate-pop');
+            } else {
+                btnServe.classList.add('hidden');
+            }
+        }
+
+        function drawBaseFiteer(cx, cy, r) {
+            // Drop shadow for the whole fiteer to lift it off the tray
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetX = 5;
+            ctx.shadowOffsetY = 10;
+
+            // 1. Main Base (Baked Dough Gradient)
+            const baseGradient = ctx.createRadialGradient(cx, cy, r*0.2, cx, cy, r);
+            baseGradient.addColorStop(0, '#fde68a'); // Lighter center
+            baseGradient.addColorStop(0.7, '#d97706'); // Golden brown
+            baseGradient.addColorStop(1, '#92400e'); // Darker crispy edges
+
+            ctx.fillStyle = baseGradient;
+            ctx.beginPath();
+            // Make it slightly irregular (rustic, handmade look)
+            for(let i=0; i<360; i+=10) {
+                let rad = i * Math.PI / 180;
+                let dist = r - (Math.random() * r * 0.03); // slight wobble
+                if (i === 0) ctx.moveTo(cx + dist * Math.cos(rad), cy + dist * Math.sin(rad));
+                else ctx.lineTo(cx + dist * Math.cos(rad), cy + dist * Math.sin(rad));
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Reset shadow for inner layers
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // 2. Flaky Layers (Tawreeq)
+            // Draw multiple irregular transparent overlapping shapes
+            for (let k = 0; k < 6; k++) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + Math.random()*0.1})`;
+                ctx.strokeStyle = `rgba(146, 64, 14, 0.15)`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                let layerR = r * (0.4 + Math.random() * 0.5); // varying sizes
+                let offsetX = (Math.random() - 0.5) * r * 0.15;
+                let offsetY = (Math.random() - 0.5) * r * 0.15;
+                
+                for(let i=0; i<360; i+=30) {
+                    let rad = i * Math.PI / 180;
+                    let dist = layerR + (Math.random() * layerR * 0.15);
+                    if (i === 0) ctx.moveTo(cx + offsetX + dist * Math.cos(rad), cy + offsetY + dist * Math.sin(rad));
+                    else ctx.lineTo(cx + offsetX + dist * Math.cos(rad), cy + offsetY + dist * Math.sin(rad));
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        function drawIngredient(ingId, cx, cy, r, seed) {
+            const ing = INGREDIENTS[ingId];
+            ctx.fillStyle = ing.color;
+            ctx.strokeStyle = ing.color;
+            
+            // Add slight shadow to ingredients for depth
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 2;
+
+            // Simple seeded random function
+            const random = () => {
+                let x = Math.sin(seed++) * 10000;
+                return x - Math.floor(x);
+            };
+
+            const numParticles = 30; // Amount of splats/pieces per click
+
+            for(let i=0; i<numParticles; i++) {
+                // Random position within a slightly smaller radius to avoid falling off edge
+                let ptAngle = random() * Math.PI * 2;
+                let ptRadius = Math.sqrt(random()) * (r * 0.85); 
+                let px = cx + Math.cos(ptAngle) * ptRadius;
+                let py = cy + Math.sin(ptAngle) * ptRadius;
+
+                ctx.beginPath();
+                
+                switch(ing.type) {
+                    case 'drizzle': // Honey, Molasses (lines/splats)
+                        ctx.lineWidth = r * 0.03;
+                        ctx.lineCap = 'round';
+                        ctx.moveTo(px, py);
+                        ctx.bezierCurveTo(px + (random()-0.5)*r*0.2, py + (random()-0.5)*r*0.2, 
+                                          px + (random()-0.5)*r*0.2, py + (random()-0.5)*r*0.2, 
+                                          px + (random()-0.5)*r*0.4, py + (random()-0.5)*r*0.4);
+                        ctx.stroke();
+                        break;
+                    case 'dust': // Sugar (small dots)
+                        ctx.arc(px, py, r * 0.015, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'shred': // Roumi (small lines)
+                        ctx.lineWidth = r * 0.02;
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(px + (random()-0.5)*r*0.1, py + (random()-0.5)*r*0.1);
+                        ctx.stroke();
+                        break;
+                    case 'string': // Mozzarella (longer curvy lines)
+                        ctx.lineWidth = r * 0.025;
+                        ctx.moveTo(px, py);
+                        ctx.quadraticCurveTo(px + (random()-0.5)*r*0.15, py + (random()-0.5)*r*0.15, px + (random()-0.5)*r*0.25, py + (random()-0.5)*r*0.25);
+                        ctx.stroke();
+                        break;
+                    case 'blob': // Mish, Jam (irregular circles)
+                        ctx.arc(px, py, r * 0.04 + random()*r*0.03, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'chunk': // Meat (small irregular polygons)
+                    case 'block': // White cheese
+                        ctx.rect(px, py, r * 0.05, r * 0.05);
+                        ctx.fill();
+                        break;
+                    case 'crumble': // Halawa
+                        ctx.arc(px, py, r * 0.02 + random()*r*0.02, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'spread': // Butter, Mahalabiya
+                        ctx.arc(px, py, r * 0.08, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                    case 'scoop': // Ice Cream
+                        // Draw a scoop with a subtle highlight
+                        ctx.arc(px, py, r * 0.06, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.arc(px + r*0.02, py - r*0.02, r * 0.03, 0, Math.PI * 2);
+                        ctx.fillStyle = "rgba(255,255,255,0.4)"; 
+                        ctx.fill();
+                        break;
+                    case 'cylinder': // Sausage
+                        ctx.lineWidth = r * 0.04;
+                        ctx.lineCap = 'round';
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(px + (random()-0.5)*r*0.12, py + (random()-0.5)*r*0.12);
+                        ctx.stroke();
+                        break;
+                }
+            }
+
+            // Reset shadow after drawing ingredient
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        function addIngredientToFiteer(ingId) {
+            if (!state.isPlaying) return;
+            state.fiteer.toppings.push(ingId);
+            renderFiteer();
+            
+            // Optional: Add a quick pop animation to the tray to feel interactive
+            const tray = document.querySelector('.tray-container');
+            tray.classList.remove('animate-shake');
+            void tray.offsetWidth; // trigger reflow
+            tray.classList.add('animate-shake');
+        }
+
+
+        function startGame() {
+            document.getElementById('screen-menu').classList.add('hidden');
+            state.isPlaying = true;
+            state.day = 1;
+            state.money = 0;
+            updateHeaderUI();
+            startDay();
+        }
+
+        function startDay() {
+            state.customersServedToday = 0;
+            state.totalCustomersToday = 3 + (state.day * 2); // Difficulty scaling
+            
+            showFloatingText(`يوم ${state.day} يا مسهل`, 'text-blue-500');
+            setTimeout(spawnCustomer, 2000);
+        }
+
+        function spawnCustomer() {
+            if (state.customersServedToday >= state.totalCustomersToday) {
+                endDay();
+                return;
+            }
+
+            // Reset Fiteer
+            trashFiteer();
+
+            // Generate Order
+            const numIngredients = Math.min(1 + Math.floor(Math.random() * 3) + Math.floor(state.day / 3), 4);
+            
+            // Pick unique random ingredients FROM UNLOCKED ONLY
+            let available = [...state.unlockedIngredients];
+            state.currentOrder.ingredients = [];
+            for(let i=0; i<numIngredients; i++) {
+                if(available.length === 0) break;
+                const idx = Math.floor(Math.random() * available.length);
+                state.currentOrder.ingredients.push(available[idx]);
+                available.splice(idx, 1);
+            }
+
+            // Create Order Text
+            let template = ORDER_TEMPLATES[Math.floor(Math.random() * ORDER_TEMPLATES.length)];
+            let filledText = template;
+            for(let i=0; i<state.currentOrder.ingredients.length; i++) {
+                filledText = filledText.replace(`{${i+1}}`, INGREDIENTS[state.currentOrder.ingredients[i]].name);
+            }
+            // Clean up unused placeholders if template asked for more than generated (safeguard)
+            filledText = filledText.replace(/، \{[0-9]\}/g, '').replace(/و \{[0-9]\}/g, '');
+
+            orderText.innerText = filledText;
+            
+            // Random Customer Emoji
+            customerEmoji.innerText = CUSTOMER_FACES[Math.floor(Math.random() * CUSTOMER_FACES.length)];
+
+            // Show UI
+            orderBubble.classList.remove('opacity-0');
+            customerEmoji.classList.remove('opacity-0');
+        }
+
+        function hideCustomer() {
+            orderBubble.classList.add('opacity-0');
+            customerEmoji.classList.add('opacity-0');
+        }
+
+        function trashFiteer() {
+            state.fiteer.toppings = [];
+            renderFiteer();
+        }
+
+
+        function serveOrder() {
+            if (!state.isPlaying || state.fiteer.toppings.length === 0) return;
+            
+            // Compare state.fiteer.toppings with state.currentOrder.ingredients
+            // Get unique required and unique applied
+            const required = [...new Set(state.currentOrder.ingredients)];
+            const applied = [...new Set(state.fiteer.toppings)];
+
+            let correct = 0;
+            let wrong = 0;
+
+            applied.forEach(ing => {
+                if (required.includes(ing)) correct++;
+                else wrong++;
+            });
+
+            let missed = required.length - correct;
+
+        // Calculate Payment
+        let payment = 0;
+        let feedbackMsg = "";
+        let feedbackColor = "";
+
+        if (correct === required.length && wrong === 0) {
+            // Perfect
+            payment = 50; 
+            feedbackMsg = "الله ينور يا أسطى.. أصل الفطير! 👑";
+            feedbackColor = "text-green-500";
+        } else if (correct === required.length && wrong > 0) {
+            // Generous (added extra)
+            payment = 30;
+            feedbackMsg = "كرم منك يا معلم، بس الزبون طالب حاجة تانية 😅";
+            feedbackColor = "text-blue-400";
+        } else if (correct > 0 && missed > 0) {
+            // Missing something but partially correct
+            payment = 20;
+            feedbackMsg = "نقصت شوية حاجات، بس تسلم إيدك الفطيرة تتاكل حاف 😋";
+            feedbackColor = "text-yellow-400";
+        } else {
+            // Completely wrong
+            payment = 10;
+            feedbackMsg = "شكل الطلبات دخلت في بعضها.. حصل خير يا بطل الجايات أحسن! 💪";
+            feedbackColor = "text-orange-400";
+        }
+
+        // Animate serving
+        const tray = document.querySelector('.tray-container');
+            tray.style.transform = 'translateY(-100px) scale(0.5)';
+            tray.style.opacity = '0';
+            
+            setTimeout(() => {
+                state.money += payment;
+                updateHeaderUI();
+                showFloatingText(`+${payment} جنيه\n${feedbackMsg}`, feedbackColor);
+                
+                hideCustomer();
+                state.customersServedToday++;
+
+                // Reset tray visual
+                tray.style.transition = 'none';
+                tray.style.transform = 'translateY(100px) scale(0.5)';
+                setTimeout(() => {
+                    tray.style.transition = 'all 0.4s ease-out';
+                    tray.style.transform = 'translateY(0) scale(1)';
+                    tray.style.opacity = '1';
+                    trashFiteer();
+                    setTimeout(spawnCustomer, 1500);
+                }, 50);
+
+            }, 400);
+        }
+
+        function showFloatingText(text, colorClass) {
+            const el = document.createElement('div');
+            el.className = `absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl md:text-5xl font-bold ${colorClass} title-font text-center drop-shadow-xl whitespace-pre-line z-50`;
+            el.style.textShadow = "2px 2px 0px white, -2px -2px 0px white, 2px -2px 0px white, -2px 2px 0px white";
+            el.innerText = text;
+            
+            feedbackContainer.appendChild(el);
+
+            // Animate float up and fade out
+            el.animate([
+                { transform: 'translate(-50%, -50%) scale(0.5)', opacity: 0 },
+                { transform: 'translate(-50%, -100%) scale(1.2)', opacity: 1, offset: 0.2 },
+                { transform: 'translate(-50%, -200%) scale(1)', opacity: 0 }
+            ], {
+                duration: 2000,
+                easing: 'ease-out'
+            });
+
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        function updateHeaderUI() {
+            uiMoney.innerText = state.money;
+            uiDay.innerText = state.day;
+        }
+
+        function endDay() {
+            document.getElementById('screen-summary').classList.remove('hidden');
+            document.getElementById('summary-customers').innerText = state.customersServedToday;
+            document.getElementById('summary-money').innerText = state.money;
+            state.isPlaying = false;
+        }
+
+        function nextDay() {
+            document.getElementById('screen-summary').classList.add('hidden');
+            state.day++;
+            updateHeaderUI();
+            state.isPlaying = true;
+            startDay();
+        }
+
+        // Store Logic Functions
+        function openStore() {
+            screenStore.classList.remove('hidden');
+            renderStoreItems();
+        }
+
+        function closeStore() {
+            screenStore.classList.add('hidden');
+        }
+
+        function renderStoreItems() {
+            storeItems.innerHTML = '';
+            
+            // Find items that are NOT yet unlocked
+            const lockedKeys = INGREDIENT_KEYS.filter(key => !state.unlockedIngredients.includes(key));
+            
+            if (lockedKeys.length === 0) {
+                storeItems.innerHTML = '<div class="col-span-full text-center py-10"><p class="text-3xl text-blue-800 font-bold">يا سيدي المعلمين، إنت اشتريت كل حاجة في السوق! 👑</p></div>';
+                return;
+            }
+
+            lockedKeys.forEach(key => {
+                const item = INGREDIENTS[key];
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-xl shadow border-2 border-blue-200 flex flex-col items-center justify-between text-center transform transition hover:scale-105';
+                
+                const canAfford = state.money >= item.price;
+                
+                card.innerHTML = `
+                    <div class="text-5xl mb-3 drop-shadow-md">${item.icon}</div>
+                    <h4 class="font-bold text-gray-900 text-lg">${item.name}</h4>
+                    <div class="flex items-center gap-1 my-3 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full border border-yellow-300">
+                        <i class="fas fa-coins text-sm"></i>
+                        <span class="font-bold">${item.price}</span>
+                    </div>
+                    <button class="${canAfford ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer shadow' : 'bg-gray-300 text-gray-500 cursor-not-allowed'} w-full font-bold py-2 px-4 rounded-lg transition-colors" 
+                            ${!canAfford ? 'disabled' : ''}>
+                        ${canAfford ? 'اشتري الآن' : 'الفلوس ماتكفيش'}
+                    </button>
+                `;
+                
+                if (canAfford) {
+                    card.querySelector('button').onclick = () => buyItem(key, item.price);
+                }
+                
+                storeItems.appendChild(card);
+            });
+        }
+
+        function buyItem(key, price) {
+            if (state.money >= price) {
+                state.money -= price;
+                state.unlockedIngredients.push(key);
+                updateHeaderUI();
+                renderStoreItems(); // Refresh store view
+                renderIngredientsUI(); // Refresh main game UI to show new item
+                showFloatingText(`مبروك! ضفنا ${INGREDIENTS[key].name} للمحل 🎊`, 'text-blue-400');
+            }
+        }
+        
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        document.getElementById('btn-next-day').addEventListener('click', nextDay);
+        btnServe.addEventListener('click', serveOrder);
+        btnTrash.addEventListener('click', () => {
+            trashFiteer();
+            const tray = document.querySelector('.tray-container');
+            tray.classList.remove('animate-shake');
+            void tray.offsetWidth;
+            tray.classList.add('animate-shake');
+        });
+        
+        btnStore.addEventListener('click', openStore);
+        btnCloseStore.addEventListener('click', closeStore);
+
+        // Initialize immediately
+        initUI();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المساعد اللغوي المتكامل والمترجم الآلي</title>
+    
+    <!-- مكتبة قراءة ملفات الإكسيل (SheetJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+        }
+        h1, h2, h3 { color: #1a73e8; margin-bottom: 15px; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+        
+        /* القارئ الصوتي العام */
+        textarea.main-input { width: 95%; height: 100px; padding: 15px; font-size: 16px; border: 2px solid #ced4da; border-radius: 8px; margin-bottom: 20px; resize: vertical; font-family: inherit; }
+        textarea.main-input:focus { border-color: #1a73e8; outline: none; }
+        .buttons-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .btn-lang { padding: 10px 18px; font-size: 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 6px; background-color: #1a73e8; color: white; transition: all 0.2s ease; }
+        .btn-lang:hover { background-color: #1557b0; transform: translateY(-2px); }
+        .stop-btn { background-color: #d93025; padding: 10px 20px; font-size: 15px; font-weight: bold; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .stop-btn:hover { background-color: #a50e0e; }
+
+        .divider { margin: 40px 0; border: 0; border-top: 2px dashed #e0e0e0; }
+
+        /* المترجم الآلي */
+        .magic-translator { background-color: #e8f0fe; padding: 20px; border-radius: 10px; margin-bottom: 25px; border: 2px solid #aecbfa; }
+        .magic-input-group { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .magic-input { width: 60%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; }
+        .btn-magic { background-color: #fbbc05; color: #202124; font-weight: bold; font-size: 16px; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+        .btn-magic:hover { background-color: #f2a500; transform: scale(1.02); }
+
+        /* أزرار التحكم بالجدول */
+        .table-controls { margin-bottom: 15px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .btn-action { padding: 10px 20px; font-size: 15px; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background 0.2s; }
+        .btn-add { background-color: #28a745; } .btn-add:hover { background-color: #218838; }
+        .btn-excel { background-color: #1f7244; } .btn-excel:hover { background-color: #175633; }
+        .btn-word { background-color: #2b579a; } .btn-word:hover { background-color: #1e3d6b; }
+        .btn-import { background-color: #6f42c1; } .btn-import:hover { background-color: #59339d; }
+        
+        /* الجدول */
+        .table-responsive { overflow-x: auto; margin-top: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: center; vertical-align: top; }
+        th { background-color: #f8f9fa; color: #495057; font-weight: bold; font-size: 14px; white-space: nowrap; vertical-align: middle; }
+        
+        .cell-content { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+        .table-cell-input { width: 100%; height: 85px; box-sizing: border-box; border: 1px solid #ced4da; border-radius: 4px; padding: 5px; font-size: 14px; resize: vertical; font-family: inherit; line-height: 1.4; }
+        .table-cell-input:focus { border-color: #1a73e8; outline: none; background-color: #fdfdfd; }
+        
+        .btn-listen { background-color: #e8f0fe; color: #1a73e8; border: 1px solid #aecbfa; border-radius: 4px; padding: 3px 10px; font-size: 13px; cursor: pointer; font-weight: bold; transition: all 0.2s; width: 100%; }
+        .btn-listen:hover { background-color: #c2d7fa; }
+        .btn-delete { background-color: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 25px; }
+        .btn-delete:hover { background-color: #bd2130; }
+    </style>
+</head>
+<body>
+
+    <!-- القسم الأول: القارئ الصوتي العام -->
+    <div class="container">
+        <h1>قارئ النصوص الذكي 🌍</h1>
+        <p>الصق أي نص حر في المربع بالأسفل، ثم اضغط على لغة النص لسماعه.</p>
+        <textarea id="textInput" class="main-input" placeholder="الصق النص هنا للنطق الصوتي..."></textarea>
+        <div class="buttons-grid">
+            <button class="btn-lang" onclick="speakText('en')">🇬🇧 الإنجليزية</button>
+            <button class="btn-lang" onclick="speakText('de')">🇩🇪 الألمانية</button>
+            <button class="btn-lang" onclick="speakText('fr')">🇫🇷 الفرنسية</button>
+            <button class="btn-lang" onclick="speakText('it')">🇮🇹 الإيطالية</button>
+            <button class="btn-lang" onclick="speakText('es')">🇪🇸 الإسبانية</button>
+            <button class="btn-lang" onclick="speakText('tr')">🇹🇷 التركية</button>
+            <button class="btn-lang" onclick="speakText('hi')">🇮🇳 الهندية</button>
+            <button class="btn-lang" onclick="speakText('ko')">🇰🇷 الكورية</button>
+            <button class="btn-lang" onclick="speakText('ja')">🇯🇵 اليابانية</button>
+            <button class="btn-lang" onclick="speakText('zh')">🇨🇳 الصينية</button>
+        </div>
+        <button class="stop-btn" onclick="stopSpeech()">🛑 إيقاف القراءة</button>
+    </div>
+
+    <hr class="divider">
+
+    <!-- القسم الثاني: المترجم والجدول -->
+    <div class="container" style="max-width: 100%;">
+        
+        <div class="magic-translator">
+            <h3>✨ المترجم الآلي السحري (Google Translate)</h3>
+            <p>اكتب جملة بالعربية هنا لترجمتها، ويمكنك الاستماع لكل ترجمة من الزر أسفلها مباشرة (🔊).</p>
+            <div class="magic-input-group">
+                <input type="text" id="autoTranslateInput" class="magic-input" placeholder="اكتب الجملة بالعربية هنا...">
+                <button onclick="autoTranslateAndAddRow()" class="btn-magic">🚀 ترجم للكل وأضف للجدول</button>
+            </div>
+        </div>
+
+        <h2>جدول الترجمات المتعددة 📝</h2>
+        
+        <!-- أزرار التحكم والاستيراد/التصدير -->
+        <div class="table-controls">
+            <button class="btn-action btn-add" onclick="addNewRow()">➕ إضافة صف يدوي</button>
+            
+            <!-- زر الاستيراد المخفي الذي يتم استدعاؤه -->
+            <input type="file" id="importFileInput" accept=".xls,.xlsx,.doc,.docx" style="display: none;" onchange="handleFileImport(event)">
+            <button class="btn-action btn-import" onclick="document.getElementById('importFileInput').click()">📥 استيراد من ملف (Excel/Word)</button>
+
+            <button class="btn-action btn-excel" onclick="exportToExcel()">📊 تصدير Excel</button>
+            <button class="btn-action btn-word" onclick="exportToWord()">📝 تصدير Word</button>
+        </div>
+
+        <div class="table-responsive">
+            <table id="translationTable">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;">#</th>
+                        <th>🇦🇪 العربية</th>
+                        <th>🇬🇧 الإنجليزية</th>
+                        <th>🇩🇪 الألمانية</th>
+                        <th>🇫🇷 الفرنسية</th>
+                        <th>🇮🇹 الإيطالية</th>
+                        <th>🇪🇸 الإسبانية</th>
+                        <th>🇹🇷 التركية</th>
+                        <th>🇮🇳 الهندية</th>
+                        <th>🇰🇷 الكورية</th>
+                        <th>🇯🇵 اليابانية</th>
+                        <th>🇨🇳 الصينية</th>
+                        <th style="width: 80px;">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- يتم إضافة الصفوف هنا -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- برمجة الموقع (JavaScript) -->
+    <script>
+        let voices = [];
+        function loadVoices() { voices = window.speechSynthesis.getVoices(); }
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        function speakText(langPrefix) {
+            const text = document.getElementById("textInput").value;
+            if (text.trim() === "") { alert("الرجاء كتابة نص أولاً في المربع!"); return; }
+            playVoice(text, langPrefix);
+        }
+
+        // دالة نطق الجدول الذكية (تتجاهل النطق الإنجليزي 🗣️ وتستخرج الجملة فقط)
+        function speakCellText(buttonElement, langPrefix) {
+            const cell = buttonElement.closest('td');
+            const textArea = cell.querySelector('.table-cell-input');
+            let rawText = textArea.value;
+
+            let cleanText = rawText.split('\n🗣️')[0]; 
+            cleanText = cleanText.trim();
+
+            if (cleanText === "") { alert("المربع فارغ!"); return; }
+            playVoice(cleanText, langPrefix);
+        }
+
+        function playVoice(text, langPrefix) {
+            window.speechSynthesis.cancel();
+            const speech = new SpeechSynthesisUtterance(text);
+            const matchingVoice = voices.find(voice => voice.lang.startsWith(langPrefix));
+            if (matchingVoice) { speech.voice = matchingVoice; speech.lang = matchingVoice.lang; } 
+            else { speech.lang = langPrefix; }
+            window.speechSynthesis.speak(speech);
+        }
+
+        function stopSpeech() { window.speechSynthesis.cancel(); }
+
+        /* برمجة بناء الجدول */
+        function addNewRow() {
+            const tableBody = document.querySelector("#translationTable tbody");
+            const newRow = document.createElement("tr");
+            
+            const createCell = (langClass, langCode) => `
+                <td>
+                    <div class="cell-content">
+                        <textarea class="table-cell-input ${langClass}"></textarea>
+                        <button class="btn-listen" onclick="speakCellText(this, '${langCode}')" title="استمع للنطق">🔊 استمع</button>
+                    </div>
+                </td>
+            `;
+
+            newRow.innerHTML = `
+                <td class="row-number"></td>
+                ${createCell('lang-ar', 'ar')}
+                ${createCell('lang-en', 'en')}
+                ${createCell('lang-de', 'de')}
+                ${createCell('lang-fr', 'fr')}
+                ${createCell('lang-it', 'it')}
+                ${createCell('lang-es', 'es')}
+                ${createCell('lang-tr', 'tr')}
+                ${createCell('lang-hi', 'hi')}
+                ${createCell('lang-ko', 'ko')}
+                ${createCell('lang-ja', 'ja')}
+                ${createCell('lang-zh-CN', 'zh-CN')}
+                <td><button class="btn-delete" onclick="deleteRow(this)">حذف</button></td>
+            `;
+            tableBody.appendChild(newRow);
+            updateRowNumbers();
+            return newRow; 
+        }
+
+        function deleteRow(button) {
+            button.closest("tr").remove();
+            updateRowNumbers();
+        }
+
+        function updateRowNumbers() {
+            const rows = document.querySelectorAll("#translationTable tbody tr");
+            rows.forEach((row, index) => {
+                row.querySelector(".row-number").innerText = index + 1;
+            });
+        }
+
+        /* المترجم الآلي (تمت إزالة النطق بالعربي) */
+        async function autoTranslateAndAddRow() {
+            const inputText = document.getElementById("autoTranslateInput").value.trim();
+            if (!inputText) { alert("الرجاء كتابة جملة بالعربية أولاً!"); return; }
+
+            const newRow = addNewRow();
+            newRow.querySelector('.lang-ar').value = inputText;
+
+            const languages = [
+                { code: 'en', className: 'lang-en' },
+                { code: 'de', className: 'lang-de' },
+                { code: 'fr', className: 'lang-fr' },
+                { code: 'it', className: 'lang-it' },
+                { code: 'es', className: 'lang-es' },
+                { code: 'tr', className: 'lang-tr' },
+                { code: 'hi', className: 'lang-hi', needsPronunciation: true },
+                { code: 'ko', className: 'lang-ko', needsPronunciation: true },
+                { code: 'ja', className: 'lang-ja', needsPronunciation: true },
+                { code: 'zh-CN', className: 'lang-zh-CN', needsPronunciation: true }
+            ];
+
+            languages.forEach(lang => { newRow.querySelector('.' + lang.className).value = "⏳ جاري..."; });
+
+            for (let lang of languages) {
+                try {
+                    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=${lang.code}&dt=t&dt=rm&q=${encodeURIComponent(inputText)}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    let translatedText = "";
+                    let pronunciation = "";
+
+                    if (data && data[0]) {
+                        data[0].forEach(item => {
+                            if (item[0] !== null && typeof item[0] === 'string') {
+                                translatedText += item[0];
+                            } else if (item[0] === null && item[2]) {
+                                pronunciation = item[2];
+                            }
+                        });
+                    }
+
+                    let finalOutput = translatedText;
+                    if (lang.needsPronunciation && pronunciation) {
+                        finalOutput += "\n🗣️ " + pronunciation;
+                    }
+                    
+                    newRow.querySelector('.' + lang.className).value = finalOutput;
+                } catch (error) {
+                    newRow.querySelector('.' + lang.className).value = "❌ خطأ";
+                }
+            }
+            document.getElementById("autoTranslateInput").value = "";
+        }
+
+        /* =========================================
+           نظام الاستيراد (جديد)
+           ========================================= */
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fileName = file.name.toLowerCase();
+            
+            // قراءة ملفات الإكسيل باستخدام مكتبة SheetJS
+            if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    // استخراج البيانات كمصفوفة
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+                    populateTableFromData(jsonData);
+                };
+                reader.readAsArrayBuffer(file);
+            } 
+            // قراءة ملف الوورد المصدر من موقعنا
+            else if (fileName.endsWith('.doc')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const table = doc.querySelector('table');
+                    if (table) {
+                        const rows = table.querySelectorAll('tr');
+                        const jsonData = [];
+                        rows.forEach(tr => {
+                            const rowData = [];
+                            tr.querySelectorAll('th, td').forEach(td => rowData.push(td.innerText || td.textContent));
+                            jsonData.push(rowData);
+                        });
+                        populateTableFromData(jsonData);
+                    } else {
+                        alert("تعذر قراءة ملف الوورد. تأكد أنه الملف الذي تم تصديره من هذا الموقع مسبقاً.");
+                    }
+                };
+                reader.readAsText(file);
+            } else {
+                alert("صيغة غير مدعومة! الرجاء اختيار الملف الذي قمت بتصديره من هذا الموقع (Excel أو Word).");
+            }
+            
+            // تصفير مدخل الملف ليسمح برفع نفس الملف مرة أخرى إذا لزم الأمر
+            event.target.value = "";
+        }
+
+        function populateTableFromData(data) {
+            if (!data || data.length < 2) {
+                alert("الملف فارغ أو لا يحتوي على بيانات صحيحة.");
+                return;
+            }
+            
+            // نبدأ من 1 لتخطي صف العناوين (Header)
+            for (let i = 1; i < data.length; i++) {
+                const rowData = data[i];
+                // التأكد أن الصف ليس فارغاً تماماً
+                if (rowData.join("").trim() === "") continue;
+                
+                const newRow = addNewRow();
+                // ترتيب اللغات يجب أن يطابق ترتيب أعمدة الجدول
+                const langs = ['ar', 'en', 'de', 'fr', 'it', 'es', 'tr', 'hi', 'ko', 'ja', 'zh-CN'];
+                
+                for (let j = 0; j < langs.length; j++) {
+                    if (rowData[j] !== undefined && rowData[j] !== null) {
+                        // إرجاع الفواصل "  |  " إلى سطر جديد كما كانت قبل التصدير
+                        let cellText = rowData[j].toString().replace(/  \|  /g, '\n');
+                        newRow.querySelector('.lang-' + langs[j]).value = cellText;
+                    }
+                }
+            }
+            alert("✅ تم استيراد الجمل بنجاح! يمكنك الآن الاستماع لها.");
+        }
+
+        /* =========================================
+           التصدير لـ Excel و Word 
+           ========================================= */
+        function getCleanTableHTML() {
+            let html = `<thead><tr>
+                <th>العربية</th><th>الإنجليزية</th><th>الألمانية</th><th>الفرنسية</th><th>الإيطالية</th><th>الإسبانية</th><th>التركية</th><th>الهندية</th><th>الكورية</th><th>اليابانية</th><th>الصينية</th>
+            </tr></thead><tbody>`;
+            const rows = document.querySelectorAll('#translationTable tbody tr');
+            rows.forEach(row => {
+                html += '<tr>';
+                const inputs = row.querySelectorAll('.table-cell-input');
+                inputs.forEach(input => {
+                    // استبدال السطر الجديد بفاصل لكي لا يخرب التصدير
+                    let cleanText = input.value.replace(/\n/g, "  |  "); 
+                    html += `<td>${cleanText}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            return html;
+        }
+
+        function exportToExcel() {
+            const tableContent = getCleanTableHTML();
+            const excelTemplate = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style> table { border-collapse: collapse; } td, th { border: 1px solid #cccccc; text-align: left; font-family: Segoe UI, sans-serif; } th { background-color: #f2f2f2; text-align: center; } </style></head><body><table border="1">${tableContent}</table></body></html>`;
+            const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", "مصفوفة_الترجمات.xls");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToWord() {
+            const tableContent = getCleanTableHTML();
+            const wordTemplate = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='UTF-8'><style> body { font-family: 'Segoe UI', Arial, sans-serif; direction: rtl; } h2 { text-align: center; color: #1a73e8; } table { border-collapse: collapse; width: 100%; margin-top: 20px; } th, td { border: 1px solid #000000; padding: 8px; text-align: right; font-size: 11pt; } th { background-color: #f4f6f9; font-weight: bold; text-align: center; } </style></head><body><h2>جدول الترجمات المتعددة المنظم</h2><table border="1">${tableContent}</table></body></html>`;
+            const blob = new Blob([wordTemplate], { type: 'application/msword;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", "ملف_الترجمات.doc");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        window.onload = function() {
+            addNewRow();
+        };
+    </script>
+
+</body>
+</html>

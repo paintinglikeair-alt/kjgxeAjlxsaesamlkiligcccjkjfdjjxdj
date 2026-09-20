@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خيميائي الألوان | Color Mixology</title>
+    <!-- استدعاء خط كايرو للغة العربية -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <!-- استدعاء مكتبة Tailwind CSS للتصميم -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a; /* لون خلفية داكن للتطبيق */
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* حاوية الخلط (القارورة) */
+        .cauldron-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            margin: 2rem auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5) inset, 0 10px 20px rgba(0,0,0,0.3);
+            overflow: hidden;
+            transition: background-color 0.5s ease;
+            border: 4px solid #334155;
+        }
+
+        /* الطبقات اللونية */
+        .color-layer {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            opacity: 0;
+            border-radius: 50%;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            transform: scale(0.9);
+        }
+
+        .color-layer.active {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* أنظمة الدمج السحرية */
+        .blend-multiply {
+            mix-blend-mode: multiply;
+        }
+        .blend-screen {
+            mix-blend-mode: screen;
+        }
+
+        /* تأثير النجاح */
+        @keyframes pulse-success {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .success-anim {
+            animation: pulse-success 1s ease-out;
+            border-color: #22c55e !important;
+        }
+
+        /* أزرار الألوان */
+        .color-btn {
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .color-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.2);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .color-btn:hover::after { opacity: 1; }
+        .color-btn:active { transform: scale(0.95); }
+        .color-btn.selected {
+            ring: 4px;
+            ring-offset: 2px;
+            ring-offset-color: #0f172a;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md w-full bg-slate-800 rounded-3xl shadow-2xl p-6 border border-slate-700">
+        <!-- العنوان الرئيسي -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-2">
+                خيميائي الألوان
+            </h1>
+            <p class="text-slate-400 text-sm">اكتشف أسرار دمج الألوان</p>
+        </div>
+
+        <!-- اختيار النظام (RGB / CMYK) -->
+        <div class="flex justify-center gap-2 mb-6 bg-slate-900 p-1 rounded-xl">
+            <button id="btn-mode-pigment" class="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors bg-purple-600 text-white shadow-lg" onclick="switchMode('pigment')">
+                صبغات (CMYK)
+            </button>
+            <button id="btn-mode-light" class="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-white" onclick="switchMode('light')">
+                إضاءة (RGB)
+            </button>
+        </div>
+
+        <!-- معلومات المستوى والهدف -->
+        <div class="bg-slate-700/50 rounded-2xl p-4 mb-6 flex items-center justify-between">
+            <div>
+                <span class="text-xs text-slate-400 uppercase tracking-wider">المستوى <span id="level-num">1</span></span>
+                <h2 class="text-xl font-bold mt-1">الهدف: <span id="target-name" class="text-white">أخضر</span></h2>
+            </div>
+            <div id="target-color-preview" class="w-12 h-12 rounded-full border-2 border-slate-500 shadow-md"></div>
+        </div>
+
+        <!-- قارورة الخلط المعتمدة على mix-blend-mode -->
+        <div id="cauldron" class="cauldron-container bg-white">
+            <!-- سيتم حقن الطبقات اللونية هنا بواسطة الجافاسكربت -->
+        </div>
+
+        <!-- رسالة النجاح المخفية -->
+        <div id="success-message" class="text-center text-green-400 font-bold text-lg h-8 mb-4 opacity-0 transition-opacity">
+            أحسنت! مزيج مثالي ✨
+        </div>
+
+        <!-- أزرار التحكم بالألوان الأساسية -->
+        <div id="controls" class="grid grid-cols-3 gap-3">
+            <!-- سيتم توليد الأزرار هنا -->
+        </div>
+        
+        <div class="mt-6 text-center">
+            <button onclick="resetCauldron()" class="text-sm text-slate-400 hover:text-white underline decoration-slate-500 underline-offset-4 transition-colors">
+                إفراغ القارورة
+            </button>
+        </div>
+    </div>
+
+    <!-- شاشة النهاية (تظهر عند الفوز بكل المستويات) -->
+    <div id="victory-screen" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-500">
+        <h2 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-4">أنت خيميائي عظيم!</h2>
+        <p class="text-xl text-slate-300 mb-8">لقد أتقنت فنون دمج الألوان بنجاح.</p>
+        <button onclick="restartGame()" class="px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-lg shadow-purple-500/30">
+            العب من جديد
+        </button>
+    </div>
+
+    <script>
+        // بيانات اللعبة والمستويات
+        const gameData = {
+            pigment: {
+                name: "صبغات (CMYK)",
+                cauldronBg: "#ffffff", // المزيج الطرحي يحتاج خلفية بيضاء
+                blendModeClass: "blend-multiply",
+                primaries: [
+                    { id: 'cyan', color: '#00FFFF', label: 'سماوي', btnBg: 'bg-[#00FFFF]', textColor: 'text-black' },
+                    { id: 'magenta', color: '#FF00FF', label: 'أرجواني', btnBg: 'bg-[#FF00FF]', textColor: 'text-white' },
+                    { id: 'yellow', color: '#FFFF00', label: 'أصفر', btnBg: 'bg-[#FFFF00]', textColor: 'text-black' }
+                ],
+                levels: [
+                    { targetHex: '#00FF00', name: 'أخضر', required: ['cyan', 'yellow'] },
+                    { targetHex: '#0000FF', name: 'أزرق', required: ['cyan', 'magenta'] },
+                    { targetHex: '#FF0000', name: 'أحمر', required: ['magenta', 'yellow'] },
+                    { targetHex: '#000000', name: 'أسود', required: ['cyan', 'magenta', 'yellow'] }
+                ]
+            },
+            light: {
+                name: "إضاءة (RGB)",
+                cauldronBg: "#000000", // المزيج الجمعي يحتاج خلفية سوداء
+                blendModeClass: "blend-screen",
+                primaries: [
+                    { id: 'red', color: '#FF0000', label: 'أحمر', btnBg: 'bg-[#FF0000]', textColor: 'text-white' },
+                    { id: 'green', color: '#00FF00', label: 'أخضر', btnBg: 'bg-[#00FF00]', textColor: 'text-black' },
+                    { id: 'blue', color: '#0000FF', label: 'أزرق', btnBg: 'bg-[#0000FF]', textColor: 'text-white' }
+                ],
+                levels: [
+                    { targetHex: '#FFFF00', name: 'أصفر', required: ['red', 'green'] },
+                    { targetHex: '#00FFFF', name: 'سماوي', required: ['green', 'blue'] },
+                    { targetHex: '#FF00FF', name: 'أرجواني', required: ['red', 'blue'] },
+                    { targetHex: '#FFFFFF', name: 'أبيض', required: ['red', 'green', 'blue'] }
+                ]
+            }
+        };
+
+        // حالة اللعبة الحالية
+        let currentMode = 'pigment';
+        let currentLevelIndex = 0;
+        let activeColors = new Set();
+        let isTransitioning = false;
+
+        // العناصر في الواجهة
+        const cauldronEl = document.getElementById('cauldron');
+        const controlsEl = document.getElementById('controls');
+        const targetPreviewEl = document.getElementById('target-color-preview');
+        const targetNameEl = document.getElementById('target-name');
+        const levelNumEl = document.getElementById('level-num');
+        const successMsgEl = document.getElementById('success-message');
+        const victoryScreen = document.getElementById('victory-screen');
+
+        // تهيئة اللعبة
+        function initGame() {
+            setupModeUI();
+            loadLevel();
+        }
+
+        // التبديل بين أنظمة اللعب
+        function switchMode(mode) {
+            if (currentMode === mode || isTransitioning) return;
+            currentMode = mode;
+            currentLevelIndex = 0;
+            
+            // تحديث أزرار الأنماط
+            const btnPigment = document.getElementById('btn-mode-pigment');
+            const btnLight = document.getElementById('btn-mode-light');
+            
+            if(mode === 'pigment') {
+                btnPigment.className = "flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors bg-purple-600 text-white shadow-lg";
+                btnLight.className = "flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-white bg-transparent shadow-none";
+            } else {
+                btnLight.className = "flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors bg-blue-600 text-white shadow-lg";
+                btnPigment.className = "flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-colors text-slate-400 hover:text-white bg-transparent shadow-none";
+            }
+
+            setupModeUI();
+            loadLevel();
+        }
+
+        // تجهيز واجهة النظام الحالي (الألوان الأساسية والخلفية)
+        function setupModeUI() {
+            const modeData = gameData[currentMode];
+            
+            // ضبط لون خلفية القارورة (أبيض للصبغات، أسود للإضاءة)
+            cauldronEl.style.backgroundColor = modeData.cauldronBg;
+            
+            // تنظيف القارورة والأزرار
+            cauldronEl.innerHTML = '';
+            controlsEl.innerHTML = '';
+            activeColors.clear();
+
+            // إنشاء الطبقات والأزرار
+            modeData.primaries.forEach(primary => {
+                // إنشاء الطبقة اللونية داخل القارورة
+                const layer = document.createElement('div');
+                layer.id = `layer-${primary.id}`;
+                layer.className = `color-layer ${modeData.blendModeClass}`;
+                layer.style.backgroundColor = primary.color;
+                cauldronEl.appendChild(layer);
+
+                // إنشاء زر التحكم
+                const btn = document.createElement('button');
+                btn.id = `btn-${primary.id}`;
+                btn.className = `color-btn h-16 rounded-2xl shadow-md flex items-center justify-center font-bold text-lg ${primary.btnBg} ${primary.textColor} border-2 border-transparent`;
+                btn.innerHTML = primary.label;
+                btn.onclick = () => toggleColor(primary.id);
+                controlsEl.appendChild(btn);
+            });
+        }
+
+        // تحميل المستوى الحالي
+        function loadLevel() {
+            const modeData = gameData[currentMode];
+            
+            // التحقق من إنهاء جميع المستويات في هذا النظام
+            if (currentLevelIndex >= modeData.levels.length) {
+                showVictoryScreen();
+                return;
+            }
+
+            const level = modeData.levels[currentLevelIndex];
+            
+            // تحديث الواجهة
+            levelNumEl.textContent = currentLevelIndex + 1;
+            targetNameEl.textContent = level.name;
+            targetPreviewEl.style.backgroundColor = level.targetHex;
+            
+            resetCauldron();
+            isTransitioning = false;
+        }
+
+        // تفعيل/إلغاء تفعيل لون
+        function toggleColor(colorId) {
+            if (isTransitioning) return;
+
+            const btn = document.getElementById(`btn-${colorId}`);
+            const layer = document.getElementById(`layer-${colorId}`);
+
+            if (activeColors.has(colorId)) {
+                activeColors.delete(colorId);
+                layer.classList.remove('active');
+                btn.classList.remove('ring-4', 'ring-offset-2', 'ring-offset-slate-800');
+                btn.style.opacity = '1';
+            } else {
+                activeColors.add(colorId);
+                layer.classList.add('active');
+                btn.classList.add('ring-4', 'ring-offset-2', 'ring-offset-slate-800');
+            }
+
+            checkWinCondition();
+        }
+
+        // إفراغ القارورة
+        function resetCauldron() {
+            if (isTransitioning) return;
+            activeColors.clear();
+            const modeData = gameData[currentMode];
+            modeData.primaries.forEach(primary => {
+                document.getElementById(`layer-${primary.id}`).classList.remove('active');
+                const btn = document.getElementById(`btn-${primary.id}`);
+                btn.classList.remove('ring-4', 'ring-offset-2', 'ring-offset-slate-800');
+            });
+        }
+
+        // التحقق من الفوز بالمستوى
+        function checkWinCondition() {
+            const level = gameData[currentMode].levels[currentLevelIndex];
+            const required = level.required;
+
+            // التأكد من أن عدد الألوان المفعلة يطابق المطلوب وأن كل لون مطلوب مفعل
+            if (activeColors.size === required.length && required.every(c => activeColors.has(c))) {
+                levelComplete();
+            }
+        }
+
+        // معالجة تخطي المستوى بنجاح
+        function levelComplete() {
+            isTransitioning = true;
+            
+            // إظهار تأثير النجاح
+            cauldronEl.classList.add('success-anim');
+            successMsgEl.style.opacity = '1';
+
+            setTimeout(() => {
+                cauldronEl.classList.remove('success-anim');
+                successMsgEl.style.opacity = '0';
+                currentLevelIndex++;
+                loadLevel();
+            }, 1800); // الانتقال للمستوى التالي بعد 1.8 ثانية
+        }
+
+        // شاشة النصر
+        function showVictoryScreen() {
+            victoryScreen.classList.remove('hidden');
+            // تأخير بسيط لتفعيل تأثير الانتقال (Transition)
+            setTimeout(() => {
+                victoryScreen.classList.remove('opacity-0');
+                victoryScreen.classList.add('opacity-100');
+            }, 50);
+        }
+
+        // إعادة تشغيل اللعبة
+        function restartGame() {
+            victoryScreen.classList.remove('opacity-100');
+            victoryScreen.classList.add('opacity-0');
+            
+            setTimeout(() => {
+                victoryScreen.classList.add('hidden');
+                currentLevelIndex = 0;
+                loadLevel();
+            }, 500);
+        }
+
+        // بدء اللعبة عند تحميل الصفحة
+        window.onload = initGame;
+    </script>
+</body>
+</html>

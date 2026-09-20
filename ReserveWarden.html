@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لعبة حارس المحمية الطبيعية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f0fdf4; /* خلفية خضراء فاتحة تناسب الطبيعة */
+            background-image: radial-gradient(#bbf7d0 1px, transparent 1px);
+            background-size: 25px 25px;
+            color: #1e293b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .game-wrapper {
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 4px solid #16a34a;
+            padding: 24px;
+            border-radius: 24px;
+            width: 100%;
+            max-width: 550px;
+            box-shadow: 0 15px 35px rgba(22, 163, 74, 0.2);
+            text-align: center;
+        }
+
+        /* منطقة عرض الحيوان */
+        .animal-display-area {
+            position: relative;
+            width: 100%;
+            height: 220px;
+            background: linear-gradient(to bottom, #e0f2fe, #bae6fd); /* لون سماء */
+            border-radius: 20px;
+            border: 4px solid #4ade80;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* أرضية للمشهد */
+        .animal-display-area::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background: #86efac;
+            border-top: 4px dashed #4ade80;
+        }
+
+        /* بطل اللعبة (الحارس) */
+        .nature-hero {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #16a34a;
+            z-index: 10;
+            background: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 35px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* الحيوان المعروض */
+        #nature-animal {
+            font-size: 7rem;
+            z-index: 5;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.2));
+            user-select: none;
+        }
+
+        /* أزرار البيئات (غابة، بحر، صحراء) */
+        .habitat-btn {
+            font-size: 1.5rem;
+            font-weight: 900;
+            padding: 20px 10px;
+            border-radius: 20px;
+            border: 4px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .habitat-btn span { font-size: 2.5rem; } /* حجم الإيموجي داخل الزر */
+
+        .habitat-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0px rgba(0,0,0,0.15);
+        }
+
+        /* ألوان الأزرار المخصصة */
+        .btn-forest { background-color: #d1fae5; color: #065f46; border-color: #34d399; box-shadow: 0 6px 0px #10b981; }
+        .btn-ocean { background-color: #e0f2fe; color: #075985; border-color: #7dd3fc; box-shadow: 0 6px 0px #0ea5e9; }
+        .btn-desert { background-color: #fef9c3; color: #854d0e; border-color: #fde047; box-shadow: 0 6px 0px #eab308; }
+
+        /* حركات (Animations) */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            75% { transform: translateX(10px) rotate(5deg); }
+        }
+        .anim-shake { animation: shake 0.4s ease-in-out; }
+        
+        @keyframes success-pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4) translateY(-20px); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .anim-success { animation: success-pop 0.8s forwards; }
+
+        /* الإشعارات (Toasts) */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            width: 90%;
+            max-width: 400px;
+        }
+        .toast {
+            background: linear-gradient(to right, #10b981, #059669);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .toast.error { background: linear-gradient(to right, #ef4444, #b91c1c); }
+        .toast.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body class="p-4">
+
+    <!-- حاوية الإشعارات -->
+    <div id="toast-container"></div>
+
+    <main class="game-wrapper">
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="initNatureGame()" class="bg-green-600 hover:bg-green-500 text-white px-5 py-2 rounded-xl font-bold shadow-md transition border-b-4 border-green-800 active:translate-y-1 active:border-b-0 text-lg">
+                إعادة اللعب 🔄
+            </button>
+            <span class="font-black text-green-900 bg-green-100 px-5 py-2 rounded-full border-2 border-green-400 text-xl shadow-sm">
+                النقاط: <span id="nature-score" class="text-green-700">0</span>
+            </span>
+        </div>
+        
+        <h2 class="text-center text-4xl font-black text-green-700 mb-2 drop-shadow-sm">حارس المحمية 🌍</h2>
+        <p class="text-gray-600 font-bold mb-6 text-lg">أين يعيش هذا الكائن؟ اختر البيئة الصحيحة!</p>
+        
+        <!-- منطقة العرض -->
+        <div class="animal-display-area">
+            <div id="nature-hero" class="nature-hero" title="أنت الحارس!">🧑‍🌾</div>
+            <div id="nature-animal">❓</div>
+        </div>
+
+        <!-- أزرار الاختيار -->
+        <div class="grid grid-cols-3 gap-3 md:gap-5">
+            <button onclick="checkHabitat('forest')" class="habitat-btn btn-forest">
+                <span>🌳</span>
+                غابة
+            </button>
+            <button onclick="checkHabitat('ocean')" class="habitat-btn btn-ocean">
+                <span>🌊</span>
+                بحر
+            </button>
+            <button onclick="checkHabitat('desert')" class="habitat-btn btn-desert">
+                <span>🏜️</span>
+                صحراء
+            </button>
+        </div>
+    </main>
+
+    <script>
+        // قاعدة بيانات الحيوانات (تم تعديلها لدعم أكثر من بيئة)
+        const animalsData = [
+            { emoji: '🐪', habitats: ['desert'], name: 'الجمل' },
+            { emoji: '🦂', habitats: ['desert'], name: 'العقرب' },
+            { emoji: '🐍', habitats: ['desert', 'forest'], name: 'الثعبان' },
+            { emoji: '🦎', habitats: ['desert', 'forest'], name: 'السحلية' },
+            
+            { emoji: '🐘', habitats: ['forest'], name: 'الفيل' },
+            { emoji: '🐒', habitats: ['forest'], name: 'القرد' },
+            { emoji: '🦁', habitats: ['forest'], name: 'الأسد' },
+            { emoji: '🦊', habitats: ['forest', 'desert'], name: 'الثعلب' },
+            { emoji: '🐻', habitats: ['forest'], name: 'الدب' },
+            { emoji: '🐢', habitats: ['ocean', 'forest', 'desert'], name: 'السلحفاة' }, // برية وبحرية
+            
+            { emoji: '🐬', habitats: ['ocean'], name: 'الدلفين' },
+            { emoji: '🦈', habitats: ['ocean'], name: 'القرش' },
+            { emoji: '🐙', habitats: ['ocean'], name: 'الأخطبوط' },
+            { emoji: '🐳', habitats: ['ocean'], name: 'الحوت' },
+            { emoji: '🦀', habitats: ['ocean', 'forest'], name: 'السلطعون' } // بعضها يعيش قرب الشواطئ
+        ];
+
+        let currentAnimal = null;
+        let score = 0;
+        let isAnimating = false; // لمنع النقر المزدوج أثناء الحركة
+
+        // دالة عرض الإشعارات
+        function showToast(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type === 'error' ? 'error' : ''}`;
+            t.innerText = msg;
+            container.appendChild(t);
+            
+            // تحريك الرسالة للظهور
+            setTimeout(() => t.classList.add('show'), 10);
+            
+            // إخفاء وحذف الرسالة بعد 2.5 ثانية
+            setTimeout(() => { 
+                t.classList.remove('show'); 
+                setTimeout(() => t.remove(), 300); 
+            }, 2500);
+        }
+
+        // تهيئة اللعبة
+        function initNatureGame() {
+            score = 0;
+            document.getElementById('nature-score').innerText = score;
+            isAnimating = false;
+            
+            // إزالة أي فئات حركة سابقة
+            const animalEl = document.getElementById('nature-animal');
+            animalEl.className = ''; 
+            
+            showNextAnimal();
+        }
+
+        // عرض حيوان جديد
+        function showNextAnimal() {
+            // اختيار حيوان عشوائي
+            const randomIndex = Math.floor(Math.random() * animalsData.length);
+            currentAnimal = animalsData[randomIndex];
+            
+            const animalEl = document.getElementById('nature-animal');
+            
+            // إعادة ضبط الشكل والحركة
+            animalEl.className = ''; // إزالة الكلاسات السابقة
+            animalEl.style.transform = 'scale(0) translateY(-50px)';
+            animalEl.style.opacity = '0';
+            
+            setTimeout(() => {
+                animalEl.innerText = currentAnimal.emoji;
+                // حركة الدخول (Pop in)
+                animalEl.style.transform = 'scale(1) translateY(0)';
+                animalEl.style.opacity = '1';
+                isAnimating = false;
+            }, 100);
+        }
+
+        // التحقق من الإجابة
+        function checkHabitat(selectedHabitat) {
+            // إذا كانت اللعبة في حالة حركة، تجاهل النقر
+            if (isAnimating) return;
+            
+            isAnimating = true;
+            const animalEl = document.getElementById('nature-animal');
+
+            // نتحقق مما إذا كانت البيئة المختارة موجودة ضمن قائمة بيئات الحيوان
+            if (currentAnimal.habitats.includes(selectedHabitat)) {
+                // إجابة صحيحة
+                score += 10;
+                document.getElementById('nature-score').innerText = score;
+                
+                // إضافة حركة النجاح
+                animalEl.classList.add('anim-success');
+                
+                showToast(`ممتاز! ${currentAnimal.name} يعيش هنا 🌟`, 'success');
+                
+                // عرض الحيوان التالي بعد انتهاء الحركة
+                setTimeout(showNextAnimal, 800);
+            } else {
+                // إجابة خاطئة
+                // إضافة اهتزاز
+                animalEl.classList.add('anim-shake');
+                
+                // تحديد الأسماء العربية للبيئات الصحيحة
+                const habitatNames = {
+                    'forest': 'الغابة 🌳',
+                    'ocean': 'البحر 🌊',
+                    'desert': 'الصحراء 🏜️'
+                };
+                
+                // دمج البيئات الصحيحة بكلمة "أو" لتظهر في رسالة الخطأ
+                let correctHabitats = currentAnimal.habitats.map(h => habitatNames[h]).join(' أو ');
+
+                showToast(`خطأ! ${currentAnimal.name} يعيش في ${correctHabitats}`, 'error');
+                
+                // إزالة حركة الاهتزاز بعد انتهائها للسماح بالمحاولة مجدداً
+                setTimeout(() => {
+                    animalEl.classList.remove('anim-shake');
+                    isAnimating = false; // السماح بمحاولة أخرى
+                }, 400);
+            }
+        }
+
+        // تشغيل اللعبة تلقائياً عند تحميل الصفحة
+        window.onload = initNatureGame;
+    </script>
+</body>
+</html>

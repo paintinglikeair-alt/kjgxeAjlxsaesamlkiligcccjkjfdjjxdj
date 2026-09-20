@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة ميزان الخضري - الإصدار المطور</title>
+    <!-- استدعاء خطوط جوجل (كايرو) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #fef3c7; 
+            background-image: radial-gradient(#fde68a 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #1e293b;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* الميزان */
+        .scale-container {
+            position: relative; width: 100%; max-width: 500px; height: 350px;
+            margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        }
+        .scale-base {
+            width: 140px; height: 20px; background: linear-gradient(to right, #78350f, #b45309, #78350f);
+            border-radius: 10px 10px 0 0; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+        .scale-pillar {
+            width: 24px; height: 250px; background: linear-gradient(to right, #92400e, #d97706, #92400e);
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            border-radius: 4px 4px 0 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .scale-pin {
+            width: 20px; height: 20px; background-color: #fbbf24; border-radius: 50%;
+            position: absolute; top: 20px; left: 50%; transform: translate(-50%, -50%); z-index: 20;
+            box-shadow: inset -2px -2px 5px rgba(0,0,0,0.5);
+        }
+        .scale-beam {
+            width: 360px; height: 16px; background: linear-gradient(to bottom, #d97706, #92400e);
+            position: absolute; top: 20px; left: 50%; margin-left: -180px; border-radius: 8px;
+            transform-origin: center; transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 10;
+        }
+        .pan-wrapper {
+            position: absolute; top: 8px; width: 140px; margin-left: -70px; transform-origin: top center;
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; flex-direction: column; align-items: center;
+        }
+        .pan-left-wrapper { left: 10px; } .pan-right-wrapper { left: 350px; }
+        .pan {
+            width: 140px; height: 30px; background: linear-gradient(to bottom, #94a3b8, #475569);
+            border-radius: 10px 10px 50px 50px; box-shadow: 0 10px 15px rgba(0,0,0,0.4);
+            position: relative; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 5px;
+        }
+        .pan-content {
+            position: absolute; bottom: 25px; display: flex; flex-wrap: wrap-reverse;
+            justify-content: center; align-items: flex-end; gap: -5px; width: 120px; pointer-events: auto;
+        }
+
+        /* الأوزان والأصناف */
+        .weight-iron {
+            background: radial-gradient(circle at 30% 30%, #52525b, #27272a); color: #d4d4d8; font-weight: 900;
+            display: flex; align-items: center; justify-content: center; border-radius: 4px 4px 0 0;
+            border-top: 4px solid #3f3f46; box-shadow: 0 4px 6px rgba(0,0,0,0.5); cursor: pointer; transition: transform 0.1s; user-select: none;
+        }
+        .weight-iron:active { transform: scale(0.95); }
+        .weight-1 { width: 30px; height: 30px; font-size: 12px; }
+        .weight-2 { width: 40px; height: 40px; font-size: 14px; }
+        .weight-5 { width: 50px; height: 50px; font-size: 18px; }
+
+        .food-item { font-size: 32px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4)); cursor: pointer; transition: transform 0.1s; user-select: none; margin: -2px; }
+        .food-item:hover { transform: scale(1.1); }
+        .food-item:active { transform: scale(0.9); }
+
+        /* الأقفاص الخشبية */
+        .crate {
+            background: #ca8a04; border: 4px solid #854d0e; border-radius: 8px; padding: 8px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 4px 6px rgba(0,0,0,0.3);
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 10px, rgba(0,0,0,0.1) 10px, rgba(0,0,0,0.1) 12px);
+        }
+
+        /* الرسوم المتحركة */
+        @keyframes pop { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+        .pop-anim { animation: pop 0.4s ease-out forwards; }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        .shake-anim { animation: shake 0.3s ease-in-out; }
+    </style>
+</head>
+<body class="flex flex-col items-center py-6 px-4">
+
+    <div class="max-w-5xl w-full">
+        <!-- اليافطة العلوية -->
+        <div class="bg-amber-700 text-amber-50 rounded-2xl shadow-xl p-4 mb-6 border-4 border-amber-900 relative overflow-hidden text-center">
+            <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-500 rounded-full opacity-20"></div>
+            
+            <div class="flex justify-center gap-4 mb-2">
+                <span id="day-display" class="bg-red-700 text-white px-4 py-1 rounded-full text-sm font-bold shadow-inner border border-red-800">
+                    اليوم الأول (تدريب)
+                </span>
+                <span class="bg-amber-900 text-amber-200 px-4 py-1 rounded-full text-sm font-bold shadow-inner">
+                    الزبون رقم <span id="level-display">1</span>
+                </span>
+            </div>
+            
+            <h1 class="text-2xl md:text-4xl font-black mb-2" style="text-shadow: 2px 2px 0px #451a03;">سوق الخضار والفاكهة</h1>
+            <p id="customer-order" class="text-xl md:text-2xl font-bold text-amber-200 bg-black/20 inline-block px-6 py-2 rounded-lg"></p>
+        </div>
+
+        <!-- منطقة اللعب الرئيسية -->
+        <div class="flex flex-col lg:flex-row gap-6 items-start justify-center">
+            
+            <!-- الميزان -->
+            <div class="bg-amber-100/50 p-6 rounded-3xl border-2 border-amber-200 shadow-xl relative w-full lg:w-3/5 h-[400px] flex items-center justify-center">
+                <div class="scale-container">
+                    <div class="scale-pillar"></div>
+                    <div class="scale-pin"></div>
+                    <div id="scale-beam" class="scale-beam">
+                        <!-- الكفة اليسرى (للبضاعة) -->
+                        <div id="pan-left-wrapper" class="pan-wrapper pan-left-wrapper">
+                            <svg class="w-full h-[100px]" viewBox="0 0 140 100" style="margin-bottom: -5px;">
+                                <line x1="70" y1="0" x2="15" y2="100" stroke="#475569" stroke-width="2.5"/>
+                                <line x1="70" y1="0" x2="125" y2="100" stroke="#475569" stroke-width="2.5"/>
+                                <circle cx="70" cy="0" r="4" fill="#fbbf24"/>
+                            </svg>
+                            <div class="pan"><div id="goods-container" class="pan-content"></div></div>
+                        </div>
+
+                        <!-- الكفة اليمنى (للأوزان) -->
+                        <div id="pan-right-wrapper" class="pan-wrapper pan-right-wrapper">
+                            <svg class="w-full h-[100px]" viewBox="0 0 140 100" style="margin-bottom: -5px;">
+                                <line x1="70" y1="0" x2="15" y2="100" stroke="#475569" stroke-width="2.5"/>
+                                <line x1="70" y1="0" x2="125" y2="100" stroke="#475569" stroke-width="2.5"/>
+                                <circle cx="70" cy="0" r="4" fill="#fbbf24"/>
+                            </svg>
+                            <div class="pan"><div id="weights-container" class="pan-content"></div></div>
+                        </div>
+                    </div>
+                    <div class="scale-base"></div>
+                </div>
+            </div>
+
+            <!-- لوحات التحكم (اليمين) -->
+            <div class="w-full lg:w-2/5 flex flex-col gap-4">
+                
+                <!-- صندوق الموازين -->
+                <div class="bg-slate-800 rounded-2xl p-4 shadow-xl border-4 border-slate-900 text-center">
+                    <h3 class="text-lg font-bold text-slate-300 mb-3 border-b border-slate-600 pb-1">صندوق الموازين</h3>
+                    <div class="flex justify-center gap-4 mb-4">
+                        <div onclick="addWeight(1)" class="weight-iron weight-1 hover:-translate-y-1">1 ك</div>
+                        <div onclick="addWeight(2)" class="weight-iron weight-2 hover:-translate-y-1">2 ك</div>
+                        <div onclick="addWeight(5)" class="weight-iron weight-5 hover:-translate-y-1">5 ك</div>
+                    </div>
+                    <div class="flex justify-between items-center bg-black p-3 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 font-bold text-sm">وزن الحديد:</span>
+                        <span class="text-green-500 font-mono text-2xl font-bold"><span id="current-weight-display">0</span> كجم</span>
+                    </div>
+                </div>
+
+                <!-- أقفاص الخضار (تظهر في اليوم الثاني) -->
+                <div id="crates-section" class="bg-amber-900/90 rounded-2xl p-4 shadow-xl border-4 border-amber-950 text-center hidden">
+                    <h3 class="text-lg font-bold text-amber-200 mb-3 border-b border-amber-800 pb-1">أقفاص البضاعة (انقر للوزن)</h3>
+                    <div class="grid grid-cols-3 gap-2" id="inventory-grid">
+                        <!-- تُضاف الأقفاص هنا -->
+                    </div>
+                </div>
+
+                <!-- زر البيع -->
+                <button id="sell-btn" onclick="attemptSell()" class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-2xl transition-all duration-300 shadow-lg border-b-4 border-blue-800 hover:scale-[1.02] active:scale-95">
+                    أوزن وبيع! 🤝
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نوافذ التنبيهات (الخسارة / الفوز) -->
+    <div id="alert-modal" class="fixed inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center hidden opacity-0 transition-opacity duration-300 px-4 text-center">
+        <div id="alert-icon" class="text-8xl mb-4"></div>
+        <h2 id="alert-title" class="text-4xl md:text-6xl font-black text-white mb-4"></h2>
+        <p id="alert-msg" class="text-xl md:text-2xl text-slate-300 mb-8"></p>
+        <button id="alert-btn" onclick="closeAlert()" class="px-10 py-4 bg-amber-500 hover:bg-amber-400 rounded-full font-black text-slate-900 text-xl transition-transform hover:scale-105 shadow-lg shadow-amber-500/30">
+            حاضر يا معلم
+        </button>
+    </div>
+
+    <script>
+        // الأصناف المتوفرة وأوزانها لكل وحدة
+        const inventory = {
+            'طماطم': { emoji: '🍅', unitWeight: 1, name: 'طماطم' },
+            'بطاطس': { emoji: '🥔', unitWeight: 1, name: 'بطاطس' },
+            'موز': { emoji: '🍌', unitWeight: 2, name: 'موز' },
+            'بطيخ': { emoji: '🍉', unitWeight: 5, name: 'بطيخ' }
+        };
+
+        // مستويات اللعبة (اليوم الأول والثاني)
+        const levels = [
+            // اليوم الأول (تعبئة تلقائية للكفة - الهدف تعلم الأوزان)
+            { day: 1, target: 3, item: 'طماطم', msg: '"عايز 3 كيلو طماطم لزوم السلطة!"', autoFill: true },
+            { day: 1, target: 7, item: 'بطاطس', msg: '"أوزنلي 7 كيلو بطاطس تحمير."', autoFill: true },
+            { day: 1, target: 4, item: 'موز', msg: '"هات 4 كيلو موز استوى."', autoFill: true },
+            
+            // اليوم الثاني (كفتان فارغتان - الهدف اختيار الصنف الصحيح والوزن الصحيح)
+            { day: 2, target: 5, item: 'بطيخ', msg: '"نقيلي بطيخة حمرا، تجيب 5 كيلو."', autoFill: false },
+            { day: 2, target: 4, item: 'طماطم', msg: '"أوزن 4 كيلو طماطم، ايديك معايا."', autoFill: false },
+            { day: 2, target: 6, item: 'موز', msg: '"عايز 3 عناقيد موز، العنقود بـ 2 كيلو صح؟"', autoFill: false },
+            { day: 2, target: 10, item: 'بطيخ', msg: '"عايز بطيختين كبار، يجو 10 كيلو!"', autoFill: false }
+        ];
+
+        let currentLevelIdx = 0;
+        let currentWeightRight = 0; // أوزان الحديد
+        let currentWeightLeft = 0;  // وزن البضاعة
+        let activeWeights = [];
+        let activeGoods = [];
+
+        // عناصر الواجهة
+        const beamEl = document.getElementById('scale-beam');
+        const panLeftEl = document.getElementById('pan-left-wrapper');
+        const panRightEl = document.getElementById('pan-right-wrapper');
+        const goodsContainer = document.getElementById('goods-container');
+        const weightsContainer = document.getElementById('weights-container');
+        const weightDisplay = document.getElementById('current-weight-display');
+        const cratesSection = document.getElementById('crates-section');
+        const alertModal = document.getElementById('alert-modal');
+
+        // بناء أقفاص البضاعة
+        function buildCrates() {
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            for (const [key, data] of Object.entries(inventory)) {
+                const crate = document.createElement('div');
+                crate.className = "crate flex flex-col items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform";
+                crate.onclick = () => addGood(key);
+                crate.innerHTML = `
+                    <div class="text-4xl filter drop-shadow-md">${data.emoji}</div>
+                    <div class="text-amber-100 font-bold text-xs mt-1 bg-black/40 px-2 rounded">${data.unitWeight} كجم</div>
+                `;
+                grid.appendChild(crate);
+            }
+        }
+
+        // تهيئة المستوى
+        function initLevel() {
+            if (currentLevelIdx >= levels.length) {
+                showAlert('🏆', 'أنت أحسن بياع!', 'خلصت كل طلبات الزباين وبقيت معلم السوق.', 'افتح الدكان من تاني', () => location.reload());
+                return;
+            }
+
+            const level = levels[currentLevelIdx];
+            
+            // تحديث النصوص
+            document.getElementById('level-display').innerText = currentLevelIdx + 1;
+            document.getElementById('customer-order').innerText = level.msg;
+            
+            const dayEl = document.getElementById('day-display');
+            if (level.day === 1) {
+                dayEl.innerText = "اليوم الأول (تدريب)";
+                dayEl.className = "bg-teal-700 text-white px-4 py-1 rounded-full text-sm font-bold shadow-inner border border-teal-800";
+                cratesSection.classList.add('hidden');
+            } else {
+                dayEl.innerText = "اليوم الثاني (احتراف)";
+                dayEl.className = "bg-red-700 text-white px-4 py-1 rounded-full text-sm font-bold shadow-inner border border-red-800";
+                cratesSection.classList.remove('hidden');
+            }
+
+            // تصفير الميزان
+            currentWeightRight = 0;
+            currentWeightLeft = 0;
+            activeWeights = [];
+            activeGoods = [];
+            weightsContainer.innerHTML = '';
+            goodsContainer.innerHTML = '';
+            
+            // تعبئة تلقائية لليوم الأول
+            if (level.autoFill) {
+                currentWeightLeft = level.target;
+                const itemData = inventory[level.item];
+                let itemsCount = Math.min(level.target, 8); 
+                for (let i = 0; i < itemsCount; i++) {
+                    renderGoodInPan(level.item, itemData.emoji, null);
+                }
+            }
+
+            updateScalePhysics();
+        }
+
+        // إضافة وزن حديد
+        function addWeight(val) {
+            currentWeightRight += val;
+            const wId = Date.now() + Math.random();
+            activeWeights.push({ id: wId, val: val });
+            
+            const wEl = document.createElement('div');
+            wEl.id = `w-${wId}`;
+            wEl.className = `weight-iron weight-${val} pop-anim`;
+            wEl.innerText = `${val} ك`;
+            wEl.onclick = () => removeWeight(wId, val);
+            weightsContainer.appendChild(wEl);
+            
+            updateScalePhysics();
+        }
+
+        // إزالة وزن حديد
+        function removeWeight(id, val) {
+            currentWeightRight -= val;
+            activeWeights = activeWeights.filter(w => w.id !== id);
+            const wEl = document.getElementById(`w-${id}`);
+            if(wEl) wEl.remove();
+            updateScalePhysics();
+        }
+
+        // إضافة بضاعة من القفص (اليوم الثاني)
+        function addGood(itemName) {
+            const level = levels[currentLevelIdx];
+            
+            // التحقق من الصنف الصارم (الخسارة عند الخطأ)
+            if (itemName !== level.item) {
+                showAlert('😡', 'الزبون زعل ومشي!', `الزبون طلب (${level.item}) وأنت بتديله (${itemName})! ركز يا معلم.`, 'عيد الطلب', () => initLevel());
+                return;
+            }
+
+            const itemData = inventory[itemName];
+            currentWeightLeft += itemData.unitWeight;
+            
+            const gId = Date.now() + Math.random();
+            activeGoods.push({ id: gId, val: itemData.unitWeight, name: itemName });
+            
+            renderGoodInPan(itemName, itemData.emoji, gId);
+            updateScalePhysics();
+        }
+
+        function renderGoodInPan(itemName, emoji, gId) {
+            const item = document.createElement('div');
+            if(gId) item.id = `g-${gId}`;
+            item.className = 'food-item pop-anim';
+            item.innerText = emoji;
+            item.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
+            
+            // يمكن الإزالة فقط في اليوم الثاني
+            if(gId) {
+                item.onclick = () => {
+                    currentWeightLeft -= inventory[itemName].unitWeight;
+                    activeGoods = activeGoods.filter(g => g.id !== gId);
+                    item.remove();
+                    updateScalePhysics();
+                };
+            }
+            goodsContainer.appendChild(item);
+        }
+
+        // فيزياء الميزان (تعتمد على الفرق بين الكفتين)
+        function updateScalePhysics() {
+            weightDisplay.innerText = currentWeightRight;
+            
+            let diff = currentWeightRight - currentWeightLeft;
+            
+            let angle = diff * 4; 
+            if (angle > 20) angle = 20;
+            if (angle < -20) angle = -20;
+
+            beamEl.style.transform = `rotate(${angle}deg)`;
+            panLeftEl.style.transform = `rotate(${-angle}deg)`;
+            panRightEl.style.transform = `rotate(${-angle}deg)`;
+        }
+
+        // محاولة البيع
+        function attemptSell() {
+            const level = levels[currentLevelIdx];
+            
+            // شرط الفوز: الوزن في اليمين يساوي الوزن في اليسار ويساوي الهدف المطلوب
+            if (currentWeightRight === level.target && currentWeightLeft === level.target) {
+                showAlert('✔️', 'الله ينور!', 'وزنة مظبوطة بالجرام، الزبون مبسوط.', 'الزبون اللي بعده', () => {
+                    currentLevelIdx++;
+                    initLevel();
+                });
+            } else {
+                // شرط الخسارة: وزنة غير مطابقة
+                document.getElementById('sell-btn').classList.add('shake-anim');
+                setTimeout(() => document.getElementById('sell-btn').classList.remove('shake-anim'), 300);
+                
+                let reason = "";
+                if (currentWeightLeft !== level.target) reason = "كمية البضاعة في الكفة مش هي اللي الزبون طلبها!";
+                else if (currentWeightRight > currentWeightLeft) reason = "أنت حاطط موازين أكتر من البضاعة!";
+                else if (currentWeightRight < currentWeightLeft) reason = "أنت حاطط موازين أقل من البضاعة وهتخسر كدا!";
+
+                showAlert('⚖️', 'الوزنة غلط!', reason, 'أوزن من تاني', () => initLevel());
+            }
+        }
+
+        // نظام النوافذ المنبثقة الموحد
+        let alertCallback = null;
+        function showAlert(icon, title, msg, btnText, callback) {
+            document.getElementById('alert-icon').innerText = icon;
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-msg').innerText = msg;
+            document.getElementById('alert-btn').innerText = btnText;
+            alertCallback = callback;
+            
+            alertModal.classList.remove('hidden');
+            setTimeout(() => alertModal.classList.remove('opacity-0'), 10);
+        }
+
+        function closeAlert() {
+            alertModal.classList.add('opacity-0');
+            setTimeout(() => {
+                alertModal.classList.add('hidden');
+                if (alertCallback) alertCallback();
+            }, 300);
+        }
+
+        // التهيئة المبدئية
+        buildCrates();
+        window.onload = initLevel;
+
+    </script>
+</body>
+</html>
